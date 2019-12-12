@@ -1,0 +1,12 @@
+DECLARE_ITEM "My Item"
+/*
+DECLARE_ITEM "Shouldn't be read"
+*/
+
+DEFINE_VALUE "My Defined Value" 47 // Cool! :)
+
+EQUATION "My Equation"
+	//ENODE ADDITION
+		ENODE CONSTANT 4
+		ENODE CONSTANT 7
+END_EQUATION

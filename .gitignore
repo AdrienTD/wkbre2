@@ -30,3 +30,13 @@
 *.exe
 *.out
 *.app
+
+# ADDED:
+*.lnk
+*.pdb
+*.res
+*.ilk
+build*/
+imgui.ini
+.vs/
+CMakeSettings.json

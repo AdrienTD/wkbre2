@@ -1,0 +1,103 @@
+#include "GameObjBlueprint.h"
+#include "gameset.h"
+#include "../tags.h"
+#include <string>
+#include "../file.h"
+
+void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir) {
+	//printf("Loading anims from %s\n", dir.c_str());
+	GrowStringList *gsl = ListFiles(dir.c_str());
+	for (unsigned int i = 0; i < gsl->len; i++) {
+		std::string fn = gsl->getdp(i);
+		size_t pp = fn.find('.');
+		std::string name = fn.substr(0, pp);
+		std::string ext = fn.substr(pp + 1);
+		if (!_stricmp(ext.c_str(), "MESH3") || !_stricmp(ext.c_str(), "ANIM3")) {
+			int pn = name.find_first_of("0123456789");
+			std::string ats = name.substr(0, pn);
+			//std::string num = name.substr(pn);
+			//printf("? %s\n", ats.c_str());
+			int animTag = this->gameSet->animationNames.getIndex(ats);
+			if (animTag != -1) {
+				//printf("Found %s\n", fn.c_str());
+				ap.animations[animTag].push_back(this->gameSet->modelCache.getModel(dir + fn));
+			}
+		}
+		//printf("%s %s\n", ext.c_str(), name.c_str());
+	}
+}
+
+void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory) {
+	//printf("Parsing blueprint \"%s\"\n", this->name.c_str());
+	// TODO: read model path
+	modelPath = gsf.nextString(true);
+	gsf.advanceLine();
+	std::string endtag("END_");
+	endtag += Tags::GAMEOBJCLASS_tagDict.getStringFromID(bpClass);
+	while (!gsf.eof)
+	{
+		std::string strtag = gsf.nextString();
+		int tag = Tags::CBLUEPRINT_tagDict.getTagID(strtag.c_str());
+		if (strtag == endtag)
+			break;
+		switch (tag) {
+		case Tags::CBLUEPRINT_STARTS_WITH_ITEM: {
+			int x = gameSet->itemNames.getIndex(gsf.nextString(true));
+			this->startItemValues[x] = gsf.nextFloat();
+			break;
+		}
+		case Tags::CBLUEPRINT_PHYSICAL_SUBTYPE: {
+			std::string sts = gsf.nextString(true);
+			subtypeNames.insertString(sts);
+			PhysicalSubtype &ps = this->subtypes[subtypeNames.getIndex(sts)];
+			ps.dir = gsf.nextString(true);
+			if(!ps.dir.empty())
+				if (ps.dir.back() != '\\')
+					ps.dir += '\\';
+			gsf.advanceLine();
+			while (!gsf.eof) {
+				std::string apphead = gsf.nextTag();
+				if (apphead == "END_PHYSICAL_SUBTYPE")
+					break;
+				else if (apphead == "APPEARANCE") {
+					std::string appstr = gsf.nextString(true);
+					int appid = gameSet->appearanceNames.getIndex(appstr);
+					gsf.advanceLine();
+					BPAppearance &ap = ps.appearances[appid];
+					while (!gsf.eof) {
+						std::string ldfstr = gsf.nextTag();
+						if (ldfstr == "END_APPEARANCE")
+							break;
+						else if (ldfstr == "LOAD_ANIMATIONS_FROM") {
+							ap.dir = gsf.nextString(true);
+							loadAnimations(ap, directory + modelPath + ps.dir + ap.dir);
+						}
+						gsf.advanceLine();
+					}
+				}
+				gsf.advanceLine();
+			}
+			// If there is no Default appearance, make one
+			if (ps.appearances.count(0) == 0) {
+				loadAnimations(ps.appearances[0], directory + modelPath + ps.dir);
+			}
+			break;
+		}
+		case Tags::CBLUEPRINT_OFFERS_COMMAND: {
+			int x = gameSet->commandNames.getIndex(gsf.nextString(true));
+			offeredCommands.push_back(&gameSet->commands[x]);
+			break;
+		}
+		}
+		gsf.advanceLine();
+	}
+	// If there are no subtypes, make a Default subtype with one Default appearance
+	if(this->subtypes.empty()) {
+		this->subtypeNames.insertString("Default");
+		loadAnimations(this->subtypes[0].appearances[0], directory + modelPath);
+	}
+}
+
+std::string GameObjBlueprint::getFullName() {
+	return std::string(Tags::GAMEOBJCLASS_tagDict.getStringFromID(bpClass)) + " \"" + name + "\"";
+}

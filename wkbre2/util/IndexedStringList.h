@@ -1,0 +1,60 @@
+#pragma once
+
+#include <cstring>
+#include <string>
+#include <map>
+#include <vector>
+#include "StriCompare.h"
+
+// Basically a vector of strings but with a map for quick string searching
+struct IndexedStringList
+{
+	std::map<std::string, int, StriCompare> str2idMap;
+	std::vector<decltype(str2idMap)::iterator> id2strVector;
+
+	struct iterator {
+		decltype(id2strVector)::const_iterator it;
+		iterator(const decltype(it) &it) : it(it) {}
+		bool operator!= (iterator &other) { return it != other.it; }
+		void operator++ () { it++; }
+		const std::string & operator* () { return (*it)->first; }
+	};
+
+	void clear()
+	{
+		id2strVector.clear();
+		str2idMap.clear();
+	}
+
+	void insertString(const std::string &str)
+	{
+		int nextid = id2strVector.size();
+		auto p = str2idMap.insert({ str, nextid });
+		if (p.second) // If the string was inserted correctly
+			id2strVector.push_back(p.first);
+	}
+
+	int getIndex(const std::string &str) const
+	{
+		auto it = str2idMap.find(str);
+		if (it != str2idMap.end())
+			return it->second;
+		else
+			return -1;
+	}
+
+	const std::string &getString(int id) const
+	{
+		return id2strVector[id]->first;
+	}
+
+	size_t size() const
+	{
+		return id2strVector.size();
+	}
+	auto begin() const { return iterator(id2strVector.begin()); }
+	auto end() const { return iterator(id2strVector.end()); }
+
+	int operator[] (const std::string &str) { return getIndex(str); }
+	const std::string& operator[] (int id) { return getString(id); }
+};
