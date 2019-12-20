@@ -44,6 +44,7 @@ void GameSet::parseFile(const char * fn, int pass)
 		//printf("Line %i\n", linecnt++);
 		std::string strtag = gsf.nextTag();
 		int tag = Tags::GAMESET_tagDict.getTagID(strtag.c_str());
+		bool isExtension = false;
 
 		if (tag == Tags::GAMESET_LINK_GAME_SET)
 		{
@@ -114,6 +115,17 @@ void GameSet::parseFile(const char * fn, int pass)
 				itemSides[x] = side;
 				break;
 			}
+			case Tags::GAMESET_LEVEL_EXTENSION:
+			case Tags::GAMESET_PLAYER_EXTENSION:
+			case Tags::GAMESET_CHARACTER_EXTENSION:
+			case Tags::GAMESET_BUILDING_EXTENSION:
+			case Tags::GAMESET_MARKER_EXTENSION:
+			case Tags::GAMESET_CONTAINER_EXTENSION:
+			case Tags::GAMESET_PROP_EXTENSION:
+			case Tags::GAMESET_CITY_EXTENSION:
+			case Tags::GAMESET_TOWN_EXTENSION:
+				isExtension = true;
+				strtag.resize(strtag.find("_EXTENSION"));
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
 			case Tags::GAMESET_CHARACTER:
@@ -128,7 +140,7 @@ void GameSet::parseFile(const char * fn, int pass)
 				std::string name = gsf.nextString(true);
 				int bpx = objBlueprintNames[cls].getIndex(name);
 				objBlueprints[cls][bpx].init(cls, bpx, name, this);
-				objBlueprints[cls][bpx].parse(gsf, directory);
+				objBlueprints[cls][bpx].parse(gsf, directory, isExtension);
 				break;
 			}
 			case Tags::GAMESET_EQUATION: {
@@ -173,6 +185,7 @@ void GameSet::load(const char * fn)
 {
 	appearanceNames.insertString("Default");
 	animationNames.insertString("Default");
+	animationNames.insertString("Idle");
 
 	printf("Gameset pass 1...\n");
 	parseFile(fn, 0);

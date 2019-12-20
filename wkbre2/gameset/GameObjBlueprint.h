@@ -34,7 +34,7 @@ struct GameObjBlueprint {
 
 	std::vector<Command*> offeredCommands;
 
-	void parse(GSFileParser &gsf, const std::string &directory);
+	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {
 		bpClass = i_bpClass; bpId = i_bpId; name = i_name; gameSet = i_gameSet;
 	}
@@ -47,5 +47,5 @@ struct GameObjBlueprint {
 	//GameObjBlueprint(int cls, const std::string &name, GameSet &gameSet) : bpClass(cls), name(name), gameSet(gameSet) {}
 
 private:
-	void loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir);
+	void loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir, bool overrideAnims = false);
 };

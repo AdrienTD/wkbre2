@@ -1,6 +1,24 @@
 #include "terrain.h"
 #include "file.h"
 
+float Terrain::getHeight(float ipx, float ipy) const {
+	//int tx = floorf(x / 5) + edge, tz = floorf(z / 5) + edge;
+	//if (tx < 0 || tx >= width || tz < 0 || tz >= height)
+	//	return 0.0f;
+	//return getVertex(tx, tz);
+	float x = edge + ipx / 5.0f, y = height - (edge + ipy / 5.0f);
+	if (x < 0) x = 0; if (x >= width) x = width - 0.001f;
+	if (y < 0) y = 0; if (y >= height) y = height - 0.001f;
+	float h1 = getVertex((int)x, (int)y), h2 = getVertex((int)x + 1, (int)y);
+	float h3 = getVertex((int)x, (int)y + 1), h4 = getVertex((int)x + 1, (int)y + 1);
+	int rx = x; int ry = y;
+	float qx = x - rx, qy = y - ry;
+	float h5 = h1 * (1.0f - qx) + h2 * qx;
+	float h6 = h3 * (1.0f - qx) + h4 * qx;
+	float hr = h5 * (1.0f - qy) + h6 * qy;
+	return hr;
+}
+
 Vector3 Terrain::getNormal(int x, int z) const {
 	//Vector3 nrm(0,0,0);
 	//float h = getVertex(x, z);

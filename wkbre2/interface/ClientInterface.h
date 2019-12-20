@@ -35,4 +35,6 @@ private:
 	int numObjectsDrawn = 0;
 	int framesPerSecond = 0, nextFps = 0;
 	time_t lastfpscheck = 0;
+	Vector3 rayDirection;
+	ClientGameObject *nextSelectedObject = nullptr;
 };

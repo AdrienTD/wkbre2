@@ -60,6 +60,8 @@ struct Terrain
 		return vertices[z*(width+1) + x] * scale;
 	}
 
+	float getHeight(float x, float z) const;
+
 	Vector3 getNormal(int x, int z) const;
 
 	void freeArrays() {

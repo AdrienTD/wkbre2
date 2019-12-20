@@ -45,7 +45,8 @@ void TransformNormal3(Vector3 *v, const Vector3 *a, const Matrix *m);
 void TransformCoord3(Vector3 *r, const Vector3 *v, const Matrix *m);
 void TransformBackFromViewMatrix(Vector3 *r, const Vector3 *o, const Matrix *m);
 void NormalizeVector3(Vector3 *o, const Vector3 *i);
-bool SphereIntersectsRay(const Vector3 *sphPos, float radius, const Vector3 *raystart, const Vector3 *raydir);
+//bool SphereIntersectsRay(const Vector3 *sphPos, float radius, const Vector3 *raystart, const Vector3 *raydir);
+bool RayIntersectsSphere(const Vector3 &raystart, const Vector3 &raydir, const Vector3 &center, float radius);
 
 // 4x4 matrix structure
 struct alignas(16) Matrix

@@ -144,6 +144,8 @@ void CreatePerspectiveMatrix(Matrix *m, float fovy, float aspect, float zn, floa
 {
 	float ys = 1 / tan(fovy/2);
 	float xs = ys / aspect;
+	//float xs = 1 / tan(fovy / 2);
+	//float ys = xs * aspect;
 	CreateZeroMatrix(m);
 	m->m[0][0] = xs;
 	m->m[1][1] = ys;
@@ -206,13 +208,35 @@ bool LineIntersectsSquareRad(float cx, float cy, float r, float sx, float sy, fl
 	if(abs(t-cx) < r) return true;
 	return false;
 }
-bool SphereIntersectsRay(const Vector3 *sphpos, float r, const Vector3 *raystart, const Vector3 *raydir)
+//bool SphereIntersectsRay(const Vector3 *sphpos, float r, const Vector3 *raystart, const Vector3 *raydir)
+//{
+//	if(LineIntersectsSquareRad(sphpos->x, sphpos->z, r, raystart->x, raystart->z, raydir->x, raydir->z))
+//	if(LineIntersectsSquareRad(sphpos->x, sphpos->y, r, raystart->x, raystart->y, raydir->x, raydir->y))
+//	if(LineIntersectsSquareRad(sphpos->y, sphpos->z, r, raystart->y, raystart->z, raydir->y, raydir->z))
+//		return true;
+//	return false;
+//}
+
+bool RayIntersectsSphere(const Vector3 &raystart, const Vector3 &raydir, const Vector3 &center, float radius)
 {
-	if(LineIntersectsSquareRad(sphpos->x, sphpos->z, r, raystart->x, raystart->z, raydir->x, raydir->z))
-	if(LineIntersectsSquareRad(sphpos->x, sphpos->y, r, raystart->x, raystart->y, raydir->x, raydir->y))
-	if(LineIntersectsSquareRad(sphpos->y, sphpos->z, r, raystart->y, raystart->z, raydir->y, raydir->z))
-		return true;
-	return false;
+	//float a, b, c;
+	//Vector3 smc = raystart - center;
+	//c = smc.sqlen3() - radius * radius;
+	//b = 2 * smc.dot(raydir);
+	//a = raydir.sqlen3();
+	//float d = b * b - 4 * a*c;
+	//return b >= 0;
+	Vector3 rdnorm = raydir.normal();
+	Vector3 smc = raystart - center;
+	float ddt = rdnorm.dot(smc);
+	float delta = ddt * ddt - rdnorm.sqlen3()*(smc.sqlen3() - radius * radius);
+	if (delta < 0.0f)
+		return false;
+	float k1 = -ddt + sqrtf(delta),
+		  k2 = -ddt - sqrtf(delta);
+	if (k1 < 0.0f && k2 < 0.0f)
+		return false;
+	return true;
 }
 
 void TransformBackFromViewMatrix(Vector3 *r, const Vector3 *o, const Matrix *m)

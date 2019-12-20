@@ -52,6 +52,13 @@ void HandleWindow()
 	for (int i = 0; i < SDL_NUM_SCANCODES; i++)
 		g_keyPressed[i] = false;
 	g_mouseWheel = 0;
+
+	bool igWantsMouse = false;
+	if (imguion) {
+		ImGuiIO &io = ImGui::GetIO();
+		igWantsMouse = io.WantCaptureMouse;
+	}
+
 	while (SDL_PollEvent(&event)) {
 		if (imguion)
 			HandleImGui(event);
@@ -77,15 +84,20 @@ void HandleWindow()
 			}
 			break;
 		case SDL_MOUSEBUTTONDOWN:
-			g_mouseDown[event.button.button] = true; break;
+			if(!igWantsMouse)
+				g_mouseDown[event.button.button] = true;
+			break;
 		case SDL_MOUSEBUTTONUP:
-			g_mouseDown[event.button.button] = false; break;
+			if(!igWantsMouse)
+				g_mouseDown[event.button.button] = false;
+			break;
 		case SDL_MOUSEMOTION:
 			g_mouseX = event.motion.x;
 			g_mouseY = event.motion.y;
 			break;
 		case SDL_MOUSEWHEEL:
-			g_mouseWheel += event.wheel.y;
+			if(!igWantsMouse)
+				g_mouseWheel += event.wheel.y;
 			//printf("mouse wheel %i\n", g_mouseWheel);
 			break;
 		}

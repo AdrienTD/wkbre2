@@ -38,8 +38,8 @@ void Mesh::load(const char * filename)
 		vertices[i] = br.readFloat();
 
 	// Sphere
-	for (int i = 0; i < 4; i++)
-		this->sphere[i] = br.readFloat();
+	this->sphereCenter = br.readVector3();
+	this->sphereRadius = br.readFloat();
 
 	// Vertex remapper
 	if (!(flags & 1)) {

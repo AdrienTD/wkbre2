@@ -7,6 +7,7 @@
 #include "../imguiimpl.h"
 #include "../window.h"
 #include <SDL_scancode.h>
+#include <SDL_mouse.h>
 #include "../tags.h"
 #include "../gameset/gameset.h"
 #include "../gfx/SceneRenderer.h"
@@ -16,34 +17,53 @@
 #include "../terrain.h"
 
 namespace {
-	Vector3 getRay(Camera &cam) {
-		float ay = (1 - g_mouseX * 2.0f / g_windowWidth) * 0.9; // *g_windowWidth) / g_windowHeight;
-		float ax = (1 - g_mouseY * 2.0f / g_windowHeight) * 0.9;
-		Vector3 direction = Vector3(
-			-sin(cam.orientation.y + ay)*cos(cam.orientation.x + ax),
-			sin(cam.orientation.x + ax),
-			cos(cam.orientation.y + ay)*cos(cam.orientation.x + ax)
-		);
-		return direction;
+	Vector3 getRay(const Camera &cam) {
+		//float ay = (1 - g_mouseX * 2.0f / g_windowWidth) * 0.45 * g_windowWidth / g_windowHeight;
+		//float ax = (1 - g_mouseY * 2.0f / g_windowHeight) * 0.45;
+		//Vector3 direction = Vector3(
+		//	-sin(cam.orientation.y + ay)*cos(cam.orientation.x + ax),
+		//	sin(cam.orientation.x + ax),
+		//	cos(cam.orientation.y + ay)*cos(cam.orientation.x + ax)
+		//);
+		//return direction;
+		const float zNear = 0.1f;
+		Vector3 xvec = cam.direction.normal().cross(Vector3(0, 1, 0)).normal();
+		Vector3 yvec = cam.direction.normal().cross(xvec).normal();
+		//Vector3 nearori = cam.position + cam.direction.normal() * zNear;
+		float ys = tan(0.45f) * zNear;
+		yvec *= ys;
+		xvec *= ys * g_windowWidth / g_windowHeight;
+		yvec *= (1 - g_mouseY * 2.0f / g_windowHeight);
+		xvec *= (1 - g_mouseX * 2.0f / g_windowWidth);
+		//Vector3 posonnear = nearori + xvec - yvec;
+		//return posonnear - cam.position;
+		return cam.direction.normal() * zNear + xvec - yvec;
 	}
-	/*
-	void CalcStampdownPos(Camera &cam, Vector3 &raydir, Terrain &terrain)
+
+	int InMap(const Vector3 &v, const Terrain &map)
+	{
+		//printf("%f < %f < %f\n", (float)(-(int)map.edge * 5), v.x, (float)((map.width - map.edge) * 5));
+		if ((v.x >= -(map.edge * 5.0f)) && (v.x < ((map.width - map.edge) * 5.0f)))
+			if ((v.z >= -(map.edge * 5.0f)) && (v.z < ((map.height - map.edge) * 5.0f)))
+				return 1;
+		return 0;
+	}
+	
+	Vector3 CalcStampdownPos(const Vector3 &raystart, const Vector3 &raydir, const Terrain &terrain)
 	{
 		float lv = 4;
 
-		Vector3 ptt = cam.position, vta;
-		NormalizeVector3(&vta, &raydir);
-		vta *= lv;
+		Vector3 ptt = raystart, vta = raydir.normal() * lv;
 
 		float h;
 		const float farzvalue = 250.0f;
 		int nlp = farzvalue * 1.5f / lv;
-		int m = (ptt.y < terrain.getVertex(ptt.x, ptt.z)) ? 0 : 1;
+		int m = (ptt.y < terrain.getHeight(ptt.x, ptt.z)) ? 0 : 1;
 
 		for (int i = 0; i < nlp; i++) {
 			ptt += vta;
-			if (!InMap(ptt)) continue;
-			h = GetHeight(ptt.x, ptt.z);
+			if (!InMap(ptt, terrain)) continue;
+			h = terrain.getHeight(ptt.x, ptt.z);
 
 			if (ptt.y == h)
 				break;
@@ -53,16 +73,17 @@ namespace {
 			}
 		}
 
-		if (InMap(ptt)) {
-			mapstdownpos = ptt; mapstdownpos.y = h; mapstdownvalid = 1;
+		if (InMap(ptt, terrain)) {
+			Vector3 mapstdownpos = ptt; mapstdownpos.y = h; //mapstdownvalid = 1;
+			return mapstdownpos;
 		}
-		else	mapstdownvalid = 0;
-		if (mapstdownvalid && InLevel(mapstdownpos)) {
-			stdownpos = mapstdownpos; stdownvalid = 1;
-		}
-		else	stdownvalid = 0;
+		else
+			return Vector3(0, 0, 0);
+		//if (mapstdownvalid && InLevel(mapstdownpos)) {
+		//	stdownpos = mapstdownpos; stdownvalid = 1;
+		//}
+		//else	stdownvalid = 0;
 	}
-	*/
 }
 
 void ClientInterface::drawObject(ClientGameObject *obj) {
@@ -78,9 +99,12 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 			else
 				obj->sceneEntity.model = nullptr;
 			if (obj->sceneEntity.model) {
-				//CreateTranslationMatrix(&obj->sceneEntity.transform, obj->position.x, obj->position.y, obj->position.z);
 				CreateWorldMatrix(&obj->sceneEntity.transform, Vector3(1,1,1), -obj->orientation, obj->position);
 				obj->sceneEntity.color = obj->getPlayer()->color;
+				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter(), obj->sceneEntity.model->getSphereRadius())) {
+					obj->sceneEntity.color = 0;
+					nextSelectedObject = obj;
+				}
 				scene->add(&obj->sceneEntity);
 				numObjectsDrawn++;
 			}
@@ -96,6 +120,8 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 
 void ClientInterface::iter()
 {
+	static Vector3 peapos(0, 0, 0);
+
 	//----- Input -----//
 
 	Vector3 forward = client->camera.direction.normal2xz();
@@ -128,6 +154,10 @@ void ClientInterface::iter()
 	if (g_mouseWheel)
 		client->camera.position.y += g_mouseWheel;
 
+	if (g_mouseDown[SDL_BUTTON_LEFT]) {
+		debugger.selectObject(nextSelectedObject);
+	}
+
 	//----- ImGui -----//
 
 	ImGuiImpl_NewFrame();
@@ -135,6 +165,7 @@ void ClientInterface::iter()
 	ImGui::Begin("Client Interface Debug");
 	ImGui::Text("ODPF: %i", numObjectsDrawn);
 	ImGui::Text("FPS: %i", framesPerSecond);
+	ImGui::DragFloat3("peapos", &peapos.x);
 	ImGui::End();
 
 	//----- Rendering -----//
@@ -145,7 +176,8 @@ void ClientInterface::iter()
 	gfx->SetTransformMatrix(&client->camera.sceneMatrix);
 
 	// Get ray
-
+	rayDirection = getRay(client->camera).normal();
+	nextSelectedObject = nullptr;
 
 	if (client->gameSet) {
 		if(!scene)
@@ -155,7 +187,10 @@ void ClientInterface::iter()
 		if (client->level)
 			drawObject(client->level);
 		// test
-		Vector3 peapos = client->camera.position + getRay(client->camera).normal() * 16;
+		//Vector3 peapos = client->camera.position + getRay(client->camera).normal() * 16;
+		peapos = Vector3(0, 0, 0);
+		if(client->terrain)
+			peapos = CalcStampdownPos(client->camera.position, rayDirection, *client->terrain);
 		SceneEntity test;
 		test.model = client->gameSet->modelCache.getModel("Warrior Kings Game Set\\Characters\\Peasant\\Male\\Peasant1.MESH3");
 		CreateTranslationMatrix(&test.transform, peapos.x, peapos.y, peapos.z);

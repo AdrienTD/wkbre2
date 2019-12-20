@@ -49,7 +49,7 @@ struct Mesh
 	uint16_t numVertices, numUvs, numAttachPoints;
 	DynArray<AttachmentPoint> attachPoints;
 	DynArray<float> vertices;
-	float sphere[4];
+	Vector3 sphereCenter; float sphereRadius;
 	DynArray<uint16_t> vertexRemapper;
 	DynArray<Material> materials;
 	DynArray<DynArray<float>> uvLists;

@@ -13,7 +13,7 @@ void Client::loadFromServerObject(Server & server)
 void Client::tick()
 {
 	if (serverLink) {
-		int pcnt = 10;
+		int pcnt = 100;
 		while (serverLink->available() && (pcnt--)) {
 			NetPacket packet = serverLink->receive();
 			BinaryReader br(packet.data.c_str());

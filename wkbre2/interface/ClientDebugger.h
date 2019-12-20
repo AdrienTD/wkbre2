@@ -8,6 +8,7 @@ public:
 	Client *client;
 	ClientDebugger(Client *client) : client(client) {}
 	void draw();
+	void selectObject(ClientGameObject *obj) { selectedObject = obj; }
 private:
 	ClientGameObject *selectedObject = nullptr;
 };

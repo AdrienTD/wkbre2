@@ -4,9 +4,10 @@
 #include <string>
 #include "../file.h"
 
-void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir) {
+void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir, bool overrideAnims) {
 	//printf("Loading anims from %s\n", dir.c_str());
 	GrowStringList *gsl = ListFiles(dir.c_str());
+	std::set<int> alreadyOverridenAnims;
 	for (unsigned int i = 0; i < gsl->len; i++) {
 		std::string fn = gsl->getdp(i);
 		size_t pp = fn.find('.');
@@ -19,6 +20,11 @@ void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const 
 			//printf("? %s\n", ats.c_str());
 			int animTag = this->gameSet->animationNames.getIndex(ats);
 			if (animTag != -1) {
+				if(overrideAnims)
+					if (!alreadyOverridenAnims.count(animTag)) {
+						alreadyOverridenAnims.insert(animTag);
+						ap.animations[animTag].clear();
+					}
 				//printf("Found %s\n", fn.c_str());
 				ap.animations[animTag].push_back(this->gameSet->modelCache.getModel(dir + fn));
 			}
@@ -27,13 +33,15 @@ void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const 
 	}
 }
 
-void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory) {
+void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, bool isExtension) {
 	//printf("Parsing blueprint \"%s\"\n", this->name.c_str());
 	// TODO: read model path
 	modelPath = gsf.nextString(true);
 	gsf.advanceLine();
 	std::string endtag("END_");
 	endtag += Tags::GAMEOBJCLASS_tagDict.getStringFromID(bpClass);
+	if (isExtension)
+		endtag += "_EXTENSION";
 	while (!gsf.eof)
 	{
 		std::string strtag = gsf.nextString();
@@ -70,7 +78,8 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory) {
 							break;
 						else if (ldfstr == "LOAD_ANIMATIONS_FROM") {
 							ap.dir = gsf.nextString(true);
-							loadAnimations(ap, directory + modelPath + ps.dir + ap.dir);
+							bool over = gsf.nextString() == "OVERRIDE";
+							loadAnimations(ap, directory + modelPath + ps.dir + ap.dir, over);
 						}
 						gsf.advanceLine();
 					}
@@ -92,7 +101,7 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory) {
 		gsf.advanceLine();
 	}
 	// If there are no subtypes, make a Default subtype with one Default appearance
-	if(this->subtypes.empty()) {
+	if(!isExtension && this->subtypes.empty()) {
 		this->subtypeNames.insertString("Default");
 		loadAnimations(this->subtypes[0].appearances[0], directory + modelPath);
 	}
