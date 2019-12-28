@@ -37,11 +37,17 @@ void Server::loadSaveGame(const char * filename)
 		case Tags::SAVEGAME_LEVEL:
 			level = loadObject(gsf, strtag);
 			break;
+		case Tags::SAVEGAME_TIME_MANAGER_STATE:
+			timeManager.load(gsf);
+			break;
 		}
 		gsf.advanceLine();
 	}
 
 	free(filetext);
+
+	timeManager.unlock();
+	timeManager.unpause();
 }
 
 ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id)
@@ -259,6 +265,19 @@ void Server::sendToAll(const NetPacketWriter & packet)
 
 void Server::tick()
 {
+	timeManager.tick();
+	auto &it = delayedSequences.begin();
+	for (; it != delayedSequences.end(); it++) {
+		if (it->first > timeManager.currentTime) {
+			break;
+		}
+		DelayedSequence &ds = it->second;
+		for (ServerGameObject *obj : ds.selfs) {
+			ds.actionSequence->run(obj);
+		}
+	}
+	delayedSequences.erase(delayedSequences.begin(), it);
+
 	for (NetLink *cli : clientLinks) {
 		int pcnt = 20;
 		while (cli->available() && (pcnt--)) { // DDoS !!!
@@ -281,6 +300,14 @@ void Server::tick()
 				int cmdid = br.readUint32();
 				int objid = br.readUint32();
 				gameSet->commands[cmdid].execute(findObject(objid));
+				break;
+			}
+			case NETSRVMSG_PAUSE: {
+				uint8_t newPaused = br.readUint8();
+				if (newPaused)
+					timeManager.pause();
+				else
+					timeManager.unpause();
 				break;
 			}
 			}

@@ -27,6 +27,7 @@ enum NetServerMessages {
 	NETSRVMSG_HELLO = 1,
 	NETSRVMSG_TEST,
 	NETSRVMSG_COMMAND,
+	NETSRVMSG_PAUSE,
 };
 
 struct NetPacketWriter {

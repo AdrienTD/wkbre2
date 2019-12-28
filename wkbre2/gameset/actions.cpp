@@ -91,6 +91,31 @@ struct ActionDecreaseItem : Action {
 	ActionDecreaseItem(int item, ObjectFinder *finder, ValueDeterminer *value) : item(item), finder(finder), value(value) {}
 };
 
+struct ActionExecuteSequence : Action {
+	ActionSequence *sequence;
+	ObjectFinder *finder;
+	void run(ServerGameObject* self) {
+		for(ServerGameObject* obj : finder->eval(self))
+			sequence->run(obj);
+	}
+	ActionExecuteSequence(ActionSequence *sequence, ObjectFinder *finder) : sequence(sequence), finder(finder) {}
+};
+
+struct ActionExecuteSequenceAfterDelay : Action {
+	ActionSequence *sequence;
+	ObjectFinder *finder;
+	ValueDeterminer *delay;
+	void run(ServerGameObject* self) {
+		Server::DelayedSequence ds;
+		ds.executor = self;
+		ds.actionSequence = sequence;
+		ds.selfs = finder->eval(self);
+		game_time_t atTime = Server::instance->timeManager.currentTime + delay->eval(self);
+		Server::instance->delayedSequences.insert(std::make_pair(atTime, ds));
+	}
+	ActionExecuteSequenceAfterDelay(ActionSequence *sequence, ObjectFinder *finder, ValueDeterminer *delay) : sequence(sequence), finder(finder), delay(delay) {}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	switch (Tags::ACTION_tagDict.getTagID(gsf.nextString().c_str())) {
@@ -121,6 +146,17 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	}
 	case Tags::ACTION_UPON_CONDITION:
 		return new ActionUponCondition(gsf, gs);
+	case Tags::ACTION_EXECUTE_SEQUENCE: {
+		int ax = gs.actionSequenceNames.getIndex(gsf.nextString(true));
+		ObjectFinder *finder = ReadFinder(gsf, gs);
+		return new ActionExecuteSequence(&gs.actionSequences[ax], finder);
+	}
+	case Tags::ACTION_EXECUTE_SEQUENCE_AFTER_DELAY: {
+		int ax = gs.actionSequenceNames.getIndex(gsf.nextString(true));
+		ObjectFinder *finder = ReadFinder(gsf, gs);
+		ValueDeterminer *delay = ReadValueDeterminer(gsf, gs);
+		return new ActionExecuteSequenceAfterDelay(&gs.actionSequences[ax], finder, delay);
+	}
 	}
 	return new ActionUnknown();
 }

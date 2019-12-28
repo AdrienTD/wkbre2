@@ -5,27 +5,6 @@
 #include <vector>
 #include "util/vecmat.h"
 
-typedef float game_time_t;
-
-struct TimeManager {
-	// float is baaad!!
-	game_time_t currentTime = 0.0f, previousTime = 0.0f, elapsedTime = 0.0f, timeSpeed = 1.0f;
-	bool paused = true; uint32_t lockCount = 1;
-
-	// synch to clients ...
-
-	void lock() { lockCount++; }
-	void unlock() { lockCount--; }
-
-	void tick() {
-		if (paused) return;
-		previousTime = currentTime;
-		currentTime = 132; // magic
-		elapsedTime = currentTime - previousTime;
-	}
-
-};
-
 struct GameObjBlueprint;
 
 template<class AnyGameObject> struct CommonGameObject {

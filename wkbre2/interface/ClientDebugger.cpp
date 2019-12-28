@@ -29,7 +29,7 @@ void ClientDebugger::draw()
 	ImGui::Begin("Client Object Tree");
 	const auto walkOnObj = [this](const auto &walkOnObj, ClientGameObject *obj) -> void {
 		
-		bool b = ImGui::TreeNodeEx(obj, ImGuiTreeNodeFlags_DefaultOpen | (obj->children.empty() ? ImGuiTreeNodeFlags_Leaf : 0), "%i: %s \"%s\"", obj->id, Tags::GAMEOBJCLASS_tagDict.getStringFromID(obj->blueprint->bpClass), obj->blueprint->name.c_str());
+		bool b = ImGui::TreeNodeEx(obj, /*ImGuiTreeNodeFlags_DefaultOpen |*/ (obj->children.empty() ? ImGuiTreeNodeFlags_Leaf : 0), "%i: %s \"%s\"", obj->id, Tags::GAMEOBJCLASS_tagDict.getStringFromID(obj->blueprint->bpClass), obj->blueprint->name.c_str());
 		if (ImGui::IsItemClicked())
 			selectedObject = obj;
 		if (b) {

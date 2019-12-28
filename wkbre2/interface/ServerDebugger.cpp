@@ -63,4 +63,5 @@ void ServerDebugger::draw() {
 		ImGui::Text("No object selected.");
 	ImGui::End();
 
+	server->timeManager.imgui();
 }

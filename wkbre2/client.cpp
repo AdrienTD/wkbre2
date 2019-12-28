@@ -137,6 +137,13 @@ void Client::sendCommand(ClientGameObject * obj, Command * cmd)
 	serverLink->send(packet);
 }
 
+void Client::sendPauseRequest(uint8_t pauseState)
+{
+	NetPacketWriter packet(NETSRVMSG_PAUSE);
+	packet.writeUint8(pauseState);
+	serverLink->send(packet);
+}
+
 ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t id)
 {
 	ClientGameObject *obj = new ClientGameObject(id, blueprint);

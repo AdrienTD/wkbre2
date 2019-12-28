@@ -8,6 +8,7 @@
 #include "Camera.h"
 #include "scene.h"
 #include <cstdarg>
+#include "TimeManager.h"
 
 struct GameSet;
 struct GSFileParser;
@@ -59,6 +60,7 @@ struct Client
 
 	void sendMessage(const std::string &msg);
 	void sendCommand(ClientGameObject *obj, Command *cmd);
+	void sendPauseRequest(uint8_t pauseState);
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }
 

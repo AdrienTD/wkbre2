@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include "common.h"
+#include "TimeManager.h"
 
 struct GameSet;
 struct GSFileParser;
@@ -12,6 +13,7 @@ struct NetLink;
 struct NetPacket;
 struct NetPacketWriter;
 struct Terrain;
+struct ActionSequence;
 
 struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint) {}
@@ -38,12 +40,12 @@ struct Server
 	std::map<uint32_t, ServerGameObject*> idmap;
 	Terrain *terrain;
 
-	//struct DelayedSequence {
-	//	int actionSequence; // or ActionSequence*
-	//	goref executor;
-	//	std::vector<goref> selfs;
-	//};
-	//std::map<float, DelayedSequence> delayedSequences;
+	struct DelayedSequence {
+		ActionSequence* actionSequence; // or ActionSequence*
+		ServerGameObject* executor;
+		std::vector<ServerGameObject*> selfs;
+	};
+	std::multimap<game_time_t, DelayedSequence> delayedSequences;
 
 	std::vector<std::string> chatMessages;
 

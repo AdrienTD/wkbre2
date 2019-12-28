@@ -90,6 +90,10 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 	using namespace Tags;
 	//if ((obj->blueprint->bpClass == GAMEOBJCLASS_BUILDING) || (obj->blueprint->bpClass == GAMEOBJCLASS_CHARACTER)) {
 	if(true) {
+		Vector3 side = client->camera.direction.cross(Vector3(0, 1, 0));
+		float dist = client->camera.direction.dot(obj->position - client->camera.position);
+		if (dist < 0.1f || dist > 250.0f)
+			goto drawsub;
 		Vector3 ttpp;
 		TransformCoord3(&ttpp, &obj->position, &client->camera.sceneMatrix);
 		if (!(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)) {
@@ -110,6 +114,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 			}
 		}
 	}
+drawsub:
 	for (auto &typechildren : obj->children) {
 		GameObjBlueprint* blueprint = client->gameSet->getBlueprint(typechildren.first);
 		for (ClientGameObject* child : typechildren.second) {
@@ -156,6 +161,12 @@ void ClientInterface::iter()
 
 	if (g_mouseDown[SDL_BUTTON_LEFT]) {
 		debugger.selectObject(nextSelectedObject);
+	}
+
+	if (g_keyPressed[SDL_SCANCODE_P]) {
+		static bool pauseState = false;
+		pauseState = !pauseState;
+		client->sendPauseRequest(pauseState);
 	}
 
 	//----- ImGui -----//
