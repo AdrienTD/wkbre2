@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <memory>
 
 struct ServerGameObject;
 struct GSFileParser;
@@ -12,16 +13,12 @@ struct Action {
 };
 
 struct ActionSequence {
-	std::vector<Action*> actionList;
+	std::vector<std::unique_ptr<Action>> actionList;
 	void run(ServerGameObject *self) {
-		for (Action *action : actionList)
+		for (auto &action : actionList)
 			action->run(self);
 	}
 	void init(GSFileParser &gsf, const GameSet &gs, const char *endtag);
-	~ActionSequence() {
-		for (Action *action : actionList)
-			delete action;
-	}
 };
 
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs);

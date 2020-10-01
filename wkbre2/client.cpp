@@ -12,6 +12,7 @@ void Client::loadFromServerObject(Server & server)
 
 void Client::tick()
 {
+	timeManager.tick();
 	if (serverLink) {
 		int pcnt = 100;
 		while (serverLink->available() && (pcnt--)) {
@@ -116,6 +117,11 @@ void Client::tick()
 				if (ClientGameObject *obj = findObject(objid)) {
 					obj->color = color;
 				}
+				break;
+			}
+			case NETCLIMSG_TIME_SYNC: {
+				timeManager.currentTime = br.readFloat();
+				timeManager.paused = br.readUint8();
 				break;
 			}
 			}

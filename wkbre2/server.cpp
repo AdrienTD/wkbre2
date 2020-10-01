@@ -278,6 +278,15 @@ void Server::tick()
 	}
 	delayedSequences.erase(delayedSequences.begin(), it);
 
+	time_t curtime = time(NULL);
+	if (curtime - lastSync >= 1) {
+		lastSync = curtime;
+		NetPacketWriter msg(NETCLIMSG_TIME_SYNC);
+		msg.writeFloat(timeManager.currentTime);
+		msg.writeUint8(timeManager.paused);
+		sendToAll(msg);
+	}
+
 	for (NetLink *cli : clientLinks) {
 		int pcnt = 20;
 		while (cli->available() && (pcnt--)) { // DDoS !!!

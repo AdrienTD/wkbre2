@@ -51,6 +51,8 @@ struct Server
 
 	std::vector<NetLink*> clientLinks;
 
+	time_t lastSync;
+
 	Server() : gameSet(nullptr), level(nullptr), terrain(nullptr) { instance = this; }
 
 	void loadSaveGame(const char *filename);

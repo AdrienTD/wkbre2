@@ -70,4 +70,5 @@ void ClientDebugger::draw()
 	ImGui::DragFloat2("Orientation", &client->camera.orientation.x, 0.1f);
 	ImGui::End();
 
+	client->timeManager.imgui();
 }

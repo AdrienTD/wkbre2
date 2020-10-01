@@ -44,7 +44,7 @@ struct ActionUponCondition : Action {
 			std::string strtag = gsf.nextTag();
 
 			if (strtag == "ACTION")
-				curlist->actionList.push_back(ReadAction(gsf, gs));
+				curlist->actionList.push_back(std::unique_ptr<Action>(ReadAction(gsf, gs)));
 			else if (strtag == "ELSE")
 				curlist = &falseList;
 			else if (strtag == "END_UPON_CONDITION")
@@ -168,7 +168,7 @@ void ActionSequence::init(GSFileParser &gsf, const GameSet &gs, const char *endt
 		std::string strtag = gsf.nextTag();
 
 		if (strtag == "ACTION")
-			actionList.push_back(ReadAction(gsf, gs));
+			actionList.push_back(std::unique_ptr<Action>(ReadAction(gsf, gs)));
 		else if (strtag == endtag)
 			return;
 		gsf.advanceLine();

@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include "util/vecmat.h"
+#include "Order.h"
 
 struct GameObjBlueprint;
 
@@ -23,6 +24,8 @@ template<class AnyGameObject> struct CommonGameObject {
 	int color = 0;
 
 	//AnyGameObject *player = nullptr;
+
+	OrderConfiguration orderConfig;
 
 	float getItem(int item)
 	{

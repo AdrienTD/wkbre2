@@ -12,6 +12,7 @@
 #include "../util/DynArray.h"
 #include "command.h"
 #include "../Model.h"
+#include "OrderBlueprint.h"
 
 struct GameObjBlueprint;
 
@@ -24,7 +25,9 @@ struct GameSet
 		}
 	};
 
-	IndexedStringList itemNames, equationNames, valueNames, actionSequenceNames, appearanceNames, commandNames, animationNames;
+	IndexedStringList itemNames, equationNames, valueNames, actionSequenceNames,
+		appearanceNames, commandNames, animationNames, orderNames, taskNames,
+		orderAssignmentNames;
 	IndexedStringList objBlueprintNames[Tags::GAMEOBJCLASS_COUNT];
 	std::unique_ptr<GameObjBlueprint[]> objBlueprints[Tags::GAMEOBJCLASS_COUNT];
 	std::map<std::string, float, StriCompare> definedValues;
@@ -32,6 +35,9 @@ struct GameSet
 	std::unique_ptr<ValueDeterminer*[]> equations;
 	std::unique_ptr<ActionSequence[]> actionSequences;
 	std::unique_ptr<Command[]> commands;
+	DynArray<OrderBlueprint> orders;
+	DynArray<TaskBlueprint> tasks;
+	DynArray<OrderAssignmentBlueprint> orderAssignments;
 
 	ModelCache modelCache;
 

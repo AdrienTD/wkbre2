@@ -90,6 +90,22 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_ORDER: {
+				orderNames.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+			case Tags::GAMESET_TASK: {
+				taskNames.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+			case Tags::GAMESET_ORDER_ASSIGNMENT: {
+				orderAssignmentNames.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
 			case Tags::GAMESET_CHARACTER:
@@ -163,6 +179,22 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_ORDER: {
+				int x = orderNames.getIndex(gsf.nextString(true));
+				orders[x].parse(gsf, *this);
+				break;
+			}
+			case Tags::GAMESET_TASK: {
+				int x = taskNames.getIndex(gsf.nextString(true));
+				tasks[x].parse(gsf, *this);
+				break;
+			}
+			case Tags::GAMESET_ORDER_ASSIGNMENT: {
+				int x = orderAssignmentNames.getIndex(gsf.nextString(true));
+				orderAssignments[x].parse(gsf, *this);
+				break;
+			}
+
 			}
 		}
 
@@ -196,6 +228,9 @@ void GameSet::load(const char * fn)
 	equations = std::make_unique<ValueDeterminer*[]>(equationNames.size());
 	actionSequences = std::make_unique<ActionSequence[]>(actionSequenceNames.size());
 	commands = std::make_unique<Command[]>(commandNames.size());
+	orders.resize(orderNames.size());
+	tasks.resize(taskNames.size());
+	orderAssignments.resize(orderAssignmentNames.size());
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);
