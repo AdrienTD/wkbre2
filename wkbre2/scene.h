@@ -14,6 +14,7 @@ struct SceneEntity {
 	Matrix transform;
 	Model *model = nullptr;
 	int color = 0;
+	uint32_t animTime = 0;
 };
 
 struct Scene {

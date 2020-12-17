@@ -15,6 +15,7 @@
 #include "../imgui/imgui.h"
 #include <ctime>
 #include "../terrain.h"
+#include <SDL_timer.h>
 
 namespace {
 	Vector3 getRay(const Camera &cam) {
@@ -92,14 +93,20 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 	if(true) {
 		Vector3 side = client->camera.direction.cross(Vector3(0, 1, 0));
 		float dist = client->camera.direction.dot(obj->position - client->camera.position);
-		if (dist < 0.1f || dist > 250.0f)
+		if (dist < client->camera.nearDist || dist > client->camera.farDist)
 			goto drawsub;
 		Vector3 ttpp;
 		TransformCoord3(&ttpp, &obj->position, &client->camera.sceneMatrix);
 		if (!(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)) {
-			auto anim = obj->blueprint->subtypes[obj->subtype].appearances[obj->appearance].animations[0];
+			const auto &ap = obj->blueprint->subtypes[obj->subtype].appearances[obj->appearance];
+			auto it = ap.animations.find(obj->animationIndex);
+			if (it == ap.animations.end())
+				it = ap.animations.find(0);
+			if (it == ap.animations.end())
+				goto drawsub;
+			const auto &anim = it->second;
 			if (!anim.empty())
-				obj->sceneEntity.model = anim[0]; //anim[rand() % anim.size()];
+				obj->sceneEntity.model = anim[obj->animationVariant]; //anim[rand() % anim.size()];
 			else
 				obj->sceneEntity.model = nullptr;
 			if (obj->sceneEntity.model) {
@@ -109,6 +116,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 					obj->sceneEntity.color = 0;
 					nextSelectedObject = obj;
 				}
+				obj->sceneEntity.animTime = (client->timeManager.currentTime - obj->animStartTime) * 1000.0f;
 				scene->add(&obj->sceneEntity);
 				numObjectsDrawn++;
 			}
@@ -142,7 +150,7 @@ void ClientInterface::iter()
 	if (g_keyDown[SDL_SCANCODE_LEFT])
 		client->camera.position += strafe;
 
-	if (g_keyDown[SDL_SCANCODE_0]) {
+	if (g_keyDown[SDL_SCANCODE_KP_0]) {
 		if (!camroton) {
 			camrotoffx = g_mouseX;
 			camrotoffy = g_mouseY;

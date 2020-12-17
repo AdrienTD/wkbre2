@@ -27,6 +27,9 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	OrderConfiguration orderConfig;
 
+	float animStartTime = 0.0f; // should be game_time_t?
+	int animationIndex = 0, animationVariant = 0;
+
 	float getItem(int item)
 	{
 		auto it = items.find(item);

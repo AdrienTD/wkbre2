@@ -68,6 +68,7 @@ void ClientDebugger::draw()
 	ImGui::Begin("Camera");
 	ImGui::DragFloat3("Position", &client->camera.position.x);
 	ImGui::DragFloat2("Orientation", &client->camera.orientation.x, 0.1f);
+	ImGui::DragFloat2("Cam distance", &client->camera.nearDist);
 	ImGui::End();
 
 	client->timeManager.imgui();

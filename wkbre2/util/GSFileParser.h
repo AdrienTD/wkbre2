@@ -14,6 +14,7 @@ struct GSFileParser
 		void *addptr;
 		GameSet *gameSet;
 	};
+	int linenum = 1;
 
 	bool isnewline(char c) const { return (c == '\n') || (c == '\r'); }
 
@@ -34,7 +35,19 @@ struct GSFileParser
 	std::string nextTag() {
 		std::string tag = nextString();
 		if (tag == "/*") {
-			do advanceLine(); while ((tag = nextString()) != "*/" && !eof);
+			//do advanceLine(); while ((tag = nextString()) != "*/" && !eof);
+			while (!eof) {
+				if (cursor[0] == '*' && cursor[1] == '/') {
+					tag = nextString();
+					break;
+				}
+				else if (isnewline(cursor[0]))
+					advanceLine();
+				else if (cursor[0] == 0)
+					return {};
+				else
+					++cursor;
+			}
 		}
 		return tag;
 	}

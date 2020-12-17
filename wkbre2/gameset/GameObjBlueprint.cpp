@@ -31,6 +31,15 @@ void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const 
 		}
 		//printf("%s %s\n", ext.c_str(), name.c_str());
 	}
+	// Ensure first variant of animation is an anim3 (prob bad trick, fixes birds having static mesh as first variant)
+	for (auto &anim : ap.animations) {
+		for (auto &mod : anim.second) {
+			if (dynamic_cast<AnimatedModel*>(mod)) {
+				std::swap(anim.second.front(), mod);
+				break;
+			}
+		}
+	}
 }
 
 void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, bool isExtension) {

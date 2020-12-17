@@ -75,7 +75,10 @@ struct alignas(16) Matrix
 // Three-dimensional vector
 struct alignas(16) Vector3
 {
-	float x, y, z, w; // w used to align size.
+	union {
+		struct { float x, y, z; }; // , w; // w used to align size.
+		float coord[3];
+	};
 	Vector3() {x = y = z = 0;}
 	Vector3(float a, float b) {x = a; y = b; z = 0;}
 	Vector3(float a, float b, float c) {x = a; y = b; z = c;}

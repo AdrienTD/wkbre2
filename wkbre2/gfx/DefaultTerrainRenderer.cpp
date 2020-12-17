@@ -48,6 +48,8 @@ void DefaultTerrainRenderer::render() {
 
 			int lx = x - terrain->edge, lz = z - terrain->edge;
 			Vector3 pp((lx + 0.5f)*tilesize, terrain->getVertex(x, terrain->height - z), (lz + 0.5f)*tilesize), ttpp;
+			Vector3 camcenter = camera->position + camera->direction * 125.0f;
+			pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
 			//TransformVector3(&ttpp, &pp, &camera->sceneMatrix);
 			//float oriz = ttpp.z;
 			//ttpp /= ttpp.z;

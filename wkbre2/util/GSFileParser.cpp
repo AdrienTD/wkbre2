@@ -9,6 +9,7 @@ void GSFileParser::advanceLine() {
 	else c++;
 	cursor = c;
 	eol = false;
+	++linenum;
 }
 
 // Return the next word as a string.

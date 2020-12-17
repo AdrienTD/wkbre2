@@ -124,6 +124,15 @@ void Client::tick()
 				timeManager.paused = br.readUint8();
 				break;
 			}
+			case NETCLIMSG_OBJECT_ANIM_SET: {
+				uint32_t objid = br.readUint32();
+				if (ClientGameObject *obj = findObject(objid)) {
+					obj->animationIndex = br.readUint32();
+					obj->animationVariant = br.readUint32();
+					obj->animStartTime = br.readFloat();
+				}
+				break;
+			}
 			}
 		}
 	}

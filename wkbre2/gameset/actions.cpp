@@ -116,6 +116,31 @@ struct ActionExecuteSequenceAfterDelay : Action {
 	ActionExecuteSequenceAfterDelay(ActionSequence *sequence, ObjectFinder *finder, ValueDeterminer *delay) : sequence(sequence), finder(finder), delay(delay) {}
 };
 
+struct ActionPlayAnimationIfIdle : Action {
+	int animationIndex;
+	ObjectFinder *finder;
+	void run(ServerGameObject *self) {
+		auto objs = finder->eval(self);
+		for (ServerGameObject *obj : objs) {
+			obj->setAnimation(animationIndex);
+		}
+	}
+	ActionPlayAnimationIfIdle(int animTag, ObjectFinder *finder) : animationIndex(animTag), finder(finder) {}
+};
+
+struct ActionExecuteOneAtRandom : Action {
+	ActionSequence actionseq;
+	void run(ServerGameObject *self) {
+		if (!actionseq.actionList.empty()) {
+			int x = rand() % actionseq.actionList.size();
+			actionseq.actionList[x]->run(self);
+		}
+	}
+	ActionExecuteOneAtRandom(GSFileParser &gsf, const GameSet &gs) {
+		actionseq.init(gsf, gs, "END_EXECUTE_ONE_AT_RANDOM");
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	switch (Tags::ACTION_tagDict.getTagID(gsf.nextString().c_str())) {
@@ -156,6 +181,14 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 		ObjectFinder *finder = ReadFinder(gsf, gs);
 		ValueDeterminer *delay = ReadValueDeterminer(gsf, gs);
 		return new ActionExecuteSequenceAfterDelay(&gs.actionSequences[ax], finder, delay);
+	}
+	case Tags::ACTION_PLAY_ANIMATION_IF_IDLE: {
+		int animTag = gs.animationNames.getIndex(gsf.nextString(true));
+		ObjectFinder *finder = ReadFinder(gsf, gs);
+		return new ActionPlayAnimationIfIdle(animTag, finder);
+	}
+	case Tags::ACTION_EXECUTE_ONE_AT_RANDOM: {
+		return new ActionExecuteOneAtRandom(gsf, gs);
 	}
 	}
 	return new ActionUnknown();

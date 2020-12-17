@@ -134,6 +134,67 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			obj->setSubtypeAndAppearance(obj->blueprint->subtypeNames.getIndex(subtype), gameSet->appearanceNames.getIndex(appear));
 			break;
 		}
+		case Tags::GAMEOBJ_ORDER_CONFIGURATION: {
+			gsf.advanceLine();
+			while(!gsf.eof) {
+				std::string strtag = gsf.nextTag();
+				if (strtag == "UNIQUE_ORDER_ID") {
+					obj->orderConfig.nextOrderId = gsf.nextInt();
+				}
+				else if (strtag == "ORDER") {
+					auto orderName = gsf.nextString(true);
+					int orderType = gameSet->orderNames.getIndex(orderName); assert(orderType != -1);
+					gsf.advanceLine();
+					OrderBlueprint &orderBp = gameSet->orders[orderType];
+					Order order(0, &orderBp);
+					while(!gsf.eof) {
+						std::string ordtag = gsf.nextTag();
+						if (ordtag == "PROCESS_STATE") {
+							order.state = gsf.nextInt();
+						}
+						else if (ordtag == "ORDER_ID") {
+							order.id = gsf.nextInt();
+						}
+						else if (ordtag == "UNIQUE_TASK_ID") {
+							order.nextTaskId = gsf.nextInt();
+						}
+						else if (ordtag == "CURRENT_TASK") {
+							order.currentTask = order.tasks.at(gsf.nextInt());
+						}
+						else if (ordtag == "TASK") {
+							int taskType = gameSet->taskNames.getIndex(gsf.nextString(true)); assert(taskType != -1);
+							gsf.advanceLine();
+							TaskBlueprint &taskBp = gameSet->tasks[taskType];
+							Task *taskptr = new Task(0, &taskBp);
+							Task &task = *taskptr;
+							while (!gsf.eof) {
+								std::string tsktag = gsf.nextTag();
+								if (tsktag == "PROCESS_STATE") {
+									task.state = gsf.nextInt();
+								}
+								else if (tsktag == "TASK_ID") {
+									task.id = gsf.nextInt();
+								}
+								else if (tsktag == "END_TASK") {
+									break;
+								}
+								gsf.advanceLine();
+							}
+							order.tasks.push_back(taskptr);
+						}
+						else if (ordtag == "END_ORDER") {
+							break;
+						}
+						gsf.advanceLine();
+					}
+					obj->orderConfig.orders.push_back(std::move(order));
+				}
+				else if (strtag == "END_ORDER_CONFIGURATION")
+					break;
+				gsf.advanceLine();
+			}
+			break;
+		}
 		case Tags::GAMEOBJ_PLAYER:
 		case Tags::GAMEOBJ_CHARACTER:
 		case Tags::GAMEOBJ_BUILDING:
@@ -248,6 +309,19 @@ void ServerGameObject::setColor(int color)
 	NetPacketWriter msg(NETCLIMSG_OBJECT_COLOR_SET);
 	msg.writeUint32(this->id);
 	msg.writeUint8(color);
+	Server::instance->sendToAll(msg);
+}
+
+void ServerGameObject::setAnimation(int animationIndex)
+{
+	this->animationIndex = animationIndex;
+	this->animationVariant = animationVariant;
+	this->animStartTime = Server::instance->timeManager.currentTime;
+	NetPacketWriter msg(NETCLIMSG_OBJECT_ANIM_SET);
+	msg.writeUint32(this->id);
+	msg.writeUint32(this->animationIndex);
+	msg.writeUint32(this->animationVariant);
+	msg.writeFloat(this->animStartTime);
 	Server::instance->sendToAll(msg);
 }
 

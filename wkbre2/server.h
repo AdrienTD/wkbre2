@@ -24,6 +24,11 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void setOrientation(const Vector3 &orientation);
 	void setSubtypeAndAppearance(int new_subtype, int new_appearance);
 	void setColor(int color);
+	void setAnimation(int animationIndex);
+
+	//void addOrderAtBegin(int orderType);
+	//void addOrderAtEnd(int orderType);
+	//void removeOrder(int orderIndex);
 };
 
 struct Server
