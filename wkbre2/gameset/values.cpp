@@ -6,6 +6,7 @@
 #include "../util/util.h"
 #include <string>
 #include "finder.h"
+#include <algorithm>
 
 //namespace Script
 //{
@@ -41,6 +42,26 @@ struct ValueObjectId_Battles : ValueDeterminer {
 	ValueObjectId_Battles(ObjectFinder *finder) : finder(finder) {}
 };
 
+struct ValueObjectClass : ValueDeterminer {
+	int objclass;
+	ObjectFinder *finder;
+	float eval(ServerGameObject *self) {
+		auto vec = finder->eval(self);
+		return !vec.empty() && std::all_of(vec.begin(), vec.end(), [this](ServerGameObject *obj) {return obj->blueprint->bpClass == objclass; });
+	}
+	ValueObjectClass(int objclass, ObjectFinder *finder) : objclass(objclass), finder(finder) {}
+};
+
+struct ValueEquationResult : ValueDeterminer {
+	int equation;
+	ObjectFinder *finder;
+	float eval(ServerGameObject *self) {
+		ServerGameObject *obj = finder->getFirst(self);
+		return Server::instance->gameSet->equations[equation]->eval(obj);
+	}
+	ValueEquationResult(int equation, ObjectFinder *finder) : equation(equation), finder(finder) {}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	switch (Tags::VALUE_tagDict.getTagID(gsf.nextTag().c_str())) {
@@ -54,6 +75,14 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	}
 	case Tags::VALUE_OBJECT_ID:
 		return new ValueObjectId_Battles(ReadFinder(gsf, gs));
+	case Tags::VALUE_OBJECT_CLASS: {
+		int objclass = Tags::GAMEOBJCLASS_tagDict.getTagID(gsf.nextString().c_str());
+		return new ValueObjectClass(objclass, ReadFinder(gsf, gs));
+	}
+	case Tags::VALUE_EQUATION_RESULT: {
+		int equation = gs.equationNames.getIndex(gsf.nextString(true));
+		return new ValueEquationResult(equation, ReadFinder(gsf, gs));
+	}
 	default:
 		return new ValueUnknown();
 	}
@@ -77,6 +106,18 @@ struct EnodeSubtraction : ValueDeterminer {
 	EnodeSubtraction(ValueDeterminer *a, ValueDeterminer *b) : a(a), b(b) {}
 };
 
+struct EnodeMultiplication : ValueDeterminer {
+	std::unique_ptr<ValueDeterminer> a, b;
+	virtual float eval(ServerGameObject *self) { return a->eval(self) * b->eval(self); }
+	EnodeMultiplication(ValueDeterminer *a, ValueDeterminer *b) : a(a), b(b) {}
+};
+
+struct EnodeDivision : ValueDeterminer {
+	std::unique_ptr<ValueDeterminer> a, b;
+	virtual float eval(ServerGameObject *self) { return a->eval(self) / b->eval(self); }
+	EnodeDivision(ValueDeterminer *a, ValueDeterminer *b) : a(a), b(b) {}
+};
+
 ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	gsf.advanceLine();
@@ -94,6 +135,14 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_SUBTRACTION: {
 				ValueDeterminer *a = ReadEquationNode(gsf, gs);
 				return new EnodeSubtraction(a, ReadEquationNode(gsf, gs));
+			}
+			case Tags::ENODE_MULTIPLICATION: {
+				ValueDeterminer *a = ReadEquationNode(gsf, gs);
+				return new EnodeMultiplication(a, ReadEquationNode(gsf, gs));
+			}
+			case Tags::ENODE_DIVISION: {
+				ValueDeterminer *a = ReadEquationNode(gsf, gs);
+				return new EnodeDivision(a, ReadEquationNode(gsf, gs));
 			}
 			}
 			gsf.cursor = oldcur;

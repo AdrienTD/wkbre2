@@ -144,11 +144,13 @@ void Client::sendMessage(const std::string &msg) {
 	serverLink->send(packet);
 }
 
-void Client::sendCommand(ClientGameObject * obj, Command * cmd)
+void Client::sendCommand(ClientGameObject * obj, Command * cmd, ClientGameObject *target, int assignmentMode)
 {
 	NetPacketWriter packet(NETSRVMSG_COMMAND);
 	packet.writeUint32(cmd->id);
 	packet.writeUint32(obj->id);
+	packet.writeUint32(target ? target->id : 0);
+	packet.writeUint8(assignmentMode);
 	serverLink->send(packet);
 }
 

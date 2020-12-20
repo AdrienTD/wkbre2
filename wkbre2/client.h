@@ -59,7 +59,7 @@ struct Client
 	void tick();
 
 	void sendMessage(const std::string &msg);
-	void sendCommand(ClientGameObject *obj, Command *cmd);
+	void sendCommand(ClientGameObject *obj, Command *cmd, ClientGameObject *target, int assignmentMode);
 	void sendPauseRequest(uint8_t pauseState);
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }

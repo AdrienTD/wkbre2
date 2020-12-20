@@ -4,7 +4,7 @@
 
 SDL_Window *g_sdlWindow = nullptr;
 bool g_windowQuit = false;
-int g_windowWidth = 800, g_windowHeight = 600;
+int g_windowWidth = 1366, g_windowHeight = 768;
 bool g_keyDown[SDL_NUM_SCANCODES], g_keyPressed[SDL_NUM_SCANCODES];
 IRenderer *g_gfxRenderer = nullptr;
 bool g_mouseDown[16];

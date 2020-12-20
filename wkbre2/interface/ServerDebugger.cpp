@@ -58,6 +58,32 @@ void ServerDebugger::draw() {
 		for (auto item : sel->items)
 			if (item.first != -1)
 				ImGui::BulletText("\"%s\": %f", server->gameSet->itemNames.getString(item.first).c_str(), item.second);
+
+		ImGui::Text("Orders:");
+		if (ImGui::Button("Add")) {
+			ImGui::OpenPopup("AddNewOrder");
+		}
+		if (ImGui::BeginPopup("AddNewOrder")) {
+			for (auto &it : server->gameSet->orderNames.str2idMap) {
+				if (ImGui::Selectable(it.first.c_str())) {
+					sel->orderConfig.addOrder(&server->gameSet->orders[it.second]);
+				}
+			}
+			ImGui::EndPopup();
+		}
+		for (auto &order : sel->orderConfig.orders) {
+			if (ImGui::TreeNode(&order, "Order %i s%i: %s", order.id, order.state, server->gameSet->orderNames.getString(order.blueprint->bpid).c_str())) {
+				if (ImGui::Button("Break there")) {
+					__debugbreak();
+				}
+				for (Task *task : order.tasks) {
+					if (ImGui::TreeNode(task, "Task %i s%i: %s", task->id, task->state, server->gameSet->taskNames.getString(task->blueprint->bpid).c_str())) {
+						ImGui::TreePop();
+					}
+				}
+				ImGui::TreePop();
+			}
+		}
 	}
 	else
 		ImGui::Text("No object selected.");

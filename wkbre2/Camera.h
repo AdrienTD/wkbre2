@@ -6,6 +6,6 @@ struct Camera {
 	Vector3 position, orientation;
 	Matrix sceneMatrix;
 	Vector3 direction;
-	float nearDist = 1.0f, farDist = 500.0f;
+	float nearDist = 1.0f, farDist = 250.0f;
 	void updateMatrix();
 };

@@ -141,6 +141,42 @@ struct ActionExecuteOneAtRandom : Action {
 	}
 };
 
+struct ActionTerminateThisTask : Action {
+	void run(ServerGameObject *self) {
+		if (Order *order = self->orderConfig.getCurrentOrder())
+			order->getCurrentTask()->terminate();
+	}
+};
+
+struct ActionTerminateThisOrder : Action {
+	void run(ServerGameObject *self) {
+		if (Order *order = self->orderConfig.getCurrentOrder())
+			order->terminate();
+	}
+};
+
+struct ActionTransferControl : Action {
+	ObjectFinder *togiveFinder, *recipientFinder;
+	void run(ServerGameObject *self) {
+		auto objs = togiveFinder->eval(self);
+		ServerGameObject *recipient = recipientFinder->getFirst(self);
+		for (ServerGameObject *obj : objs)
+			obj->setParent(recipient);
+	}
+	ActionTransferControl(ObjectFinder *togiveFinder, ObjectFinder *recipientFinder) : togiveFinder(togiveFinder), recipientFinder(recipientFinder) {}
+};
+
+struct ActionAssignOrderVia : Action {
+	const OrderAssignmentBlueprint *oabp;
+	ObjectFinder *finder;
+	void run(ServerGameObject *self) {
+		for (ServerGameObject *obj : finder->eval(self)) {
+			oabp->assignTo(obj);
+		}
+	}
+	ActionAssignOrderVia(const OrderAssignmentBlueprint *oabp, ObjectFinder *finder) : oabp(oabp), finder(finder) {}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	switch (Tags::ACTION_tagDict.getTagID(gsf.nextString().c_str())) {
@@ -189,6 +225,23 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	}
 	case Tags::ACTION_EXECUTE_ONE_AT_RANDOM: {
 		return new ActionExecuteOneAtRandom(gsf, gs);
+	}
+	case Tags::ACTION_TERMINATE_THIS_TASK: {
+		return new ActionTerminateThisTask;
+	}
+	case Tags::ACTION_TERMINATE_THIS_ORDER:
+	case Tags::ACTION_TERMINATE_ORDER: {
+		return new ActionTerminateThisOrder;
+	}
+	case Tags::ACTION_TRANSFER_CONTROL: {
+		ObjectFinder *a = ReadFinder(gsf, gs);
+		ObjectFinder *b = ReadFinder(gsf, gs);
+		return new ActionTransferControl(a, b);
+	}
+	case Tags::ACTION_ASSIGN_ORDER_VIA: {
+		auto *oabpx = &gs.orderAssignments[gs.orderAssignmentNames.getIndex(gsf.nextString(true))];
+		ObjectFinder *f = ReadFinder(gsf, gs);
+		return new ActionAssignOrderVia(oabpx, f);
 	}
 	}
 	return new ActionUnknown();

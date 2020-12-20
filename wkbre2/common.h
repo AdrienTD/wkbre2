@@ -4,7 +4,7 @@
 #include <map>
 #include <vector>
 #include "util/vecmat.h"
-#include "Order.h"
+//#include "Order.h"
 
 struct GameObjBlueprint;
 
@@ -25,7 +25,7 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	//AnyGameObject *player = nullptr;
 
-	OrderConfiguration orderConfig;
+	//OrderConfiguration orderConfig;
 
 	float animStartTime = 0.0f; // should be game_time_t?
 	int animationIndex = 0, animationVariant = 0;

@@ -24,6 +24,12 @@ struct FinderSpecificId : ObjectFinder {
 	FinderSpecificId(uint32_t objid) : objid(objid) {}
 };
 
+struct FinderPlayer : ObjectFinder {
+	std::vector<ServerGameObject*> eval(ServerGameObject *self) {
+		return { self->getPlayer() };
+	}
+};
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -35,6 +41,8 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 		return new FinderSelf();
 	case Tags::FINDER_SPECIFIC_ID:
 		return new FinderSpecificId(gsf.nextInt());
+	case Tags::FINDER_PLAYER:
+		return new FinderPlayer;
 	}
 	return new FinderUnknown();
 }

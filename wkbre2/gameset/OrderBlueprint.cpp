@@ -14,6 +14,21 @@ void OrderBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			this->classType = Tags::ORDTSKTYPE_tagDict.getTagID(gsf.nextString().c_str());
 		else if (tag == "USE_TASK")
 			this->tasks.push_back(&gs.tasks[gs.taskNames.getIndex(gsf.nextString(true))]);
+		else if (tag == "FLAG") {
+			std::string flag = gsf.nextString();
+			if (flag == "CYCLE_ORDER")
+				cycleOrder = true;
+		}
+		else if (tag == "INITIALISATION_SEQUENCE")
+			this->initSequence.init(gsf, gs, "END_INITIALISATION_SEQUENCE");
+		else if (tag == "START_SEQUENCE")
+			this->startSequence.init(gsf, gs, "END_START_SEQUENCE");
+		else if (tag == "RESUMPTION_SEQUENCE")
+			this->resumptionSequence.init(gsf, gs, "END_RESUMPTION_SEQUENCE");
+		else if (tag == "TERMINATION_SEQUENCE")
+			this->terminationSequence.init(gsf, gs, "END_TERMINATION_SEQUENCE");
+		else if (tag == "CANCELLATION_SEQUENCE")
+			this->cancellationSequence.init(gsf, gs, "END_CANCELLATION_SEQUENCE");
 		gsf.advanceLine();
 	}
 }
@@ -29,14 +44,22 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			this->classType = Tags::ORDTSKTYPE_tagDict.getTagID(gsf.nextString().c_str());
 		else if (tag == "TASK_TARGET")
 			this->taskTarget = ReadFinder(gsf, gs);
+		else if (tag == "INITIALISATION_SEQUENCE")
+			this->initSequence.init(gsf, gs, "END_INITIALISATION_SEQUENCE");
 		else if (tag == "START_SEQUENCE")
 			this->startSequence.init(gsf, gs, "END_START_SEQUENCE");
+		else if (tag == "RESUMPTION_SEQUENCE")
+			this->resumptionSequence.init(gsf, gs, "END_RESUMPTION_SEQUENCE");
+		else if (tag == "TERMINATION_SEQUENCE")
+			this->terminationSequence.init(gsf, gs, "END_TERMINATION_SEQUENCE");
+		else if (tag == "CANCELLATION_SEQUENCE")
+			this->cancellationSequence.init(gsf, gs, "END_CANCELLATION_SEQUENCE");
 		else if (tag == "TRIGGER") {
-			TriggerBlueprint trig = TriggerBlueprint(Tags::TASKTRIGGER_tagDict.getTagID(gsf.nextString().c_str()));
+			this->triggers.emplace_back(Tags::TASKTRIGGER_tagDict.getTagID(gsf.nextString().c_str()));
+			TriggerBlueprint &trig = this->triggers.back();
 			if (trig.type == Tags::TASKTRIGGER_TIMER)
 				trig.period = ReadValueDeterminer(gsf, gs);
 			trig.actions.init(gsf, gs, "END_TRIGGER");
-			this->triggers.push_back(std::move(trig));
 		}
 		gsf.advanceLine();
 	}
@@ -51,10 +74,15 @@ void OrderAssignmentBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			break;
 		else if (tag == "ORDER_TO_ASSIGN")
 			this->orderToAssign = &gs.orders[gs.orderNames.getIndex(gsf.nextString(true))];
-		else if (tag == "ORDER_ASSIGMENT_MODE")
+		else if (tag == "ORDER_ASSIGNMENT_MODE")
 			this->orderAssignmentMode = Tags::ORDERASSIGNMODE_tagDict.getTagID(gsf.nextString().c_str());
 		else if (tag == "ORDER_TARGET")
 			this->orderTarget = ReadFinder(gsf, gs);
 		gsf.advanceLine();
 	}
+}
+
+void OrderAssignmentBlueprint::assignTo(ServerGameObject * gameobj) const
+{
+	gameobj->orderConfig.addOrder(this->orderToAssign, this->orderAssignmentMode, this->orderTarget->getFirst(gameobj));
 }

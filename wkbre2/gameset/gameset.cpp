@@ -115,6 +115,8 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_PROP:
 			case Tags::GAMESET_CITY:
 			case Tags::GAMESET_TOWN:
+			case Tags::GAMESET_FORMATION:
+			case Tags::GAMESET_ARMY:
 			{
 				int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
 				objBlueprintNames[cls].insertString(gsf.nextString(true));
@@ -140,6 +142,8 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_PROP_EXTENSION:
 			case Tags::GAMESET_CITY_EXTENSION:
 			case Tags::GAMESET_TOWN_EXTENSION:
+			case Tags::GAMESET_FORMATION_EXTENSION:
+			case Tags::GAMESET_ARMY_EXTENSION:
 				isExtension = true;
 				strtag.resize(strtag.find("_EXTENSION"));
 			case Tags::GAMESET_LEVEL:
@@ -151,6 +155,8 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_PROP:
 			case Tags::GAMESET_CITY:
 			case Tags::GAMESET_TOWN:
+			case Tags::GAMESET_FORMATION:
+			case Tags::GAMESET_ARMY:
 			{
 				int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
 				std::string name = gsf.nextString(true);
@@ -181,11 +187,13 @@ void GameSet::parseFile(const char * fn, int pass)
 			}
 			case Tags::GAMESET_ORDER: {
 				int x = orderNames.getIndex(gsf.nextString(true));
+				orders[x].bpid = x;
 				orders[x].parse(gsf, *this);
 				break;
 			}
 			case Tags::GAMESET_TASK: {
 				int x = taskNames.getIndex(gsf.nextString(true));
+				tasks[x].bpid = x;
 				tasks[x].parse(gsf, *this);
 				break;
 			}

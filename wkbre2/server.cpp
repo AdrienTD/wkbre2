@@ -146,7 +146,8 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 					int orderType = gameSet->orderNames.getIndex(orderName); assert(orderType != -1);
 					gsf.advanceLine();
 					OrderBlueprint &orderBp = gameSet->orders[orderType];
-					Order order(0, &orderBp);
+					obj->orderConfig.orders.emplace_back(0, &orderBp, obj);
+					Order &order = obj->orderConfig.orders.back();
 					while(!gsf.eof) {
 						std::string ordtag = gsf.nextTag();
 						if (ordtag == "PROCESS_STATE") {
@@ -159,21 +160,42 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 							order.nextTaskId = gsf.nextInt();
 						}
 						else if (ordtag == "CURRENT_TASK") {
-							order.currentTask = order.tasks.at(gsf.nextInt());
+							order.currentTask = gsf.nextInt();
 						}
 						else if (ordtag == "TASK") {
 							int taskType = gameSet->taskNames.getIndex(gsf.nextString(true)); assert(taskType != -1);
 							gsf.advanceLine();
 							TaskBlueprint &taskBp = gameSet->tasks[taskType];
-							Task *taskptr = new Task(0, &taskBp);
+							Task *taskptr = new Task(0, &taskBp, &order);
 							Task &task = *taskptr;
 							while (!gsf.eof) {
 								std::string tsktag = gsf.nextTag();
-								if (tsktag == "PROCESS_STATE") {
+								if (tsktag == "TARGET") {
+									// TODO
+								}
+								else if (tsktag == "PROXIMITY") {
+									task.proximity = gsf.nextFloat();
+								}
+								else if (tsktag == "PROXIMITY_SATISFIED") {
+									// TODO
+								}
+								else if (tsktag == "TRIGGERS_STARTED") {
+									task.triggersStarted = gsf.nextInt();
+								}
+								else if (tsktag == "TRIGGER") {
+									task.triggers[gsf.nextInt()]->parse(gsf, *gameSet);
+								}
+								else if (tsktag == "FIRST_EXECUTION") {
+									task.firstExecution = gsf.nextInt();
+								}
+								else if (tsktag == "PROCESS_STATE") {
 									task.state = gsf.nextInt();
 								}
 								else if (tsktag == "TASK_ID") {
 									task.id = gsf.nextInt();
+								}
+								else if (tsktag == "START_SEQUENCE_EXECUTED") {
+									task.startSequenceExecuted = gsf.nextInt();
 								}
 								else if (tsktag == "END_TASK") {
 									break;
@@ -187,7 +209,6 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 						}
 						gsf.advanceLine();
 					}
-					obj->orderConfig.orders.push_back(std::move(order));
 				}
 				else if (strtag == "END_ORDER_CONFIGURATION")
 					break;
@@ -203,6 +224,8 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		case Tags::GAMEOBJ_PROP:
 		case Tags::GAMEOBJ_CITY:
 		case Tags::GAMEOBJ_TOWN:
+		case Tags::GAMEOBJ_FORMATION:
+		case Tags::GAMEOBJ_ARMY:
 		{
 			ServerGameObject *child = loadObject(gsf, strtag);
 			child->setParent(obj);
@@ -340,6 +363,7 @@ void Server::sendToAll(const NetPacketWriter & packet)
 void Server::tick()
 {
 	timeManager.tick();
+
 	auto &it = delayedSequences.begin();
 	for (; it != delayedSequences.end(); it++) {
 		if (it->first > timeManager.currentTime) {
@@ -351,6 +375,16 @@ void Server::tick()
 		}
 	}
 	delayedSequences.erase(delayedSequences.begin(), it);
+
+	const auto processObjOrders = [](ServerGameObject *obj, auto &func) -> void {
+		obj->orderConfig.process();
+		for (auto &childtype : obj->children) {
+			for (ServerGameObject *child : childtype.second)
+				func(child, func);
+		}
+	};
+	if(level)
+		processObjOrders(level, processObjOrders);
 
 	time_t curtime = time(NULL);
 	if (curtime - lastSync >= 1) {
@@ -382,7 +416,9 @@ void Server::tick()
 			case NETSRVMSG_COMMAND: {
 				int cmdid = br.readUint32();
 				int objid = br.readUint32();
-				gameSet->commands[cmdid].execute(findObject(objid));
+				int targetid = br.readUint32();
+				int mode = br.readUint8();
+				gameSet->commands[cmdid].execute(findObject(objid), findObject(targetid), mode);
 				break;
 			}
 			case NETSRVMSG_PAUSE: {

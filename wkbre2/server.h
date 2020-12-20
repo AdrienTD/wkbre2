@@ -5,6 +5,7 @@
 #include <vector>
 #include "common.h"
 #include "TimeManager.h"
+#include "Order.h"
 
 struct GameSet;
 struct GSFileParser;
@@ -16,7 +17,9 @@ struct Terrain;
 struct ActionSequence;
 
 struct ServerGameObject : CommonGameObject<ServerGameObject> {
-	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint) {}
+	OrderConfiguration orderConfig;
+
+	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 
 	void setItem(int index, float value);
 	void setParent(ServerGameObject *newParent);
