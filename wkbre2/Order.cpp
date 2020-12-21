@@ -4,6 +4,7 @@
 #include "gameset/values.h"
 #include "server.h"
 #include "util/GSFileParser.h"
+#include "gameset/finder.h"
 
 void Order::init()
 {
@@ -86,7 +87,9 @@ void Task::init()
 {
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
+	this->target = blueprint->taskTarget->getFirst(this->order->gameObject); // FIXME: that would override the order's target!!!
 	this->blueprint->initSequence.run(this->order->gameObject);
+	this->startSequenceExecuted = false; // is this correct?
 }
 
 void Task::suspend()
@@ -94,6 +97,9 @@ void Task::suspend()
 	if (!isWorking()) return;
 	this->state = OTS_SUSPENDED;
 	this->stopTriggers();
+	ServerGameObject *go = this->order->gameObject;
+	if(go->movement.isMoving())
+		go->stopMovement();
 	//this->blueprint->suspensionSequence.run(this->order->gameObject);
 }
 
@@ -108,6 +114,9 @@ void Task::cancel()
 	if (!isWorking()) return;
 	this->state = OTS_CANCELLED;
 	this->stopTriggers();
+	ServerGameObject *go = this->order->gameObject;
+	if (go->movement.isMoving())
+		go->stopMovement();
 	this->blueprint->cancellationSequence.run(this->order->gameObject);
 }
 
@@ -116,6 +125,9 @@ void Task::terminate()
 	if (!isWorking()) return;
 	this->state = OTS_TERMINATED;
 	this->stopTriggers();
+	ServerGameObject *go = this->order->gameObject;
+	if (go->movement.isMoving())
+		go->stopMovement();
 	this->blueprint->terminationSequence.run(this->order->gameObject);
 	this->order->advanceToNextTask();
 }
@@ -130,8 +142,29 @@ void Task::process()
 		if (!this->startSequenceExecuted) {
 			this->blueprint->startSequence.run(order->gameObject);
 			this->startSequenceExecuted = true;
+			if (this->blueprint->proximityRequirement)
+				this->proximity = this->blueprint->proximityRequirement->eval(this->order->gameObject); // should this be here?
 		}
-		this->startTriggers(); // suppose the proximity is always satisfied for now
+		if (this->target) {
+			ServerGameObject *go = this->order->gameObject;
+			if (this->proximity < 0.0f || (go->position - this->target->position).sqlen2xz() < this->proximity * this->proximity) {
+				this->startTriggers();
+				if (go->movement.isMoving())
+					go->stopMovement();
+				if (!proximitySatisfied) {
+					proximitySatisfied = true;
+					blueprint->proximitySatisfiedSequence.run(order->gameObject);
+				}
+			}
+			else {
+				this->stopTriggers();
+				if (!go->movement.isMoving())
+					go->startMovement(this->target->position);
+				if (proximitySatisfied) {
+					proximitySatisfied = false;
+				}
+			}
+		}
 		if (this->triggersStarted) {
 			for (Trigger *trigger : this->triggers)
 				trigger->update();

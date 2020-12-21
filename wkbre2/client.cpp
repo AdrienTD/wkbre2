@@ -13,6 +13,21 @@ void Client::loadFromServerObject(Server & server)
 void Client::tick()
 {
 	timeManager.tick();
+
+	const auto walkObj = [this](ClientGameObject *obj, auto &rec) -> void {
+		if (obj->movement.isMoving()) {
+			obj->position = obj->movement.getNewPosition(timeManager.currentTime);
+			obj->position.y = terrain->getHeight(obj->position.x, obj->position.z);
+			Vector3 dir = obj->movement.getDirection();
+			obj->orientation.y = atan2f(dir.x, -dir.z);
+		}
+		for (auto &it : obj->children)
+			for (ClientGameObject *obj : it.second)
+				rec(obj, rec);
+	};
+	if(level)
+		walkObj(level, walkObj);
+
 	if (serverLink) {
 		int pcnt = 100;
 		while (serverLink->available() && (pcnt--)) {
@@ -130,6 +145,24 @@ void Client::tick()
 					obj->animationIndex = br.readUint32();
 					obj->animationVariant = br.readUint32();
 					obj->animStartTime = br.readFloat();
+				}
+				break;
+			}
+			case NETCLIMSG_OBJECT_MOVEMENT_STARTED: {
+				uint32_t objid = br.readUint32();
+				Vector3 src = br.readVector3();
+				Vector3 dst = br.readVector3();
+				float startTime = br.readFloat();
+				float speed = br.readFloat();
+				if (ClientGameObject *obj = findObject(objid)) {
+					obj->movement.startMovement(src, dst, startTime, speed);
+				}
+				break;
+			}
+			case NETCLIMSG_OBJECT_MOVEMENT_STOPPED: {
+				uint32_t objid = br.readUint32();
+				if (ClientGameObject *obj = findObject(objid)) {
+					obj->movement.stopMovement();
 				}
 				break;
 			}

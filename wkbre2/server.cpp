@@ -177,7 +177,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 									task.proximity = gsf.nextFloat();
 								}
 								else if (tsktag == "PROXIMITY_SATISFIED") {
-									// TODO
+									task.proximitySatisfied = gsf.nextInt();
 								}
 								else if (tsktag == "TRIGGERS_STARTED") {
 									task.triggersStarted = gsf.nextInt();
@@ -348,6 +348,29 @@ void ServerGameObject::setAnimation(int animationIndex)
 	Server::instance->sendToAll(msg);
 }
 
+void ServerGameObject::startMovement(const Vector3 & destination)
+{
+	constexpr float speed = 5.0f;
+	movement.startMovement(position, destination, Server::instance->timeManager.currentTime, speed);
+	NetPacketWriter npw{ NETCLIMSG_OBJECT_MOVEMENT_STARTED };
+	npw.writeUint32(this->id);
+	npw.writeVector3(position);
+	npw.writeVector3(destination);
+	npw.writeFloat(Server::instance->timeManager.currentTime);
+	npw.writeFloat(speed);
+	Server::instance->sendToAll(npw);
+	setAnimation(Server::instance->gameSet->animationNames["Move"]);
+}
+
+void ServerGameObject::stopMovement()
+{
+	movement.stopMovement();
+	NetPacketWriter npw{ NETCLIMSG_OBJECT_MOVEMENT_STOPPED };
+	npw.writeUint32(this->id);
+	Server::instance->sendToAll(npw);
+	setAnimation(0); // default animation
+}
+
 void Server::sendToAll(const NetPacket & packet)
 {
 	for (NetLink *cli : clientLinks)
@@ -358,6 +381,14 @@ void Server::sendToAll(const NetPacketWriter & packet)
 {
 	for (NetLink *cli : clientLinks)
 		cli->send(packet);
+}
+
+void Server::syncTime()
+{
+	NetPacketWriter msg(NETCLIMSG_TIME_SYNC);
+	msg.writeFloat(timeManager.currentTime);
+	msg.writeUint8(timeManager.paused);
+	sendToAll(msg);
 }
 
 void Server::tick()
@@ -376,8 +407,14 @@ void Server::tick()
 	}
 	delayedSequences.erase(delayedSequences.begin(), it);
 
-	const auto processObjOrders = [](ServerGameObject *obj, auto &func) -> void {
+	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
 		obj->orderConfig.process();
+		if (obj->movement.isMoving()) {
+			obj->position = obj->movement.getNewPosition(timeManager.currentTime);
+			obj->position.y = terrain->getHeight(obj->position.x, obj->position.z);
+			Vector3 dir = obj->movement.getDirection();
+			obj->orientation.y = atan2f(dir.x, -dir.z);
+		}
 		for (auto &childtype : obj->children) {
 			for (ServerGameObject *child : childtype.second)
 				func(child, func);
@@ -389,10 +426,7 @@ void Server::tick()
 	time_t curtime = time(NULL);
 	if (curtime - lastSync >= 1) {
 		lastSync = curtime;
-		NetPacketWriter msg(NETCLIMSG_TIME_SYNC);
-		msg.writeFloat(timeManager.currentTime);
-		msg.writeUint8(timeManager.paused);
-		sendToAll(msg);
+		syncTime();
 	}
 
 	for (NetLink *cli : clientLinks) {
@@ -427,6 +461,7 @@ void Server::tick()
 					timeManager.pause();
 				else
 					timeManager.unpause();
+				syncTime();
 				break;
 			}
 			}

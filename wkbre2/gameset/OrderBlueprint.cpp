@@ -61,6 +61,10 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 				trig.period = ReadValueDeterminer(gsf, gs);
 			trig.actions.init(gsf, gs, "END_TRIGGER");
 		}
+		else if (tag == "PROXIMITY_REQUIREMENT")
+			this->proximityRequirement = ReadValueDeterminer(gsf, gs);
+		else if (tag == "PROXIMITY_SATISFIED_SEQUENCE")
+			this->proximitySatisfiedSequence.init(gsf, gs, "END_PROXIMITY_SATISFIED_SEQUENCE");
 		gsf.advanceLine();
 	}
 }

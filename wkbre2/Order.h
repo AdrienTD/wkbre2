@@ -60,7 +60,7 @@ struct Task {
 	std::vector<Trigger*> triggers;
 	bool startSequenceExecuted = false;
 	ServerGameObject *target = nullptr;
-	float proximity = -1.0f; bool lastDestinationValid = false;
+	float proximity = -1.0f; bool proximitySatisfied = false, lastDestinationValid = false;
 
 	Task(int id, TaskBlueprint *blueprint, Order *order);
 

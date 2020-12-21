@@ -28,6 +28,8 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void setSubtypeAndAppearance(int new_subtype, int new_appearance);
 	void setColor(int color);
 	void setAnimation(int animationIndex);
+	void startMovement(const Vector3 &destination);
+	void stopMovement();
 
 	//void addOrderAtBegin(int orderType);
 	//void addOrderAtEnd(int orderType);
@@ -67,6 +69,8 @@ struct Server
 	ServerGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 
 	ServerGameObject *findObject(uint32_t id) { return idmap[id]; }
+
+	void syncTime();
 
 	void tick();
 

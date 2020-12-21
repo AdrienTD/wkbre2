@@ -4,6 +4,7 @@
 #include "../gameset/gameset.h"
 #include "../file.h"
 #include "../util/growbuffer.h"
+#include "../terrain.h"
 
 void ServerDebugger::draw() {
 	static GrowStringList savegameList;
@@ -83,6 +84,13 @@ void ServerDebugger::draw() {
 				}
 				ImGui::TreePop();
 			}
+		}
+		if (ImGui::Button("Move to center")) {
+			sel->startMovement(Vector3(server->terrain->width - 2 * server->terrain->edge, 0.0f, server->terrain->height - 2 * server->terrain->edge) * 5.0f);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Stop movement")) {
+			sel->stopMovement();
 		}
 	}
 	else
