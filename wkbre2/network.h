@@ -25,6 +25,7 @@ enum NetClientMessages {
 	NETCLIMSG_OBJECT_ANIM_SET,
 	NETCLIMSG_OBJECT_MOVEMENT_STARTED,
 	NETCLIMSG_OBJECT_MOVEMENT_STOPPED,
+	NETCLIMSG_OBJECT_REMOVED,
 };
 
 enum NetServerMessages {
@@ -50,6 +51,14 @@ struct NetPacketWriter {
 	void writeString(const std::string &str) { size_t len = str.size();  assert(rem() >= len); memcpy(nextWritePnt, str.c_str(), len); nextWritePnt += len; }
 	void writeStringZ(const std::string &str) { writeString(str); writeUint8(0); }
 	void writeVector3(const Vector3 &vec) { writeFloat(vec.x); writeFloat(vec.y); writeFloat(vec.z); }
+
+	void writeValues(uint8_t a) { writeUint8(a); }
+	void writeValues(uint16_t a) { writeUint16(a); }
+	void writeValues(uint32_t a) { writeUint32(a); }
+	void writeValues(float a) { writeUint8(a); }
+	void writeValues(const std::string & str) { writeStringZ(str); }
+	void writeValues(const Vector3 &vec) { writeVector3(vec); }
+	template<typename T, typename ... Args> void writeValues(T val, Args ... rest) { writeValues(val); writeValues(rest); }
 
 	std::string getString() const { return std::string((char*)data, size()); }
 

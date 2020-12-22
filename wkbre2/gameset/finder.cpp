@@ -30,6 +30,19 @@ struct FinderPlayer : ObjectFinder {
 	}
 };
 
+struct FinderAlias : ObjectFinder {
+	int aliasIndex;
+	std::vector<ServerGameObject*> eval(ServerGameObject *self) {
+		auto &alias = Server::instance->aliases[aliasIndex];
+		std::vector<ServerGameObject*> res;
+		for (auto &ref : alias)
+			if (ref)
+				res.push_back(ref);
+		return res;
+	}
+	FinderAlias(int aliasIndex) : aliasIndex(aliasIndex) {}
+};
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -43,6 +56,10 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 		return new FinderSpecificId(gsf.nextInt());
 	case Tags::FINDER_PLAYER:
 		return new FinderPlayer;
+	case Tags::FINDER_ALIAS: {
+		int ax = gs.aliasNames.getIndex(gsf.nextString(true));
+		return new FinderAlias(ax);
+	}
 	}
 	return new FinderUnknown();
 }

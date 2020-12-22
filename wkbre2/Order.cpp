@@ -8,10 +8,16 @@
 
 void Order::init()
 {
+	this->blueprint->initSequence.run(this->gameObject);
+	for (Task *task : this->tasks)
+		task->init();
+}
+
+void Order::start()
+{
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
 	this->currentTask = 0;
-	this->blueprint->initSequence.run(this->gameObject);
 }
 
 void Order::suspend()
@@ -49,7 +55,7 @@ void Order::process()
 	if (this->state == OTS_SUSPENDED)
 		this->resume();
 	else if (this->state != OTS_PROCESSING)
-		this->init();
+		this->start();
 	if (this->state == OTS_PROCESSING) {
 		Task *task = this->getCurrentTask();
 		task->process();
@@ -85,10 +91,14 @@ Task::Task(int id, TaskBlueprint * blueprint, Order * order) : id(id), blueprint
 
 void Task::init()
 {
+	this->blueprint->initSequence.run(this->order->gameObject);
+}
+
+void Task::start()
+{
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
 	this->target = blueprint->taskTarget->getFirst(this->order->gameObject); // FIXME: that would override the order's target!!!
-	this->blueprint->initSequence.run(this->order->gameObject);
 	this->startSequenceExecuted = false; // is this correct?
 }
 
@@ -137,7 +147,7 @@ void Task::process()
 	if (this->state == OTS_SUSPENDED)
 		this->resume();
 	else if (this->state != OTS_PROCESSING)
-		this->init();
+		this->start();
 	if (this->state == OTS_PROCESSING) {
 		if (!this->startSequenceExecuted) {
 			this->blueprint->startSequence.run(order->gameObject);
@@ -212,6 +222,7 @@ void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMod
 	if (target) {
 		neworder->tasks.at(0)->target = target;
 	}
+	neworder->init();
 }
 
 void OrderConfiguration::cancelAllOrders()

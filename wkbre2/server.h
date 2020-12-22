@@ -6,6 +6,8 @@
 #include "common.h"
 #include "TimeManager.h"
 #include "Order.h"
+#include "GameObjectRef.h"
+#include <unordered_set>
 
 struct GameSet;
 struct GSFileParser;
@@ -15,6 +17,7 @@ struct NetPacket;
 struct NetPacketWriter;
 struct Terrain;
 struct ActionSequence;
+struct Server;
 
 struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	OrderConfiguration orderConfig;
@@ -52,10 +55,12 @@ struct Server
 
 	struct DelayedSequence {
 		ActionSequence* actionSequence; // or ActionSequence*
-		ServerGameObject* executor;
-		std::vector<ServerGameObject*> selfs;
+		SrvGORef executor;
+		std::vector<SrvGORef> selfs;
 	};
 	std::multimap<game_time_t, DelayedSequence> delayedSequences;
+
+	std::map<int, std::unordered_set<SrvGORef>> aliases;
 
 	std::vector<std::string> chatMessages;
 
@@ -67,6 +72,7 @@ struct Server
 
 	void loadSaveGame(const char *filename);
 	ServerGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
+	void deleteObject(ServerGameObject *obj);
 
 	ServerGameObject *findObject(uint32_t id) { return idmap[id]; }
 

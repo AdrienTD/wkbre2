@@ -67,6 +67,10 @@ void GameSet::parseFile(const char * fn, int pass)
 				appearanceNames.insertString(gsf.nextString(true));
 				break;
 			}
+			case Tags::GAMESET_DECLARE_ALIAS: {
+				aliasNames.insertString(gsf.nextString(true));
+				break;
+			}
 			case Tags::GAMESET_EQUATION: {
 				equationNames.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);

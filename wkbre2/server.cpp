@@ -68,6 +68,22 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 	return obj;
 }
 
+void Server::deleteObject(ServerGameObject * obj)
+{
+	int id = obj->id;
+	// remove from parent's children
+	auto &vec = obj->parent->children.at(obj->blueprint->getFullId());
+	vec.erase(std::find(vec.begin(), vec.end(), obj));
+	// remove from ID map
+	idmap.erase(obj->id);
+	// delete the object, bye!
+	delete obj;
+	// report removal to the clients
+	NetPacketWriter msg(NETCLIMSG_OBJECT_REMOVED);
+	msg.writeUint32(id);
+	sendToAll(msg);
+}
+
 ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsname)
 {
 	int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(clsname.c_str());
@@ -171,7 +187,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 							while (!gsf.eof) {
 								std::string tsktag = gsf.nextTag();
 								if (tsktag == "TARGET") {
-									// TODO
+									task.target = gsf.nextInt();
 								}
 								else if (tsktag == "PROXIMITY") {
 									task.proximity = gsf.nextFloat();
@@ -216,6 +232,14 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			}
 			break;
 		}
+		case Tags::GAMEOBJ_ALIAS: {
+			auto &alias = aliases[gameSet->aliasNames[gsf.nextString(true)]];
+			int count = gsf.nextInt();
+			for (int i = 0; i < count; i++) {
+				alias.emplace(gsf.nextInt());
+			}
+			break;
+		}
 		case Tags::GAMEOBJ_PLAYER:
 		case Tags::GAMEOBJ_CHARACTER:
 		case Tags::GAMEOBJ_BUILDING:
@@ -229,6 +253,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		{
 			ServerGameObject *child = loadObject(gsf, strtag);
 			child->setParent(obj);
+			break;
 		}
 		}
 		if (strtag == endtag)
@@ -401,8 +426,9 @@ void Server::tick()
 			break;
 		}
 		DelayedSequence &ds = it->second;
-		for (ServerGameObject *obj : ds.selfs) {
-			ds.actionSequence->run(obj);
+		for (SrvGORef &obj : ds.selfs) {
+			if (obj)
+				ds.actionSequence->run(obj);
 		}
 	}
 	delayedSequences.erase(delayedSequences.begin(), it);

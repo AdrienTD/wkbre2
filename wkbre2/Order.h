@@ -4,6 +4,7 @@
 #include <queue>
 #include <deque>
 #include "gameset/actions.h"
+#include "GameObjectRef.h"
 
 struct OrderBlueprint;
 struct TaskBlueprint;
@@ -32,7 +33,6 @@ struct Order {
 	OrderBlueprint *blueprint;
 	std::vector<Task*> tasks;
 	int nextTaskId = 0;
-	//Task *currentTask;
 	int currentTask = -1;
 
 	Order(int id, OrderBlueprint *blueprint, ServerGameObject *gameObject) : id(id), blueprint(blueprint), gameObject(gameObject) {}
@@ -41,6 +41,7 @@ struct Order {
 	bool isWorking() const { return (state == OTS_PROCESSING) || (state == OTS_SUSPENDED); }
 
 	void init();
+	void start();
 	void suspend();
 	void resume();
 	void cancel();
@@ -55,11 +56,10 @@ struct Task {
 	Order *order;
 	int id, state = OTS_UNINITIALISED;
 	TaskBlueprint *blueprint;
-	//Order *order;
 	bool firstExecution = true, triggersStarted = false;
 	std::vector<Trigger*> triggers;
 	bool startSequenceExecuted = false;
-	ServerGameObject *target = nullptr;
+	SrvGORef target;
 	float proximity = -1.0f; bool proximitySatisfied = false, lastDestinationValid = false;
 
 	Task(int id, TaskBlueprint *blueprint, Order *order);
@@ -68,6 +68,7 @@ struct Task {
 	bool isWorking() const { return (state == OTS_PROCESSING) || (state == OTS_SUSPENDED); }
 
 	void init();
+	void start();
 	void suspend();
 	void resume();
 	void cancel();

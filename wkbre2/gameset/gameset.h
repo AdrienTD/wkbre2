@@ -27,7 +27,7 @@ struct GameSet
 
 	IndexedStringList itemNames, equationNames, valueNames, actionSequenceNames,
 		appearanceNames, commandNames, animationNames, orderNames, taskNames,
-		orderAssignmentNames;
+		orderAssignmentNames, aliasNames;
 	IndexedStringList objBlueprintNames[Tags::GAMEOBJCLASS_COUNT];
 	std::unique_ptr<GameObjBlueprint[]> objBlueprints[Tags::GAMEOBJCLASS_COUNT];
 	std::map<std::string, float, StriCompare> definedValues;

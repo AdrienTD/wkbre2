@@ -109,7 +109,9 @@ struct ActionExecuteSequenceAfterDelay : Action {
 		Server::DelayedSequence ds;
 		ds.executor = self;
 		ds.actionSequence = sequence;
-		ds.selfs = finder->eval(self);
+		//ds.selfs = finder->eval(self);
+		for (ServerGameObject *obj : finder->eval(self))
+			ds.selfs.emplace_back(obj);
 		game_time_t atTime = Server::instance->timeManager.currentTime + delay->eval(self);
 		Server::instance->delayedSequences.insert(std::make_pair(atTime, ds));
 	}
@@ -177,6 +179,49 @@ struct ActionAssignOrderVia : Action {
 	ActionAssignOrderVia(const OrderAssignmentBlueprint *oabp, ObjectFinder *finder) : oabp(oabp), finder(finder) {}
 };
 
+struct ActionRemove : Action {
+	ObjectFinder *finder;
+	void run(ServerGameObject *self) {
+		for (ServerGameObject *obj : finder->eval(self)) {
+			Server::instance->deleteObject(obj);
+		}
+	}
+	ActionRemove(ObjectFinder *finder) : finder(finder) {}
+};
+
+struct ActionAssignAlias : Action {
+	int aliasIndex;
+	ObjectFinder *finder;
+	void run(ServerGameObject *self) {
+		auto &alias = Server::instance->aliases[aliasIndex];
+		for (ServerGameObject *obj : finder->eval(self)) {
+			alias.insert(obj);
+		}
+	}
+	ActionAssignAlias(int aliasIndex, ObjectFinder *finder) : aliasIndex(aliasIndex), finder(finder) {}
+};
+
+struct ActionUnassignAlias : Action {
+	int aliasIndex;
+	ObjectFinder *finder;
+	void run(ServerGameObject *self) {
+		auto &alias = Server::instance->aliases[aliasIndex];
+		for (ServerGameObject *obj : finder->eval(self)) {
+			alias.erase(obj);
+		}
+	}
+	ActionUnassignAlias(int aliasIndex, ObjectFinder *finder) : aliasIndex(aliasIndex), finder(finder) {}
+};
+
+struct ActionClearAlias : Action {
+	int aliasIndex;
+	void run(ServerGameObject *self) {
+		auto &alias = Server::instance->aliases[aliasIndex];
+		alias.clear();
+	}
+	ActionClearAlias(int aliasIndex) : aliasIndex(aliasIndex) {}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	switch (Tags::ACTION_tagDict.getTagID(gsf.nextString().c_str())) {
@@ -242,6 +287,22 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 		auto *oabpx = &gs.orderAssignments[gs.orderAssignmentNames.getIndex(gsf.nextString(true))];
 		ObjectFinder *f = ReadFinder(gsf, gs);
 		return new ActionAssignOrderVia(oabpx, f);
+	}
+	case Tags::ACTION_REMOVE: {
+		ObjectFinder *f = ReadFinder(gsf, gs);
+		return new ActionRemove(f);
+	}
+	case Tags::ACTION_ASSIGN_ALIAS: {
+		int ax = gs.aliasNames.getIndex(gsf.nextString(true));
+		return new ActionAssignAlias(ax, ReadFinder(gsf, gs));
+	}
+	case Tags::ACTION_UNASSIGN_ALIAS: {
+		int ax = gs.aliasNames.getIndex(gsf.nextString(true));
+		return new ActionUnassignAlias(ax, ReadFinder(gsf, gs));
+	}
+	case Tags::ACTION_CLEAR_ALIAS: {
+		int ax = gs.aliasNames.getIndex(gsf.nextString(true));
+		return new ActionClearAlias(ax);
 	}
 	}
 	return new ActionUnknown();

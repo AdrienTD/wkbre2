@@ -6,6 +6,8 @@
 #include "terrain.h"
 #include "interface/ClientInterface.h"
 
+Client * Client::instance = nullptr;
+
 void Client::loadFromServerObject(Server & server)
 {
 }
@@ -163,6 +165,19 @@ void Client::tick()
 				uint32_t objid = br.readUint32();
 				if (ClientGameObject *obj = findObject(objid)) {
 					obj->movement.stopMovement();
+				}
+				break;
+			}
+			case NETCLIMSG_OBJECT_REMOVED: {
+				uint32_t objid = br.readUint32();
+				if (ClientGameObject *obj = findObject(objid)) {
+					// remove from parent's children
+					auto &vec = obj->parent->children.at(obj->blueprint->getFullId());
+					vec.erase(std::find(vec.begin(), vec.end(), obj));
+					// remove from ID map
+					idmap.erase(obj->id);
+					// delete the object, bye!
+					delete obj;
 				}
 				break;
 			}

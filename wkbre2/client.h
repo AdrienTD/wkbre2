@@ -9,6 +9,7 @@
 #include "scene.h"
 #include <cstdarg>
 #include "TimeManager.h"
+#include "GameObjectRef.h"
 
 struct GameSet;
 struct GSFileParser;
@@ -18,6 +19,7 @@ struct NetLink;
 struct Command;
 struct Terrain;
 struct ClientInterface;
+struct Client;
 
 struct ClientGameObject : CommonGameObject<ClientGameObject> {
 	ClientGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ClientGameObject>(id, blueprint) {}
@@ -26,6 +28,8 @@ struct ClientGameObject : CommonGameObject<ClientGameObject> {
 
 struct Client
 {
+	static Client *instance;
+
 	GameSet *gameSet;
 
 	TimeManager timeManager;
@@ -50,7 +54,7 @@ struct Client
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 
 	Client(bool localServer = false) : gameSet(nullptr), level(nullptr),
-		serverLink(nullptr), terrain(nullptr), cliInterface(nullptr), localServer(localServer) {}
+		serverLink(nullptr), terrain(nullptr), cliInterface(nullptr), localServer(localServer) {instance = this;}
 
 	ClientGameObject *findObject(uint32_t id) { return idmap[id]; }
 
