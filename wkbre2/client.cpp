@@ -73,7 +73,7 @@ void Client::tick()
 				uint32_t objid = br.readUint32();
 				uint32_t index = br.readUint32();
 				float value = br.readFloat();
-				info("Object %u changed its item \"%s\" to the value %f.\n", objid, gameSet->itemNames.getString(index).c_str(), value);
+				info("Object %u changed its item \"%s\" to the value %f.\n", objid, gameSet->items.names.getString(index).c_str(), value);
 				findObject(objid)->items[index] = value;
 				break;
 			}

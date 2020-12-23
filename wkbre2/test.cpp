@@ -38,8 +38,8 @@ void Test_GameSet()
 
 	GameSet gameSet("Warrior Kings Game Set\\multi-player extensions.cpp");
 
-	printf("List of %i items:\n", gameSet.itemNames.size());
-	for (const std::string &item : gameSet.itemNames)
+	printf("List of %i items:\n", gameSet.items.names.size());
+	for (const std::string &item : gameSet.items.names)
 		printf("%s\n", item.c_str());
 
 	printf("List of %i defined values:\n", gameSet.definedValues.size());
@@ -101,7 +101,7 @@ void Test_Actions()
 	server.loadSaveGame("Save_Games\\heymap.sav");
 	printf("Savegame loaded!\n");
 
-	int actseq = server.gameSet->actionSequenceNames.getIndex("My act seq");
+	int actseq = server.gameSet->actionSequences.names.getIndex("My act seq");
 	server.gameSet->actionSequences[actseq].run(server.level);
 
 	getchar();

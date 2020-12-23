@@ -13,7 +13,7 @@ void OrderBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 		else if (tag == "CLASS_TYPE")
 			this->classType = Tags::ORDTSKTYPE_tagDict.getTagID(gsf.nextString().c_str());
 		else if (tag == "USE_TASK")
-			this->tasks.push_back(&gs.tasks[gs.taskNames.getIndex(gsf.nextString(true))]);
+			this->tasks.push_back(gs.tasks.readPtr(gsf));
 		else if (tag == "FLAG") {
 			std::string flag = gsf.nextString();
 			if (flag == "CYCLE_ORDER")
@@ -77,7 +77,7 @@ void OrderAssignmentBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 		if (tag == "END_ORDER_ASSIGNMENT")
 			break;
 		else if (tag == "ORDER_TO_ASSIGN")
-			this->orderToAssign = &gs.orders[gs.orderNames.getIndex(gsf.nextString(true))];
+			this->orderToAssign = gs.orders.readPtr(gsf);
 		else if (tag == "ORDER_ASSIGNMENT_MODE")
 			this->orderAssignmentMode = Tags::ORDERASSIGNMODE_tagDict.getTagID(gsf.nextString().c_str());
 		else if (tag == "ORDER_TARGET")

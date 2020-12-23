@@ -106,7 +106,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		switch (tag) {
 		case Tags::GAMEOBJ_ITEM: {
 			std::string itemstr = gsf.nextString(true);
-			int item = gameSet->itemNames.getIndex(itemstr);
+			int item = gameSet->items.names.getIndex(itemstr);
 			if (item != -1)
 				obj->setItem(item, gsf.nextFloat());
 			else
@@ -147,7 +147,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		case Tags::GAMEOBJ_APPEARANCE: {
 			std::string subtype = gsf.nextString(true);
 			std::string appear = gsf.nextString(true);
-			obj->setSubtypeAndAppearance(obj->blueprint->subtypeNames.getIndex(subtype), gameSet->appearanceNames.getIndex(appear));
+			obj->setSubtypeAndAppearance(obj->blueprint->subtypeNames.getIndex(subtype), gameSet->appearances.names.getIndex(appear));
 			break;
 		}
 		case Tags::GAMEOBJ_ORDER_CONFIGURATION: {
@@ -159,7 +159,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 				}
 				else if (strtag == "ORDER") {
 					auto orderName = gsf.nextString(true);
-					int orderType = gameSet->orderNames.getIndex(orderName); assert(orderType != -1);
+					int orderType = gameSet->orders.names.getIndex(orderName); assert(orderType != -1);
 					gsf.advanceLine();
 					OrderBlueprint &orderBp = gameSet->orders[orderType];
 					obj->orderConfig.orders.emplace_back(0, &orderBp, obj);
@@ -179,7 +179,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 							order.currentTask = gsf.nextInt();
 						}
 						else if (ordtag == "TASK") {
-							int taskType = gameSet->taskNames.getIndex(gsf.nextString(true)); assert(taskType != -1);
+							int taskType = gameSet->tasks.names.getIndex(gsf.nextString(true)); assert(taskType != -1);
 							gsf.advanceLine();
 							TaskBlueprint &taskBp = gameSet->tasks[taskType];
 							Task *taskptr = new Task(0, &taskBp, &order);
@@ -233,7 +233,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			break;
 		}
 		case Tags::GAMEOBJ_ALIAS: {
-			auto &alias = aliases[gameSet->aliasNames[gsf.nextString(true)]];
+			auto &alias = aliases[gameSet->aliases.readIndex(gsf)];
 			int count = gsf.nextInt();
 			for (int i = 0; i < count; i++) {
 				alias.emplace(gsf.nextInt());
@@ -384,7 +384,7 @@ void ServerGameObject::startMovement(const Vector3 & destination)
 	npw.writeFloat(Server::instance->timeManager.currentTime);
 	npw.writeFloat(speed);
 	Server::instance->sendToAll(npw);
-	setAnimation(Server::instance->gameSet->animationNames["Move"]);
+	setAnimation(Server::instance->gameSet->animations.names["Move"]);
 }
 
 void ServerGameObject::stopMovement()

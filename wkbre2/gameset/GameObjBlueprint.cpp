@@ -18,7 +18,7 @@ void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const 
 			std::string ats = name.substr(0, pn);
 			//std::string num = name.substr(pn);
 			//printf("? %s\n", ats.c_str());
-			int animTag = this->gameSet->animationNames.getIndex(ats);
+			int animTag = this->gameSet->animations.names.getIndex(ats);
 			if (animTag != -1) {
 				if(overrideAnims)
 					if (!alreadyOverridenAnims.count(animTag)) {
@@ -59,7 +59,7 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			break;
 		switch (tag) {
 		case Tags::CBLUEPRINT_STARTS_WITH_ITEM: {
-			int x = gameSet->itemNames.getIndex(gsf.nextString(true));
+			int x = gameSet->items.readIndex(gsf);
 			this->startItemValues[x] = gsf.nextFloat();
 			break;
 		}
@@ -78,7 +78,7 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 					break;
 				else if (apphead == "APPEARANCE") {
 					std::string appstr = gsf.nextString(true);
-					int appid = gameSet->appearanceNames.getIndex(appstr);
+					int appid = gameSet->appearances.names.getIndex(appstr);
 					gsf.advanceLine();
 					BPAppearance &ap = ps.appearances[appid];
 					while (!gsf.eof) {
@@ -102,7 +102,7 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			break;
 		}
 		case Tags::CBLUEPRINT_OFFERS_COMMAND: {
-			int x = gameSet->commandNames.getIndex(gsf.nextString(true));
+			int x = gameSet->commands.readIndex(gsf);
 			offeredCommands.push_back(&gameSet->commands[x]);
 			break;
 		}

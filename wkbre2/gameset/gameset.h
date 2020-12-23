@@ -13,31 +13,46 @@
 #include "command.h"
 #include "../Model.h"
 #include "OrderBlueprint.h"
+#include "../util/StriCompare.h"
 
 struct GameObjBlueprint;
 
+template<typename T> struct GSBlueprintList {
+	IndexedStringList names;
+	DynArray<T> blueprints;
+	T & operator[](size_t index) { return blueprints[index]; }
+	const T & operator[](size_t index) const { return blueprints[index]; }
+	size_t size() const { return names.size(); }
+	void pass() { blueprints.resize(names.size()); }
+	int readIndex(GSFileParser &gsf) const { return names.getIndex(gsf.nextString(true)); }
+	T & readRef(GSFileParser &gsf) { return blueprints[readIndex(gsf)]; }
+	const T & readRef(GSFileParser &gsf) const { return blueprints[readIndex(gsf)]; }
+	T * readPtr(GSFileParser &gsf) { return &blueprints[readIndex(gsf)]; }
+	const T * readPtr(GSFileParser &gsf) const { return &blueprints[readIndex(gsf)]; }
+};
+
+template<> struct GSBlueprintList<void> {
+	IndexedStringList names;
+	size_t size() const { return names.size(); }
+	void pass() {}
+	int readIndex(GSFileParser &gsf) const { return names.getIndex(gsf.nextString(true)); }
+};
+
 struct GameSet
 {
-	struct StriCompare
-	{
-		bool operator() (const std::string &a, const std::string &b) const {
-			return _stricmp(a.c_str(), b.c_str()) < 0;
-		}
-	};
+	GSBlueprintList<GameObjBlueprint> objBlueprints[Tags::GAMEOBJCLASS_COUNT];
+	GSBlueprintList<int> items;
+	GSBlueprintList<ValueDeterminer*> equations;
+	GSBlueprintList<ActionSequence> actionSequences;
+	GSBlueprintList<void> appearances;
+	GSBlueprintList<Command> commands;
+	GSBlueprintList<void> animations;
+	GSBlueprintList<OrderBlueprint> orders;
+	GSBlueprintList<TaskBlueprint> tasks;
+	GSBlueprintList<OrderAssignmentBlueprint> orderAssignments;
+	GSBlueprintList<void> aliases;
 
-	IndexedStringList itemNames, equationNames, valueNames, actionSequenceNames,
-		appearanceNames, commandNames, animationNames, orderNames, taskNames,
-		orderAssignmentNames, aliasNames;
-	IndexedStringList objBlueprintNames[Tags::GAMEOBJCLASS_COUNT];
-	std::unique_ptr<GameObjBlueprint[]> objBlueprints[Tags::GAMEOBJCLASS_COUNT];
 	std::map<std::string, float, StriCompare> definedValues;
-	std::unique_ptr<int[]> itemSides;
-	std::unique_ptr<ValueDeterminer*[]> equations;
-	std::unique_ptr<ActionSequence[]> actionSequences;
-	std::unique_ptr<Command[]> commands;
-	DynArray<OrderBlueprint> orders;
-	DynArray<TaskBlueprint> tasks;
-	DynArray<OrderAssignmentBlueprint> orderAssignments;
 
 	ModelCache modelCache;
 
@@ -46,7 +61,7 @@ struct GameSet
 
 	GameObjBlueprint *findBlueprint(int cls, const std::string &name)
 	{
-		int x = objBlueprintNames[cls].getIndex(name);
+		int x = objBlueprints[cls].names.getIndex(name);
 		if (x == -1) return nullptr;
 		else return &objBlueprints[cls][x];
 	}

@@ -70,7 +70,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_DEFINED_VALUE:
 		return new ValueConstant(gs.definedValues.at(gsf.nextString(true)));
 	case Tags::VALUE_ITEM_VALUE: {
-		int item = gs.itemNames.getIndex(gsf.nextString(true));
+		int item = gs.items.readIndex(gsf);
 		return new ValueItemValue(item, ReadFinder(gsf, gs));
 	}
 	case Tags::VALUE_OBJECT_ID:
@@ -80,7 +80,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 		return new ValueObjectClass(objclass, ReadFinder(gsf, gs));
 	}
 	case Tags::VALUE_EQUATION_RESULT: {
-		int equation = gs.equationNames.getIndex(gsf.nextString(true));
+		int equation = gs.equations.readIndex(gsf);
 		return new ValueEquationResult(equation, ReadFinder(gsf, gs));
 	}
 	default:

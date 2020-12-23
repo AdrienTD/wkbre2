@@ -57,7 +57,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_PLAYER:
 		return new FinderPlayer;
 	case Tags::FINDER_ALIAS: {
-		int ax = gs.aliasNames.getIndex(gsf.nextString(true));
+		int ax = gs.aliases.readIndex(gsf);
 		return new FinderAlias(ax);
 	}
 	}

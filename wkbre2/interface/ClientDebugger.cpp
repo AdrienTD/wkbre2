@@ -55,12 +55,12 @@ void ClientDebugger::draw()
 		ImGui::Text("Items:");
 		for (auto item : sel->items)
 			if (item.first != -1)
-				ImGui::BulletText("\"%s\": %f", client->gameSet->itemNames.getString(item.first).c_str(), item.second);
+				ImGui::BulletText("\"%s\": %f", client->gameSet->items.names.getString(item.first).c_str(), item.second);
 		ImGui::Text("Commands:");
 		auto &io = ImGui::GetIO();
 		int assignmentMode = io.KeyCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (io.KeyShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
 		for (Command *cmd : sel->blueprint->offeredCommands)
-			if (ImGui::Button(client->gameSet->commandNames.getString(cmd->id).c_str()))
+			if (ImGui::Button(client->gameSet->commands.names.getString(cmd->id).c_str()))
 				client->sendCommand(sel, cmd, nullptr, assignmentMode);
 	}
 	else

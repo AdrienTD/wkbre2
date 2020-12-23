@@ -55,7 +55,7 @@ void GameSet::parseFile(const char * fn, int pass)
 		else if (pass == 0) {
 			switch (tag) {
 			case Tags::GAMESET_DECLARE_ITEM: {
-				itemNames.insertString(gsf.nextString(true));
+				items.names.insertString(gsf.nextString(true));
 				break;
 			}
 			case Tags::GAMESET_DEFINE_VALUE: {
@@ -64,30 +64,30 @@ void GameSet::parseFile(const char * fn, int pass)
 				break;
 			}
 			case Tags::GAMESET_APPEARANCE_TAG: {
-				appearanceNames.insertString(gsf.nextString(true));
+				appearances.names.insertString(gsf.nextString(true));
 				break;
 			}
 			case Tags::GAMESET_DECLARE_ALIAS: {
-				aliasNames.insertString(gsf.nextString(true));
+				aliases.names.insertString(gsf.nextString(true));
 				break;
 			}
 			case Tags::GAMESET_EQUATION: {
-				equationNames.insertString(gsf.nextString(true));
+				equations.names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
 			case Tags::GAMESET_ACTION_SEQUENCE: {
-				actionSequenceNames.insertString(gsf.nextString(true));
+				actionSequences.names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
 			case Tags::GAMESET_COMMAND: {
-				commandNames.insertString(gsf.nextString(true));
+				commands.names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
 			case Tags::GAMESET_ANIMATION_TAG: {
-				animationNames.insertString(gsf.nextString(true));
+				animations.names.insertString(gsf.nextString(true));
 				break;
 			}
 			case Tags::GAMESET_CHARACTER_LADDER: {
@@ -95,17 +95,17 @@ void GameSet::parseFile(const char * fn, int pass)
 				break;
 			}
 			case Tags::GAMESET_ORDER: {
-				orderNames.insertString(gsf.nextString(true));
+				orders.names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
 			case Tags::GAMESET_TASK: {
-				taskNames.insertString(gsf.nextString(true));
+				tasks.names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
 			case Tags::GAMESET_ORDER_ASSIGNMENT: {
-				orderAssignmentNames.insertString(gsf.nextString(true));
+				orderAssignments.names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
@@ -123,7 +123,7 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_ARMY:
 			{
 				int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
-				objBlueprintNames[cls].insertString(gsf.nextString(true));
+				objBlueprints[cls].names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
@@ -132,9 +132,9 @@ void GameSet::parseFile(const char * fn, int pass)
 		else if (pass == 1) {
 			switch (tag) {
 			case Tags::GAMESET_DECLARE_ITEM: {
-				int x = itemNames.getIndex(gsf.nextString(true));
-				int side = 0;
-				itemSides[x] = side;
+				int x = items.names.getIndex(gsf.nextString(true));
+				//int side = 0;
+				//itemSides[x] = side;
 				break;
 			}
 			case Tags::GAMESET_LEVEL_EXTENSION:
@@ -164,23 +164,23 @@ void GameSet::parseFile(const char * fn, int pass)
 			{
 				int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
 				std::string name = gsf.nextString(true);
-				int bpx = objBlueprintNames[cls].getIndex(name);
+				int bpx = objBlueprints[cls].names.getIndex(name);
 				objBlueprints[cls][bpx].init(cls, bpx, name, this);
 				objBlueprints[cls][bpx].parse(gsf, directory, isExtension);
 				break;
 			}
 			case Tags::GAMESET_EQUATION: {
-				int x = equationNames.getIndex(gsf.nextString(true));
+				int x = equations.readIndex(gsf);
 				equations[x] = ReadEquationNode(gsf, *this);
 				break;
 			}
 			case Tags::GAMESET_ACTION_SEQUENCE: {
-				int x = actionSequenceNames.getIndex(gsf.nextString(true));
+				int x = actionSequences.readIndex(gsf);
 				actionSequences[x].init(gsf, *this, "END_ACTION_SEQUENCE");
 				break;
 			}
 			case Tags::GAMESET_COMMAND: {
-				int x = commandNames.getIndex(gsf.nextString(true));
+				int x = commands.readIndex(gsf);
 				commands[x].id = x;
 				commands[x].parse(gsf, *this);
 				break;
@@ -190,19 +190,19 @@ void GameSet::parseFile(const char * fn, int pass)
 				break;
 			}
 			case Tags::GAMESET_ORDER: {
-				int x = orderNames.getIndex(gsf.nextString(true));
+				int x = orders.readIndex(gsf);
 				orders[x].bpid = x;
 				orders[x].parse(gsf, *this);
 				break;
 			}
 			case Tags::GAMESET_TASK: {
-				int x = taskNames.getIndex(gsf.nextString(true));
+				int x = tasks.readIndex(gsf);
 				tasks[x].bpid = x;
 				tasks[x].parse(gsf, *this);
 				break;
 			}
 			case Tags::GAMESET_ORDER_ASSIGNMENT: {
-				int x = orderAssignmentNames.getIndex(gsf.nextString(true));
+				int x = orderAssignments.readIndex(gsf);
 				orderAssignments[x].parse(gsf, *this);
 				break;
 			}
@@ -227,22 +227,25 @@ void GameSet::parseFile(const char * fn, int pass)
 
 void GameSet::load(const char * fn)
 {
-	appearanceNames.insertString("Default");
-	animationNames.insertString("Default");
-	animationNames.insertString("Idle");
+	appearances.names.insertString("Default");
+	animations.names.insertString("Default");
+	animations.names.insertString("Idle");
 
 	printf("Gameset pass 1...\n");
 	parseFile(fn, 0);
 
-	for (int i = 0; i < Tags::GAMEOBJCLASS_COUNT; i++)
-		objBlueprints[i] = std::unique_ptr<GameObjBlueprint[]>(new GameObjBlueprint[objBlueprintNames[i].size()]);
-	itemSides = std::make_unique<int[]>(itemNames.size());
-	equations = std::make_unique<ValueDeterminer*[]>(equationNames.size());
-	actionSequences = std::make_unique<ActionSequence[]>(actionSequenceNames.size());
-	commands = std::make_unique<Command[]>(commandNames.size());
-	orders.resize(orderNames.size());
-	tasks.resize(taskNames.size());
-	orderAssignments.resize(orderAssignmentNames.size());
+	for (auto &objbp : objBlueprints)
+		objbp.pass();
+	items.pass();
+	equations.pass();
+	actionSequences.pass();
+	appearances.pass();
+	commands.pass();
+	animations.pass();
+	orders.pass();
+	tasks.pass();
+	orderAssignments.pass();
+	aliases.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

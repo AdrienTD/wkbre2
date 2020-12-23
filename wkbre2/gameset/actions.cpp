@@ -233,19 +233,19 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 		return new ActionTraceValue(std::move(msg), vd);
 	}
 	case Tags::ACTION_SET_ITEM: {
-		int item = gs.itemNames.getIndex(gsf.nextString(true));
+		int item = gs.items.readIndex(gsf);
 		ObjectFinder *finder = ReadFinder(gsf, gs);
 		ValueDeterminer *value = ReadValueDeterminer(gsf, gs);
 		return new ActionSetItem(item, finder, value);
 	}
 	case Tags::ACTION_INCREASE_ITEM: {
-		int item = gs.itemNames.getIndex(gsf.nextString(true));
+		int item = gs.items.readIndex(gsf);
 		ObjectFinder *finder = ReadFinder(gsf, gs);
 		ValueDeterminer *value = ReadValueDeterminer(gsf, gs);
 		return new ActionIncreaseItem(item, finder, value);
 	}
 	case Tags::ACTION_DECREASE_ITEM: {
-		int item = gs.itemNames.getIndex(gsf.nextString(true));
+		int item = gs.items.readIndex(gsf);
 		ObjectFinder *finder = ReadFinder(gsf, gs);
 		ValueDeterminer *value = ReadValueDeterminer(gsf, gs);
 		return new ActionDecreaseItem(item, finder, value);
@@ -253,18 +253,18 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_UPON_CONDITION:
 		return new ActionUponCondition(gsf, gs);
 	case Tags::ACTION_EXECUTE_SEQUENCE: {
-		int ax = gs.actionSequenceNames.getIndex(gsf.nextString(true));
+		int ax = gs.actionSequences.readIndex(gsf);
 		ObjectFinder *finder = ReadFinder(gsf, gs);
-		return new ActionExecuteSequence(&gs.actionSequences[ax], finder);
+		return new ActionExecuteSequence((ActionSequence*)&gs.actionSequences[ax], finder);
 	}
 	case Tags::ACTION_EXECUTE_SEQUENCE_AFTER_DELAY: {
-		int ax = gs.actionSequenceNames.getIndex(gsf.nextString(true));
+		int ax = gs.actionSequences.readIndex(gsf);
 		ObjectFinder *finder = ReadFinder(gsf, gs);
 		ValueDeterminer *delay = ReadValueDeterminer(gsf, gs);
-		return new ActionExecuteSequenceAfterDelay(&gs.actionSequences[ax], finder, delay);
+		return new ActionExecuteSequenceAfterDelay((ActionSequence*)&gs.actionSequences[ax], finder, delay);
 	}
 	case Tags::ACTION_PLAY_ANIMATION_IF_IDLE: {
-		int animTag = gs.animationNames.getIndex(gsf.nextString(true));
+		int animTag = gs.animations.readIndex(gsf);
 		ObjectFinder *finder = ReadFinder(gsf, gs);
 		return new ActionPlayAnimationIfIdle(animTag, finder);
 	}
@@ -284,7 +284,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 		return new ActionTransferControl(a, b);
 	}
 	case Tags::ACTION_ASSIGN_ORDER_VIA: {
-		auto *oabpx = &gs.orderAssignments[gs.orderAssignmentNames.getIndex(gsf.nextString(true))];
+		auto *oabpx = gs.orderAssignments.readPtr(gsf);
 		ObjectFinder *f = ReadFinder(gsf, gs);
 		return new ActionAssignOrderVia(oabpx, f);
 	}
@@ -293,15 +293,15 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 		return new ActionRemove(f);
 	}
 	case Tags::ACTION_ASSIGN_ALIAS: {
-		int ax = gs.aliasNames.getIndex(gsf.nextString(true));
+		int ax = gs.aliases.readIndex(gsf);
 		return new ActionAssignAlias(ax, ReadFinder(gsf, gs));
 	}
 	case Tags::ACTION_UNASSIGN_ALIAS: {
-		int ax = gs.aliasNames.getIndex(gsf.nextString(true));
+		int ax = gs.aliases.readIndex(gsf);
 		return new ActionUnassignAlias(ax, ReadFinder(gsf, gs));
 	}
 	case Tags::ACTION_CLEAR_ALIAS: {
-		int ax = gs.aliasNames.getIndex(gsf.nextString(true));
+		int ax = gs.aliases.readIndex(gsf);
 		return new ActionClearAlias(ax);
 	}
 	}
