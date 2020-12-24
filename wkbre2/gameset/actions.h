@@ -2,14 +2,15 @@
 
 #include <vector>
 #include <memory>
-#include <memory>
 
 struct ServerGameObject;
 struct GSFileParser;
 struct GameSet;
 
 struct Action {
+	virtual ~Action() {}
 	virtual void run(ServerGameObject *self) = 0;
+	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
 };
 
 struct ActionSequence {

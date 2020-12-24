@@ -20,6 +20,8 @@ struct ActionSequence;
 struct Server;
 
 struct ServerGameObject : CommonGameObject<ServerGameObject> {
+	using Program = Server;
+
 	OrderConfiguration orderConfig;
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
@@ -41,6 +43,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 
 struct Server
 {
+	using GameObject = ServerGameObject;
 	static Server *instance;
 
 	GameSet *gameSet;

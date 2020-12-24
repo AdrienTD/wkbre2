@@ -2,6 +2,7 @@
 #include "../util/GSFileParser.h"
 #include "../gameset/gameset.h"
 #include "finder.h"
+#include "../server.h"
 
 void OrderBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 {

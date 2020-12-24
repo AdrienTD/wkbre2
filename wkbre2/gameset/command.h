@@ -7,7 +7,7 @@ struct OrderBlueprint;
 
 struct Command {
 	int id;
-	OrderBlueprint *order;
+	OrderBlueprint *order = nullptr;
 	ActionSequence startSequence;
 
 	void parse(GSFileParser &gsf, GameSet &gs);

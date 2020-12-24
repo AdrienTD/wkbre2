@@ -22,12 +22,14 @@ struct ClientInterface;
 struct Client;
 
 struct ClientGameObject : CommonGameObject<ClientGameObject> {
+	using Program = Client;
 	ClientGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ClientGameObject>(id, blueprint) {}
 	SceneEntity sceneEntity;
 };
 
 struct Client
 {
+	using GameObject = ClientGameObject;
 	static Client *instance;
 
 	GameSet *gameSet;
