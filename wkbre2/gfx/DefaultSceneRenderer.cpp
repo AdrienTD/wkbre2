@@ -80,8 +80,8 @@ void DefaultSceneRenderer::render()
 				for (size_t i = 0; i < mesh.groupIndices[g].size(); i++) {
 					IndexTuple &tind = mesh.groupIndices[g][i];
 					float *fl = &verts[tind.vertex * 3];
-					Vector3 prever(fl[0], fl[1], fl[2]), postver;
-					TransformVector3(&postver, &prever, &ent->transform);
+					Vector3 prever(fl[0], fl[1], fl[2]);
+					Vector3 postver = prever.transform(ent->transform);
 					bver[i].x = postver.x;
 					bver[i].y = postver.y;
 					bver[i].z = postver.z;

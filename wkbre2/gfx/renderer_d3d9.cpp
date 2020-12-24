@@ -559,7 +559,7 @@ struct D3D9Renderer : public IRenderer
 		ddev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
 		ddev->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
 
-		Matrix m; CreateZeroMatrix(&m);
+		Matrix m = Matrix::getZeroMatrix();
 		m._11 = 2.0f / g_windowWidth;
 		m._22 = -2.0f / g_windowHeight;
 		m._41 = -1 - 1.f/g_windowWidth;

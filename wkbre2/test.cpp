@@ -31,6 +31,7 @@
 #include "gfx/DefaultTerrainRenderer.h"
 #include "interface/ClientInterface.h"
 #include "scene.h"
+#include "SDL_timer.h"
 
 void Test_GameSet()
 {
@@ -370,9 +371,9 @@ void Test_Mesh()
 		gfx->BeginBatchDrawing();
 		batch->begin();
 
-		CreatePerspectiveMatrix(&pers, 0.9, (float)g_windowWidth / (float)g_windowHeight, 1.0f, 400.0f);
-		CreateLookAtLHViewMatrix(&cammat, &campos, &(campos + camdir), &Vector3(0, 1, 0));
-		MultiplyMatrices(&persandcam, &cammat, &pers);
+		pers = Matrix::getLHPerspectiveMatrix(0.9, (float)g_windowWidth / (float)g_windowHeight, 1.0f, 400.0f);
+		cammat = Matrix::getLHLookAtViewMatrix(campos, campos + camdir, Vector3(0, 1, 0));
+		persandcam = cammat * pers;
 		gfx->SetTransformMatrix(&persandcam);
 
 		std::string curtex;
@@ -649,8 +650,8 @@ void Test_Scene()
 
 	ModelCache modcache;
 	Model* models[2];
-	models[0] = modcache.getModel("Warrior Kings Game Set\\Characters\\Peasant\\Male\\Peasant1.MESH3");
-	models[1] = modcache.getModel("Warrior Kings Game Set\\Characters\\Add On - Arch Druid\\ArchDruid_BigBoot.MESH3");
+	models[0] = modcache.getModel("Warrior Kings Game Set\\Characters\\Peasant\\Male\\Dance1.ANIM3");
+	models[1] = modcache.getModel("Warrior Kings Game Set\\Characters\\Add On - Arch Druid\\Summon.ANIM3");
 
 	const int numents = 256;
 
@@ -672,6 +673,7 @@ void Test_Scene()
 
 	while (!g_windowQuit)
 	{
+		uint32_t ticks = SDL_GetTicks();
 		ImGuiImpl_NewFrame();
 		ImGui::DragFloat3("Position", &camera.position.x);
 		ImGui::DragFloat2("Orientation", &camera.orientation.x, 0.1f);
@@ -679,10 +681,11 @@ void Test_Scene()
 
 		for (int i = 0; i < numents; i++) {
 			SceneEntity &se = scents[i];
-			float s = (sin(GetTickCount() / 1000.0f + scalestart[i]) + 1.0f) * 0.5f;
-			CreateScaleMatrix(&se.transform, s, s, s);
+			float s = (sinf(ticks / 1000.0f + scalestart[i]) + 1.0f) * 0.5f;
+			se.transform = Matrix::getScaleMatrix(Vector3(s, s, s));
 			se.transform._41 = xpos[i];
 			se.transform._43 = zpos[i];
+			se.animTime = ticks;
 		}
 
 		gfx->BeginDrawing();

@@ -85,6 +85,32 @@ namespace {
 		//}
 		//else	stdownvalid = 0;
 	}
+
+	bool RayIntersectsSphere(const Vector3 &raystart, const Vector3 &raydir, const Vector3 &center, float radius)
+	{
+		Vector3 rdnorm = raydir.normal();
+		Vector3 smc = raystart - center;
+		float ddt = rdnorm.dot(smc);
+		float delta = ddt * ddt - rdnorm.sqlen3()*(smc.sqlen3() - radius * radius);
+		if (delta < 0.0f)
+			return false;
+		float k1 = -ddt + sqrtf(delta),
+			k2 = -ddt - sqrtf(delta);
+		if (k1 < 0.0f && k2 < 0.0f)
+			return false;
+		return true;
+	}
+
+	Matrix CreateWorldMatrix(const Vector3 &is, const Vector3 &ir, const Vector3 &it)
+	{
+		//Matrix mscale, mrot, mtrans;
+		//CreateScaleMatrix(&mscale, is.x, is.y, is.z);
+		//CreateRotationYXZMatrix(&mrot, ir.y, ir.x, ir.z);
+		//CreateTranslationMatrix(&mtrans, it.x, it.y, it.z);
+		//*mWorld = mscale * mrot*mtrans;
+		return Matrix::getScaleMatrix(is) * Matrix::getRotationYMatrix(ir.y) * Matrix::getRotationXMatrix(ir.x)
+			* Matrix::getRotationZMatrix(ir.z) * Matrix::getTranslationMatrix(it);
+	}
 }
 
 void ClientInterface::drawObject(ClientGameObject *obj) {
@@ -95,8 +121,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 		float dist = client->camera.direction.dot(obj->position - client->camera.position);
 		if (dist < client->camera.nearDist || dist > client->camera.farDist)
 			goto drawsub;
-		Vector3 ttpp;
-		TransformCoord3(&ttpp, &obj->position, &client->camera.sceneMatrix);
+		Vector3 ttpp = obj->position.transformScreenCoords(client->camera.sceneMatrix);
 		if (!(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)) {
 			const auto &ap = obj->blueprint->subtypes[obj->subtype].appearances[obj->appearance];
 			auto it = ap.animations.find(obj->animationIndex);
@@ -110,7 +135,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 			else
 				obj->sceneEntity.model = nullptr;
 			if (obj->sceneEntity.model) {
-				CreateWorldMatrix(&obj->sceneEntity.transform, Vector3(1,1,1), -obj->orientation, obj->position);
+				obj->sceneEntity.transform = CreateWorldMatrix(Vector3(1,1,1), -obj->orientation, obj->position);
 				obj->sceneEntity.color = obj->getPlayer()->color;
 				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter(), obj->sceneEntity.model->getSphereRadius())) {
 					obj->sceneEntity.color = 0;
@@ -212,7 +237,7 @@ void ClientInterface::iter()
 			peapos = CalcStampdownPos(client->camera.position, rayDirection, *client->terrain);
 		SceneEntity test;
 		test.model = client->gameSet->modelCache.getModel("Warrior Kings Game Set\\Characters\\Peasant\\Male\\Peasant1.MESH3");
-		CreateTranslationMatrix(&test.transform, peapos.x, peapos.y, peapos.z);
+		test.transform = Matrix::getTranslationMatrix(peapos);
 		test.color = 0;
 		scene->add(&test);
 		//
