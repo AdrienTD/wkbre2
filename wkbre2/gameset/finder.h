@@ -23,3 +23,4 @@ struct ObjectFinder {
 };
 
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs);
+ObjectFinder *ReadFinderNode(GSFileParser &gsf, const GameSet &gs);

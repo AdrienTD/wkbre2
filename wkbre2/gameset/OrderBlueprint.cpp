@@ -66,6 +66,10 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			this->proximityRequirement = ReadValueDeterminer(gsf, gs);
 		else if (tag == "PROXIMITY_SATISFIED_SEQUENCE")
 			this->proximitySatisfiedSequence.init(gsf, gs, "END_PROXIMITY_SATISFIED_SEQUENCE");
+		else if (tag == "PLAY_ANIMATION") {
+			if (gsf.nextString() == "TAG")
+				this->defaultAnim = gs.animations.readIndex(gsf);
+		}
 		gsf.advanceLine();
 	}
 }

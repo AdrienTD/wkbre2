@@ -48,6 +48,7 @@ void Server::loadSaveGame(const char * filename)
 
 	timeManager.unlock();
 	timeManager.unpause();
+	lastSync = time(nullptr);
 }
 
 ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id)
@@ -240,6 +241,16 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			}
 			break;
 		}
+		case Tags::GAMEOBJ_INDIVIDUAL_REACTION: {
+			obj->individualReactions.insert(gameSet->reactions.readPtr(gsf));
+			break;
+		}
+		case Tags::GAMEOBJ_ASSOCIATE: {
+			int category = gameSet->associations.readIndex(gsf);
+			int count = gsf.nextInt();
+			for (int i = 0; i < count; i++)
+				obj->associateObject(category, findObject(gsf.nextInt()));
+		}
 		case Tags::GAMEOBJ_PLAYER:
 		case Tags::GAMEOBJ_CHARACTER:
 		case Tags::GAMEOBJ_BUILDING:
@@ -394,6 +405,53 @@ void ServerGameObject::stopMovement()
 	npw.writeUint32(this->id);
 	Server::instance->sendToAll(npw);
 	setAnimation(0); // default animation
+}
+
+void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
+{
+	// Problem: reaction can be executed twice if it is in both intrinsics and individuals, but is it worth checking that?
+	for (Reaction *r : blueprint->intrinsicReactions)
+		if (r->canBeTriggeredBy(evt, this))
+			r->actions.run(this);
+	for (Reaction *r : individualReactions)
+		if (r->canBeTriggeredBy(evt, this))
+			r->actions.run(this);
+}
+
+void ServerGameObject::associateObject(int category, ServerGameObject * associated)
+{
+	this->associates[category].insert(associated);
+	associated->associators[category].insert(this);
+}
+
+void ServerGameObject::dissociateObject(int category, ServerGameObject * associated)
+{
+	this->associates[category].erase(associated);
+	associated->associators[category].erase(this);
+
+}
+
+void ServerGameObject::clearAssociates(int category)
+{
+	for (auto &obj : associates[category])
+		obj->associators[category].erase(this);
+	associates[category].clear();
+}
+
+void ServerGameObject::convertTo(GameObjBlueprint * postbp)
+{
+	// remove from parent's children
+	auto &vec = parent->children.at(blueprint->getFullId());
+	vec.erase(std::find(vec.begin(), vec.end(), this));
+	// add it back at the correct blueprint key
+	parent->children[postbp->getFullId()].push_back(this);
+	// now converted!
+	blueprint = postbp;
+	// inform the clients
+	NetPacketWriter npw{ NETCLIMSG_OBJECT_CONVERTED };
+	npw.writeUint32(this->id);
+	npw.writeUint32(postbp->getFullId());
+	Server::instance->sendToAll(npw);
 }
 
 void Server::sendToAll(const NetPacket & packet)

@@ -165,6 +165,14 @@ struct EnodeDivision : ValueDeterminer {
 	EnodeDivision(ValueDeterminer *a, ValueDeterminer *b) : a(a), b(b) {}
 };
 
+struct EnodeIsZero : ValueDeterminer {
+	std::unique_ptr<ValueDeterminer> a;
+	virtual float eval(ServerGameObject *self) override { return a->eval(self) == 0.0f; }
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		a.reset(ReadEquationNode(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	gsf.advanceLine();
@@ -181,6 +189,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_SUBTRACTION: vd = new EnodeSubtraction; break;
 			case Tags::ENODE_MULTIPLICATION: vd = new EnodeMultiplication; break;
 			case Tags::ENODE_DIVISION: vd = new EnodeDivision; break;
+			case Tags::ENODE_IS_ZERO: vd = new EnodeIsZero; break;
 			default: 
 				gsf.cursor = oldcur;
 				return ReadValueDeterminer(gsf, gs);

@@ -96,6 +96,15 @@ struct TimerTrigger : Trigger {
 	void parse(GSFileParser &gsf, GameSet &gs) override;
 };
 
+struct AnimationLoopTrigger : Trigger {
+	float referenceTime;
+	using Trigger::Trigger;
+	void init() override;
+	void update() override;
+	void parse(GSFileParser &gsf, GameSet &gs) override;
+};
+
+
 struct OrderConfiguration {
 	ServerGameObject *gameobj;
 	std::deque<Order> orders;

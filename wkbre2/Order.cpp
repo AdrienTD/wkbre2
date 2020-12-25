@@ -81,8 +81,10 @@ Task::Task(int id, TaskBlueprint * blueprint, Order * order) : id(id), blueprint
 	for (int i = 0; i < this->triggers.size(); i++) {
 		auto &trigbp = blueprint->triggers[i];
 		Trigger *trigger;
-		if (trigbp.type = Tags::TASKTRIGGER_TIMER)
+		if (trigbp.type == Tags::TASKTRIGGER_TIMER)
 			trigger = new TimerTrigger(this, &trigbp);
+		else if (trigbp.type == Tags::TASKTRIGGER_ANIMATION_LOOP)
+			trigger = new AnimationLoopTrigger(this, &trigbp);
 		else
 			trigger = new Trigger(this, &trigbp);
 		this->triggers[i] = trigger;
@@ -164,6 +166,8 @@ void Task::process()
 				if (!proximitySatisfied) {
 					proximitySatisfied = true;
 					blueprint->proximitySatisfiedSequence.run(order->gameObject);
+					if(blueprint->defaultAnim != -1)
+						go->setAnimation(blueprint->defaultAnim);
 				}
 			}
 			else {
@@ -172,6 +176,8 @@ void Task::process()
 					go->startMovement(this->target->position);
 				if (proximitySatisfied) {
 					proximitySatisfied = false;
+					//if (blueprint->defaultAnim != -1)
+					//	go->setAnimation(0);
 				}
 			}
 		}
@@ -278,6 +284,33 @@ void TimerTrigger::parse(GSFileParser & gsf, GameSet & gs)
 			period = gsf.nextFloat();
 		else if (word == "REFERENCE_TIME")
 			referenceTime = gsf.nextFloat();
+		else if (word == "END_TRIGGER")
+			break;
+		gsf.advanceLine();
+	}
+}
+
+void AnimationLoopTrigger::init()
+{
+	referenceTime = Server::instance->timeManager.currentTime;
+}
+
+void AnimationLoopTrigger::update()
+{
+	const float period = 1.5f;
+	if (Server::instance->timeManager.currentTime >= referenceTime + period) {
+		this->blueprint->actions.run(this->task->order->gameObject);
+		this->referenceTime += period;
+	}
+}
+
+void AnimationLoopTrigger::parse(GSFileParser & gsf, GameSet & gs)
+{
+	gsf.advanceLine();
+	while (!gsf.eof) {
+		std::string word = gsf.nextTag();
+		if (word == "REFERENCE_TIME")
+			referenceTime = (float)gsf.nextInt() / 1000.0f;
 		else if (word == "END_TRIGGER")
 			break;
 		gsf.advanceLine();

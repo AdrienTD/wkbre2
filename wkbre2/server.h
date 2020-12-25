@@ -8,6 +8,7 @@
 #include "Order.h"
 #include "GameObjectRef.h"
 #include <unordered_set>
+#include <unordered_map>
 
 struct GameSet;
 struct GSFileParser;
@@ -18,11 +19,14 @@ struct NetPacketWriter;
 struct Terrain;
 struct ActionSequence;
 struct Server;
+struct Reaction;
 
 struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	using Program = Server;
 
 	OrderConfiguration orderConfig;
+	std::unordered_set<Reaction*> individualReactions;
+	std::unordered_map<int, std::unordered_set<SrvGORef>> associates, associators;
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 
@@ -35,6 +39,11 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void setAnimation(int animationIndex);
 	void startMovement(const Vector3 &destination);
 	void stopMovement();
+	void sendEvent(int evt, ServerGameObject *sender = nullptr);
+	void associateObject(int category, ServerGameObject *associated);
+	void dissociateObject(int category, ServerGameObject *associated);
+	void clearAssociates(int category);
+	void convertTo(GameObjBlueprint *postbp);
 
 	//void addOrderAtBegin(int orderType);
 	//void addOrderAtEnd(int orderType);

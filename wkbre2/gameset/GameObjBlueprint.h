@@ -10,6 +10,7 @@
 struct GameSet;
 struct Command;
 struct Model;
+struct Reaction;
 
 struct GameObjBlueprint {
 	struct BPAppearance {
@@ -33,6 +34,8 @@ struct GameObjBlueprint {
 	std::string modelPath;
 
 	std::vector<Command*> offeredCommands;
+
+	std::vector<Reaction*> intrinsicReactions;
 
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {

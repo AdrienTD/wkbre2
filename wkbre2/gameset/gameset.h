@@ -14,6 +14,8 @@
 #include "../Model.h"
 #include "OrderBlueprint.h"
 #include "../util/StriCompare.h"
+#include "reaction.h"
+#include "ObjectCreation.h"
 
 struct GameObjBlueprint;
 
@@ -51,6 +53,12 @@ struct GameSet
 	GSBlueprintList<TaskBlueprint> tasks;
 	GSBlueprintList<OrderAssignmentBlueprint> orderAssignments;
 	GSBlueprintList<void> aliases;
+	GSBlueprintList<void> events;
+	GSBlueprintList<Reaction> reactions;
+	GSBlueprintList<PackageReceiptTrigger> prTriggers;
+	GSBlueprintList<ObjectCreation> objectCreations;
+	GSBlueprintList<ObjectFinder*> objectFinderDefinitions;
+	GSBlueprintList<void> associations;
 
 	std::map<std::string, float, StriCompare> definedValues;
 
@@ -70,6 +78,8 @@ struct GameSet
 		uint32_t clid = fullId & 63, tyid = fullId >> 6;
 		return &objBlueprints[clid][tyid];
 	}
+
+	GameObjBlueprint *readObjBlueprintPtr(GSFileParser &gsf);
 
 	GameSet() {}
 	GameSet(const char *fn) { load(fn); }

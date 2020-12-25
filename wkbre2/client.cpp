@@ -181,6 +181,21 @@ void Client::tick()
 				}
 				break;
 			}
+			case NETCLIMSG_OBJECT_CONVERTED: {
+				uint32_t objid = br.readUint32();
+				uint32_t postbpid = br.readUint32();
+				if (ClientGameObject *obj = findObject(objid)) {
+					GameObjBlueprint *postbp = gameSet->getBlueprint(postbpid);
+					// remove from parent's children
+					auto &vec = obj->parent->children.at(obj->blueprint->getFullId());
+					vec.erase(std::find(vec.begin(), vec.end(), obj));
+					// add it back at the correct blueprint key
+					obj->parent->children[postbp->getFullId()].push_back(obj);
+					// now converted!
+					obj->blueprint = postbp;
+				}
+				break;
+			}
 			}
 		}
 	}

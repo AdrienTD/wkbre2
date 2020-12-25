@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <set>
+#include "finder.h"
 
 void ignoreBlueprint(GSFileParser &gsf, const std::string &tag)
 {
@@ -109,6 +110,34 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_GAME_EVENT: {
+				events.names.insertString(gsf.nextString(true));
+				break;
+			}
+			case Tags::GAMESET_REACTION: {
+				reactions.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+			case Tags::GAMESET_PACKAGE_RECEIPT_TRIGGER: {
+				prTriggers.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+			case Tags::GAMESET_OBJECT_CREATION: {
+				objectCreations.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+			case Tags::GAMESET_OBJECT_FINDER_DEFINITION: {
+				objectFinderDefinitions.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+			case Tags::GAMESET_ASSOCIATE_CATEGORY: {
+				associations.names.insertString(gsf.nextString(true));
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -206,6 +235,27 @@ void GameSet::parseFile(const char * fn, int pass)
 				orderAssignments[x].parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_REACTION: {
+				Reaction &r = reactions.readRef(gsf);
+				r.parse(gsf, *this);
+				break;
+			}
+			case Tags::GAMESET_PACKAGE_RECEIPT_TRIGGER: {
+				PackageReceiptTrigger &prt = prTriggers.readRef(gsf);
+				prt.parse(gsf, *this);
+				break;
+			}
+			case Tags::GAMESET_OBJECT_CREATION: {
+				ObjectCreation &oc = objectCreations.readRef(gsf);
+				oc.parse(gsf, *this);
+				break;
+			}
+			case Tags::GAMESET_OBJECT_FINDER_DEFINITION: {
+				int ofd = objectFinderDefinitions.readIndex(gsf);
+				objectFinderDefinitions[ofd] = ReadFinderNode(gsf, *this);
+				//ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			}
 		}
@@ -230,6 +280,11 @@ void GameSet::load(const char * fn)
 	appearances.names.insertString("Default");
 	animations.names.insertString("Default");
 	animations.names.insertString("Idle");
+	for (auto &pde : Tags::PDEVENT_tagDict.tags) {
+		std::string s = pde;
+		for (char &c : s) if (c == '_') c = ' ';
+		events.names.insertString(s);
+	}
 
 	printf("Gameset pass 1...\n");
 	parseFile(fn, 0);
@@ -246,8 +301,20 @@ void GameSet::load(const char * fn)
 	tasks.pass();
 	orderAssignments.pass();
 	aliases.pass();
+	events.pass();
+	reactions.pass();
+	prTriggers.pass();
+	objectCreations.pass();
+	objectFinderDefinitions.pass();
+	associations.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);
 	printf("Gameset loaded!\n");
+}
+
+GameObjBlueprint * GameSet::readObjBlueprintPtr(GSFileParser & gsf)
+{
+	int bpclass = Tags::GAMEOBJCLASS_tagDict.getTagID(gsf.nextString().c_str());
+	return objBlueprints[bpclass].readPtr(gsf);
 }

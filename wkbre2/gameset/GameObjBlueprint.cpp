@@ -106,6 +106,10 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			offeredCommands.push_back(&gameSet->commands[x]);
 			break;
 		}
+		case Tags::CBLUEPRINT_INTRINSIC_REACTION: {
+			intrinsicReactions.push_back(gameSet->reactions.readPtr(gsf));
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

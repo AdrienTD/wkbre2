@@ -38,6 +38,21 @@ struct ActionTraceValue : Action {
 	ActionTraceValue(std::string &&message, ValueDeterminer *value) : message(message), value(value) {}
 };
 
+struct ActionTraceFinderResults : Action {
+	std::string message;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		auto vec = finder->eval(self);
+		printf("Trace Finder: %s\n %zi objects:\n", message.c_str(), vec.size());
+		for (ServerGameObject *obj : vec)
+			printf(" - %i %s\n", obj->id, obj->blueprint->getFullName().c_str());
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		message = gsf.nextString(true);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 struct ActionUponCondition : Action {
 	std::unique_ptr<ValueDeterminer> value;
 	ActionSequence trueList, falseList;
@@ -297,12 +312,133 @@ struct ActionClearAlias : Action {
 	ActionClearAlias(int aliasIndex) : aliasIndex(aliasIndex) {}
 };
 
+struct ActionAddReaction : Action {
+	Reaction *reaction;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		for(ServerGameObject *obj : finder->eval(self))
+			obj->individualReactions.insert(reaction);
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		reaction = gs.reactions.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionRemoveReaction : Action {
+	Reaction *reaction;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		for (ServerGameObject *obj : finder->eval(self))
+			obj->individualReactions.erase(reaction);
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		reaction = gs.reactions.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionSendEvent : Action {
+	int event = -1;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		if (event == -1) return;
+		for (ServerGameObject *obj : finder->eval(self))
+			obj->sendEvent(event, self);
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		event = gs.events.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionCreateObjectVia : Action {
+	ObjectCreation *info;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		for (ServerGameObject *obj : finder->eval(self))
+			info->run(obj);
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		info = gs.objectCreations.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionRegisterAssociates : Action {
+	std::unique_ptr<ObjectFinder> f_aors, f_ated;
+	int category;
+	virtual void run(ServerGameObject *self) override {
+		auto aors = f_aors->eval(self);
+		auto ated = f_ated->eval(self);
+		for (ServerGameObject *aor : aors) {
+			for (ServerGameObject *obj : ated)
+				aor->associateObject(category, obj);
+		}
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		f_aors.reset(ReadFinder(gsf, gs));
+		category = gs.associations.readIndex(gsf);
+		f_ated.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionDeregisterAssociates : Action {
+	std::unique_ptr<ObjectFinder> f_aors, f_ated;
+	int category;
+	virtual void run(ServerGameObject *self) override {
+		auto aors = f_aors->eval(self);
+		auto ated = f_ated->eval(self);
+		for (ServerGameObject *aor : aors) {
+			for (ServerGameObject *obj : ated)
+				aor->dissociateObject(category, obj);
+		}
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		f_aors.reset(ReadFinder(gsf, gs));
+		category = gs.associations.readIndex(gsf);
+		f_ated.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionClearAssociates : Action {
+	int category;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		for (ServerGameObject *obj : finder->eval(self))
+			obj->clearAssociates(category);
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		category = gs.associations.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionConvertTo : Action {
+	GameObjBlueprint *postbp;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		for (ServerGameObject *obj : finder->eval(self))
+			obj->convertTo(postbp);
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		postbp = gs.readObjBlueprintPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionNop : Action {
+	virtual void run(ServerGameObject *self) override {}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
 	switch (Tags::ACTION_tagDict.getTagID(gsf.nextString().c_str())) {
 	case Tags::ACTION_TRACE: action = new ActionTrace; break;
 	case Tags::ACTION_TRACE_VALUE: action = new ActionTraceValue; break;
+	case Tags::ACTION_TRACE_FINDER_RESULTS: action = new ActionTraceFinderResults; break;
 	case Tags::ACTION_SET_ITEM: action = new ActionSetItem; break;
 	case Tags::ACTION_INCREASE_ITEM: action = new ActionIncreaseItem; break;
 	case Tags::ACTION_DECREASE_ITEM: action = new ActionDecreaseItem; break;
@@ -320,6 +456,17 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_ASSIGN_ALIAS: action = new ActionAssignAlias; break;
 	case Tags::ACTION_UNASSIGN_ALIAS: action = new ActionUnassignAlias; break;
 	case Tags::ACTION_CLEAR_ALIAS: action = new ActionClearAlias; break;
+	case Tags::ACTION_ADD_REACTION: action = new ActionAddReaction; break;
+	case Tags::ACTION_REMOVE_REACTION: action = new ActionRemoveReaction; break;
+	case Tags::ACTION_SEND_EVENT: action = new ActionSendEvent; break;
+	case Tags::ACTION_CREATE_OBJECT_VIA: action = new ActionCreateObjectVia; break;
+	case Tags::ACTION_REGISTER_ASSOCIATES: action = new ActionRegisterAssociates; break;
+	case Tags::ACTION_DEREGISTER_ASSOCIATES: action = new ActionDeregisterAssociates; break;
+	case Tags::ACTION_CLEAR_ASSOCIATES: action = new ActionClearAssociates; break;
+	case Tags::ACTION_CONVERT_TO: action = new ActionConvertTo; break;
+		// Below are ignored actions (that should not affect gameplay very much)
+	case Tags::ACTION_PLAY_SOUND: action = new ActionNop; break;
+		//
 	default: action = new ActionUnknown; break;
 	}
 	action->parse(gsf, const_cast<GameSet&>(gs));  // FIXME
