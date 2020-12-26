@@ -55,6 +55,9 @@ struct Terrain
 	uint8_t *vertices;
 	Tile *tiles;
 
+	std::pair<int, int> getNumPlayableTiles() const { return { width - 2 * edge, height - 2 * edge }; }
+	std::pair<float, float> getPlayableArea() const { return { 5.0f * (width - 2 * edge), 5.0f * (height - 2 * edge) }; }
+
 	inline float getVertex(int x, int z) const
 	{
 		return vertices[z*(width+1) + x] * scale;

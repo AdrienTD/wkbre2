@@ -17,9 +17,11 @@ template<typename Program, typename AnyGameObject> struct GameObjectRef {
 	void set(uint32_t id) { objid = id; }
 	GameObjectRef &operator=(AnyGameObject *obj) { set(obj); return *this; }
 	GameObjectRef &operator=(uint32_t id) { set(id); return *this; }
+	GameObjectRef &operator=(const GameObjectRef &ref) { set(ref.objid); return *this; }
 
 	bool operator<(const GameObjectRef &other) const { return objid < other.objid; }
 	bool operator==(const GameObjectRef &other) const { return objid == other.objid; }
+	bool operator==(AnyGameObject *obj) const { return objid == obj->id; }
 
 	GameObjectRef() { objid = NULL_GOREF; }
 	GameObjectRef(AnyGameObject *obj) { set(obj); }

@@ -27,6 +27,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	OrderConfiguration orderConfig;
 	std::unordered_set<Reaction*> individualReactions;
 	std::unordered_map<int, std::unordered_set<SrvGORef>> associates, associators;
+	int tileIndex = -1;
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 
@@ -45,9 +46,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void clearAssociates(int category);
 	void convertTo(GameObjBlueprint *postbp);
 
-	//void addOrderAtBegin(int orderType);
-	//void addOrderAtEnd(int orderType);
-	//void removeOrder(int orderIndex);
+	void updatePosition(const Vector3 &newposition);
 };
 
 struct Server
@@ -64,6 +63,7 @@ struct Server
 	ServerGameObject *level;
 	std::map<uint32_t, ServerGameObject*> idmap;
 	Terrain *terrain;
+	std::vector<SrvGORef> *tileObjList = nullptr;
 
 	struct DelayedSequence {
 		ActionSequence* actionSequence; // or ActionSequence*
@@ -79,6 +79,8 @@ struct Server
 	std::vector<NetLink*> clientLinks;
 
 	time_t lastSync;
+
+	std::vector<std::tuple<ServerGameObject*, int, int>> postAssociations;
 
 	Server() : gameSet(nullptr), level(nullptr), terrain(nullptr) { instance = this; }
 

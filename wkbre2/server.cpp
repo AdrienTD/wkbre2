@@ -5,6 +5,7 @@
 #include "gameset/gameset.h"
 #include "network.h"
 #include "terrain.h"
+#include "gameset/ScriptContext.h"
 
 Server *Server::instance = nullptr;
 
@@ -46,6 +47,9 @@ void Server::loadSaveGame(const char * filename)
 
 	free(filetext);
 
+	for (auto &t : postAssociations)
+		std::get<0>(t)->associateObject(std::get<1>(t), findObject(std::get<2>(t)));
+
 	timeManager.unlock();
 	timeManager.unpause();
 	lastSync = time(nullptr);
@@ -53,8 +57,10 @@ void Server::loadSaveGame(const char * filename)
 
 ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id)
 {
-	if (!id)
-		id = nextUniqueId++;
+	if (!id) {
+		while (idmap.count(++nextUniqueId) != 0);
+		id = nextUniqueId;
+	}
 	ServerGameObject *obj = new ServerGameObject(id, blueprint);
 	idmap[id] = obj;
 
@@ -72,9 +78,24 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 void Server::deleteObject(ServerGameObject * obj)
 {
 	int id = obj->id;
+
+	// remove associations from/to this object
+	for (auto &ref : obj->associates)
+		for (const SrvGORef &ass : ref.second) {
+			assert(ass.get());
+			ass->associators[ref.first].erase(obj);
+		}
+	for (auto &ref : obj->associators)
+		for (const SrvGORef &ass : ref.second) {
+			assert(ass.get());
+			ass->associates[ref.first].erase(obj);
+		}
+
 	// remove from parent's children
 	auto &vec = obj->parent->children.at(obj->blueprint->getFullId());
 	vec.erase(std::find(vec.begin(), vec.end(), obj));
+	//std::swap(*std::find(vec.begin(), vec.end(), obj), vec.back());
+	//vec.pop_back();
 	// remove from ID map
 	idmap.erase(obj->id);
 	// delete the object, bye!
@@ -135,6 +156,8 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			NetPacketWriter packet(NETCLIMSG_TERRAIN_SET);
 			packet.writeStringZ(mapfp);
 			sendToAll(packet);
+			auto area = this->terrain->getNumPlayableTiles();
+			this->tileObjList = new std::vector<SrvGORef>[area.first * area.second];
 			break;
 		}
 		case Tags::GAMEOBJ_COLOUR_INDEX: {
@@ -249,7 +272,9 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			int category = gameSet->associations.readIndex(gsf);
 			int count = gsf.nextInt();
 			for (int i = 0; i < count; i++)
-				obj->associateObject(category, findObject(gsf.nextInt()));
+				postAssociations.emplace_back(obj, category, gsf.nextInt());
+				//obj->associateObject(category, findObject(gsf.nextInt()));
+			break;
 		}
 		case Tags::GAMEOBJ_PLAYER:
 		case Tags::GAMEOBJ_CHARACTER:
@@ -332,7 +357,7 @@ void ServerGameObject::setParent(ServerGameObject * newParent)
 
 void ServerGameObject::setPosition(const Vector3 & position)
 {
-	this->position = position;
+	updatePosition(position);
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_POSITION_SET);
 	msg.writeUint32(this->id);
@@ -410,6 +435,7 @@ void ServerGameObject::stopMovement()
 void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 {
 	// Problem: reaction can be executed twice if it is in both intrinsics and individuals, but is it worth checking that?
+	auto _ = SrvScriptContext::packageSender.change(sender);
 	for (Reaction *r : blueprint->intrinsicReactions)
 		if (r->canBeTriggeredBy(evt, this))
 			r->actions.run(this);
@@ -454,6 +480,31 @@ void ServerGameObject::convertTo(GameObjBlueprint * postbp)
 	Server::instance->sendToAll(npw);
 }
 
+void ServerGameObject::updatePosition(const Vector3 & newposition)
+{
+	Server *server = Server::instance;
+	position = newposition;
+	if (server->tileObjList) {
+		int trnNumX, trnNumZ;
+		std::tie(trnNumX, trnNumZ) = server->terrain->getNumPlayableTiles();
+		int tx = static_cast<int>(position.x / 5.0f), tz = static_cast<int>(position.z / 5.0f);
+		int newtileIndex;
+		if (tx >= 0 && tx < trnNumX && tz >= 0 && tz < trnNumZ)
+			newtileIndex = tz * trnNumX + tx;
+		else
+			newtileIndex = -1;
+		if (newtileIndex != tileIndex) {
+			if (tileIndex != -1) {
+				auto &vec = server->tileObjList[tileIndex];
+				vec.erase(std::find(vec.begin(), vec.end(), this));
+			}
+			if (newtileIndex != -1)
+				server->tileObjList[newtileIndex].push_back(this);
+			tileIndex = newtileIndex;
+		}
+	}
+}
+
 void Server::sendToAll(const NetPacket & packet)
 {
 	for (NetLink *cli : clientLinks)
@@ -494,8 +545,9 @@ void Server::tick()
 	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
 		obj->orderConfig.process();
 		if (obj->movement.isMoving()) {
-			obj->position = obj->movement.getNewPosition(timeManager.currentTime);
-			obj->position.y = terrain->getHeight(obj->position.x, obj->position.z);
+			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
+			newpos.y = terrain->getHeight(obj->position.x, obj->position.z);
+			obj->updatePosition(newpos);
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
 		}

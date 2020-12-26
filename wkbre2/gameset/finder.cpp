@@ -5,6 +5,8 @@
 #include "../server.h"
 #include "../client.h"
 #include "CommonEval.h"
+#include "../NNSearch.h"
+#include "ScriptContext.h"
 
 std::vector<ClientGameObject*> ObjectFinder::eval(ClientGameObject * self)
 {
@@ -130,6 +132,81 @@ struct FinderAssociators : ObjectFinder {
 	}
 };
 
+struct FinderPlayers : ObjectFinder {
+	int equation;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
+		Server *server = Server::instance;
+		std::vector<ServerGameObject*> res;
+		for (auto &it : server->level->children) {
+			if ((it.first & 63) == Tags::GAMEOBJCLASS_PLAYER)
+				for (ServerGameObject *player : it.second)
+					if (auto _ = SrvScriptContext::candidate.change(player))
+						if (server->gameSet->equations[equation]->eval(self))
+							res.push_back(player);
+		}
+		return res;
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		equation = gs.equations.readIndex(gsf);
+	}
+};
+
+struct FinderCandidate : CommonEval<FinderCandidate, ObjectFinder> {
+	template<typename AnyGameObject> std::vector<AnyGameObject*> common_eval(AnyGameObject *self) {
+		auto obj = ScriptContext<AnyGameObject::Program, AnyGameObject>::candidate.get();
+		if (obj) return { obj };
+		else return {};
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+};
+
+struct FinderCreator : CommonEval<FinderCreator, ObjectFinder> {
+	template<typename AnyGameObject> std::vector<AnyGameObject*> common_eval(AnyGameObject *self) {
+		auto obj = ScriptContext<AnyGameObject::Program, AnyGameObject>::creator.get();
+		if (obj) return { obj };
+		else return {};
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+};
+
+struct FinderPackageSender : ObjectFinder {
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject* self) override {
+		auto obj = SrvScriptContext::packageSender.get();
+		if (obj) return { obj };
+		else return {};
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+};
+
+struct FinderSequenceExecutor : ObjectFinder {
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject* self) override {
+		auto obj = SrvScriptContext::sequenceExecutor.get();
+		if (obj) return { obj };
+		else return {};
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+};
+
+struct FinderNearestToSatisfy : ObjectFinder {
+	std::unique_ptr<ValueDeterminer> vdcond, vdradius;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
+		float radius = vdradius->eval(self);
+		NNSearch search;
+		search.start(Server::instance, self->position, radius);
+		std::vector<ServerGameObject*> res;
+		while (ServerGameObject *obj = search.next()) {
+			auto _ = SrvScriptContext::candidate.change(obj);
+			if (vdcond->eval(self) > 0.0f)
+				res.push_back(obj);
+		}
+		return res;
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		vdcond.reset(ReadValueDeterminer(gsf, gs));
+		vdradius.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -143,10 +220,16 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_PLAYER: finder = new FinderPlayer; break;
 	case Tags::FINDER_ALIAS: finder = new FinderAlias; break;
 	case Tags::FINDER_CONTROLLER: finder = new FinderController; break;
-	case Tags::FINDER_TARGET: finder = new FinderController; break;
+	case Tags::FINDER_TARGET: finder = new FinderTarget; break;
 	case Tags::FINDER_RESULTS: finder = new FinderResults; break;
 	case Tags::FINDER_ASSOCIATES: finder = new FinderAssociates; break;
 	case Tags::FINDER_ASSOCIATORS: finder = new FinderAssociators; break;
+	case Tags::FINDER_PLAYERS: finder = new FinderPlayers; break;
+	case Tags::FINDER_CANDIDATE: finder = new FinderCandidate; break;
+	case Tags::FINDER_CREATOR: finder = new FinderCreator; break;
+	case Tags::FINDER_PACKAGE_SENDER: finder = new FinderPackageSender; break;
+	case Tags::FINDER_SEQUENCE_EXECUTOR: finder = new FinderSequenceExecutor; break;
+	case Tags::FINDER_NEAREST_TO_SATISFY: finder = new FinderNearestToSatisfy; break;
 	default: finder = new FinderUnknown; break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));
@@ -236,6 +319,8 @@ struct FinderChain : FinderNSubs {
 		std::vector<ServerGameObject*> vec = { self };
 		for (auto &finder : finders) {
 			vec = finder->eval(vec[0]);
+			if (vec.empty())
+				break;
 		}
 		return vec;
 	}
@@ -261,6 +346,7 @@ struct FinderFilterFirst : ObjectFinder {
 		int limit = (int)count->eval(self), num = 0;
 		decltype(vec) res;
 		for (ServerGameObject *obj : vec) {
+			auto _ = SrvScriptContext::candidate.change(obj);
 			if (Server::instance->gameSet->equations[equation]->eval(obj) > 0.0f) {
 				res.push_back(obj);
 				if (++num >= limit)
@@ -283,7 +369,8 @@ struct FinderFilter : ObjectFinder {
 		auto vec = finder->eval(self);
 		decltype(vec) res;
 		for (ServerGameObject *obj : vec) {
-			if (Server::instance->gameSet->equations[equation]->eval(obj) > 0.0f) {
+			auto _ = SrvScriptContext::candidate.change(obj);
+			if (Server::instance->gameSet->equations[equation]->eval(self) > 0.0f) {
 				res.push_back(obj);
 			}
 		}
@@ -291,6 +378,83 @@ struct FinderFilter : ObjectFinder {
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		equation = gs.equations.readIndex(gsf);
+		finder.reset(ReadFinderNode(gsf, gs));
+	}
+};
+
+struct FinderMetreRadius : ObjectFinder {
+	std::unique_ptr<ValueDeterminer> vdradius;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
+		float radius = vdradius->eval(self);
+		NNSearch search;
+		search.start(Server::instance, self->position, radius);
+		std::vector<ServerGameObject*> res;
+		while (ServerGameObject *obj = search.next())
+			res.push_back(obj);
+		return res;
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		vdradius.reset(ReadValueDeterminer(gsf, gs));
+		// ...
+	}
+};
+
+struct FinderGradeSelect : ObjectFinder {
+	bool byHighest;
+	int equation;
+	std::unique_ptr<ValueDeterminer> vdCount;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
+		int count = (int)vdCount->eval(self);
+		auto vec = finder->eval(self);
+		ValueDeterminer *vd = Server::instance->gameSet->equations[equation];
+
+		std::vector<std::pair<float,ServerGameObject*>> values(vec.size());
+		for (size_t i = 0; i < vec.size(); i++) {
+			auto _ = SrvScriptContext::candidate.change(vec[i]);
+			values[i] = { vd->eval(self), vec[i] };
+		}
+		std::sort(values.begin(), values.end(), [this](auto & a, auto & b) {return (a.first < b.first) != byHighest; });
+		if (count <= 0 || count > vec.size())
+			count = vec.size();
+		std::vector<ServerGameObject*> res(count);
+		for (size_t i = 0; i < res.size(); i++)
+			res[i] = values[i].second;
+		return res;
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		auto arg = gsf.nextString();
+		if (arg == "BY_HIGHEST")
+			byHighest = true;
+		else if (arg == "BY_LOWEST")
+			byHighest = false;
+		else
+			ferr("Invalid grading %s", arg.c_str());
+		equation = gs.equations.readIndex(gsf);
+		vdCount.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinderNode(gsf, gs));
+	}
+};
+
+struct FinderNearestCandidate : ObjectFinder {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
+		auto vec = finder->eval(self);
+		float bestDist = INFINITY;
+		ServerGameObject *bestObj = nullptr;
+		for (ServerGameObject *obj : vec) {
+			float dist = (obj->position - self->position).sqlen2xz();
+			if (dist < bestDist) {
+				bestDist = dist;
+				bestObj = obj;
+			}
+		}
+		if (bestObj)
+			return { bestObj };
+		else
+			return {};
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		finder.reset(ReadFinderNode(gsf, gs));
 	}
 };
@@ -314,6 +478,9 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::FINDER_ALTERNATIVE: finder = new FinderAlternative; break;
 			case Tags::FINDER_FILTER_FIRST: finder = new FinderFilterFirst; break;
 			case Tags::FINDER_FILTER: finder = new FinderFilter; break;
+			case Tags::FINDER_METRE_RADIUS: finder = new FinderMetreRadius; break;
+			case Tags::FINDER_GRADE_SELECT: finder = new FinderGradeSelect; break;
+			case Tags::FINDER_NEAREST_CANDIDATE: finder = new FinderNearestCandidate; break;
 			default:
 				gsf.cursor = oldcur;
 				return ReadFinder(gsf, gs);

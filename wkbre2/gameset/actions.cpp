@@ -4,6 +4,7 @@
 #include "gameset.h"
 #include "../util/util.h"
 #include "../server.h"
+#include "ScriptContext.h"
 
 struct ActionUnknown : Action {
 	virtual void run(ServerGameObject *self) override {
@@ -139,8 +140,10 @@ struct ActionExecuteSequence : Action {
 	ActionSequence *sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(ServerGameObject* self) override {
-		for(ServerGameObject* obj : finder->eval(self))
+		for (ServerGameObject* obj : finder->eval(self)) {
+			auto _ = SrvScriptContext::sequenceExecutor.change(self);
 			sequence->run(obj);
+		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		sequence = gs.actionSequences.readPtr(gsf);
@@ -432,6 +435,54 @@ struct ActionNop : Action {
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
 };
 
+struct ActionSwitchAppearance : Action {
+	int appear;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		for (ServerGameObject *obj : finder->eval(self))
+			obj->setSubtypeAndAppearance(obj->subtype, appear);
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		appear = gs.appearances.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionConvertAccordingToTag : Action {
+	int typeTag;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject *self) override {
+		for (ServerGameObject *obj : finder->eval(self)) {
+			auto it = obj->blueprint->mappedTypeTags.find(typeTag);
+			if(it != obj->blueprint->mappedTypeTags.end())
+				obj->convertTo(it->second);
+		}
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		typeTag = gs.typeTags.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionRepeatSequence : Action {
+	ActionSequence *sequence;
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<ValueDeterminer> vdcount;
+	virtual void run(ServerGameObject* self) override {
+		int count = (int)vdcount->eval(self);
+		for (ServerGameObject* obj : finder->eval(self)) {
+			auto _ = SrvScriptContext::sequenceExecutor.change(self);
+			for (int i = 0; i < count; i++)
+				sequence->run(obj);
+		}
+	}
+	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+		sequence = gs.actionSequences.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+		vdcount.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -464,8 +515,16 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_DEREGISTER_ASSOCIATES: action = new ActionDeregisterAssociates; break;
 	case Tags::ACTION_CLEAR_ASSOCIATES: action = new ActionClearAssociates; break;
 	case Tags::ACTION_CONVERT_TO: action = new ActionConvertTo; break;
+	case Tags::ACTION_SWITCH_APPEARANCE: action = new ActionSwitchAppearance; break;
+	case Tags::ACTION_CONVERT_ACCORDING_TO_TAG: action = new ActionConvertAccordingToTag; break;
+	case Tags::ACTION_REPEAT_SEQUENCE: action = new ActionRepeatSequence; break;
 		// Below are ignored actions (that should not affect gameplay very much)
-	case Tags::ACTION_PLAY_SOUND: action = new ActionNop; break;
+	case Tags::ACTION_PLAY_SOUND:
+	case Tags::ACTION_PLAY_SPECIAL_EFFECT:
+	case Tags::ACTION_ATTACH_SPECIAL_EFFECT:
+	case Tags::ACTION_ATTACH_LOOPING_SPECIAL_EFFECT:
+	case Tags::ACTION_DETACH_LOOPING_SPECIAL_EFFECT:
+		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown; break;
 	}

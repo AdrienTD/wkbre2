@@ -19,7 +19,9 @@ void Reaction::parse(GSFileParser & gsf, GameSet & gs)
 				events.push_back(ex);
 			else {
 				gsf.cursor = oldcur;
-				prTriggers.push_back(gs.prTriggers.readPtr(gsf));
+				int prt = gs.prTriggers.readIndex(gsf);
+				if (prt != -1)
+					prTriggers.push_back(&gs.prTriggers[prt]);
 			}
 		}
 		else if (tag == "END_REACTION")

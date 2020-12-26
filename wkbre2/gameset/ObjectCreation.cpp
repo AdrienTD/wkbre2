@@ -4,6 +4,7 @@
 #include "finder.h"
 #include "position.h"
 #include "../server.h"
+#include "ScriptContext.h"
 
 void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
 {
@@ -31,6 +32,7 @@ void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
 void ObjectCreation::run(ServerGameObject * creator)
 {
 	ServerGameObject *created = Server::instance->createObject(typeToCreate);
+	auto _ = SrvScriptContext::creator.change(creator);
 	created->setParent(controller->getFirst(creator));
 	OrientedPosition opos = createAt->eval(creator);
 	created->setPosition(opos.position);

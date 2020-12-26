@@ -100,7 +100,8 @@ void Task::start()
 {
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
-	this->target = blueprint->taskTarget->getFirst(this->order->gameObject); // FIXME: that would override the order's target!!!
+	if (!this->target && blueprint->taskTarget)
+		this->target = blueprint->taskTarget->getFirst(this->order->gameObject); // FIXME: that would override the order's target!!!
 	this->startSequenceExecuted = false; // is this correct?
 }
 
@@ -151,13 +152,13 @@ void Task::process()
 	else if (this->state != OTS_PROCESSING)
 		this->start();
 	if (this->state == OTS_PROCESSING) {
-		if (!this->startSequenceExecuted) {
-			this->blueprint->startSequence.run(order->gameObject);
-			this->startSequenceExecuted = true;
-			if (this->blueprint->proximityRequirement)
-				this->proximity = this->blueprint->proximityRequirement->eval(this->order->gameObject); // should this be here?
-		}
 		if (this->target) {
+			if (!this->startSequenceExecuted) {
+				this->blueprint->startSequence.run(order->gameObject);
+				this->startSequenceExecuted = true;
+				if (this->blueprint->proximityRequirement)
+					this->proximity = this->blueprint->proximityRequirement->eval(this->order->gameObject); // should this be here?
+			}
 			ServerGameObject *go = this->order->gameObject;
 			if (this->proximity < 0.0f || (go->position - this->target->position).sqlen2xz() < this->proximity * this->proximity) {
 				this->startTriggers();
@@ -180,10 +181,13 @@ void Task::process()
 					//	go->setAnimation(0);
 				}
 			}
+			if (this->triggersStarted) {
+				for (Trigger *trigger : this->triggers)
+					trigger->update();
+			}
 		}
-		if (this->triggersStarted) {
-			for (Trigger *trigger : this->triggers)
-				trigger->update();
+		else {
+			terminate();
 		}
 	}
 }

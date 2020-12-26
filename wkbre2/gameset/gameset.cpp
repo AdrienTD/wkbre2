@@ -138,6 +138,14 @@ void GameSet::parseFile(const char * fn, int pass)
 				associations.names.insertString(gsf.nextString(true));
 				break;
 			}
+			case Tags::GAMESET_TYPE_TAG: {
+				typeTags.names.insertString(gsf.nextString(true));
+				break;
+			}
+			case Tags::GAMESET_VALUE_TAG: {
+				valueTags.names.insertString(gsf.nextString(true));
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -256,6 +264,12 @@ void GameSet::parseFile(const char * fn, int pass)
 				//ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_DEFAULT_VALUE_TAG_INTERPRETATION: {
+				int vt = valueTags.readIndex(gsf);
+				if (vt != -1)
+					valueTags[vt].reset(ReadValueDeterminer(gsf, *this));
+				break;
+			}
 
 			}
 		}
@@ -307,6 +321,8 @@ void GameSet::load(const char * fn)
 	objectCreations.pass();
 	objectFinderDefinitions.pass();
 	associations.pass();
+	typeTags.pass();
+	valueTags.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

@@ -110,6 +110,11 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			intrinsicReactions.push_back(gameSet->reactions.readPtr(gsf));
 			break;
 		}
+		case Tags::CBLUEPRINT_MAP_TYPE_TAG: {
+			int tag = gameSet->typeTags.readIndex(gsf);
+			mappedTypeTags[tag] = gameSet->readObjBlueprintPtr(gsf);
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

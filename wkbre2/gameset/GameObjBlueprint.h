@@ -37,6 +37,8 @@ struct GameObjBlueprint {
 
 	std::vector<Reaction*> intrinsicReactions;
 
+	std::map<int, GameObjBlueprint*> mappedTypeTags;
+
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {
 		bpClass = i_bpClass; bpId = i_bpId; name = i_name; gameSet = i_gameSet;

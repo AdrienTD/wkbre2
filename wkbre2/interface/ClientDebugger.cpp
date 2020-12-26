@@ -57,11 +57,13 @@ void ClientDebugger::draw()
 			if (item.first != -1)
 				ImGui::BulletText("\"%s\": %f", client->gameSet->items.names.getString(item.first).c_str(), item.second);
 		ImGui::Text("Commands:");
+		static int targetid = 0;
+		ImGui::InputInt("Target ID", &targetid);
 		auto &io = ImGui::GetIO();
 		int assignmentMode = io.KeyCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (io.KeyShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
 		for (Command *cmd : sel->blueprint->offeredCommands)
 			if (ImGui::Button(client->gameSet->commands.names.getString(cmd->id).c_str()))
-				client->sendCommand(sel, cmd, nullptr, assignmentMode);
+				client->sendCommand(sel, cmd, client->findObject(targetid), assignmentMode);
 	}
 	else
 		ImGui::Text("No object selected.");

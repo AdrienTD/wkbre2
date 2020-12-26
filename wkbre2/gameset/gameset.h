@@ -59,6 +59,8 @@ struct GameSet
 	GSBlueprintList<ObjectCreation> objectCreations;
 	GSBlueprintList<ObjectFinder*> objectFinderDefinitions;
 	GSBlueprintList<void> associations;
+	GSBlueprintList<void> typeTags;
+	GSBlueprintList<std::unique_ptr<ValueDeterminer>> valueTags;
 
 	std::map<std::string, float, StriCompare> definedValues;
 
