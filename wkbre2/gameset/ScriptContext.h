@@ -23,7 +23,7 @@ template<typename Program, typename AnyGO> struct ScriptContext {
 		}
 		AnyGO *get() { return object.get(); }
 	};
-	static CtxElement candidate, creator, packageSender, sequenceExecutor;
+	static CtxElement candidate, creator, packageSender, sequenceExecutor, target;
 };
 
 extern template struct ScriptContext<Server, ServerGameObject>;

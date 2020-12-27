@@ -146,6 +146,17 @@ void GameSet::parseFile(const char * fn, int pass)
 				valueTags.names.insertString(gsf.nextString(true));
 				break;
 			}
+			case Tags::GAMESET_DIPLOMATIC_LADDER: {
+				gsf.advanceLine();
+				auto tag = gsf.nextTag();
+				while (tag != "END_DIPLOMATIC_LADDER") {
+					if (tag == "STATUS")
+						diplomaticStatuses.names.insertString(gsf.nextString(true));
+					gsf.advanceLine();
+					tag = gsf.nextTag();
+				}
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:

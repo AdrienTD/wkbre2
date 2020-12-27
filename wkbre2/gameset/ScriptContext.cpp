@@ -12,5 +12,4 @@ SrvScriptContext::CtxElement SrvScriptContext::sequenceExecutor;
 
 CliScriptContext::CtxElement CliScriptContext::candidate;
 CliScriptContext::CtxElement CliScriptContext::creator;
-//CliScriptContext::CtxElement CliScriptContext::packageSender;
-//CliScriptContext::CtxElement CliScriptContext::sequenceExecutor;
+CliScriptContext::CtxElement CliScriptContext::target;

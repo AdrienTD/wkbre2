@@ -16,6 +16,7 @@
 #include <ctime>
 #include "../terrain.h"
 #include <SDL_timer.h>
+#include "../gameset/ScriptContext.h"
 
 namespace {
 	Vector3 getRay(const Camera &cam) {
@@ -160,6 +161,46 @@ void ClientInterface::iter()
 {
 	static Vector3 peapos(0, 0, 0);
 
+	static bool firstTime = true;
+	static Cursor *arrowCursor;
+	static Cursor *currentCursor = nullptr;
+	if (firstTime) {
+		firstTime = false;
+		//arrowCursor = WndCreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+		arrowCursor = WndCreateCursor("Interface\\C_DEFAULT.TGA");
+		WndSetCursor(arrowCursor);
+		currentCursor = arrowCursor;
+	}
+
+	static CliGORef selected;
+
+	//----- Command cursors -----//
+
+	Cursor *nextCursor = nullptr;
+	Command *rightClickCommand = nullptr;
+	if (ClientGameObject *sel = selected.get()) {
+		if (true || nextSelectedObject) {
+			auto _ = CliScriptContext::target.change(nextSelectedObject);
+			for (Command *cmd : sel->blueprint->offeredCommands) {
+				if (cmd->cursor)
+					if (std::all_of(cmd->cursorConditions.begin(), cmd->cursorConditions.end(), [&](int eq) {return client->gameSet->equations[eq]->eval(sel) > 0.0f; }))
+					{
+						nextCursor = cmd->cursor;
+						rightClickCommand = cmd;
+						break;
+					}
+			}
+		}
+	}
+	if (!nextCursor)
+		nextCursor = arrowCursor;
+	if (nextCursor) {
+		if (nextCursor != currentCursor) {
+			currentCursor = nextCursor;
+			WndSetCursor(currentCursor);
+		}
+	}
+
 	//----- Input -----//
 
 	Vector3 forward = client->camera.direction.normal2xz();
@@ -194,6 +235,14 @@ void ClientInterface::iter()
 
 	if (g_mouseDown[SDL_BUTTON_LEFT]) {
 		debugger.selectObject(nextSelectedObject);
+		selected = nextSelectedObject;
+	}
+
+	if (g_mouseDown[SDL_BUTTON_RIGHT] && nextSelectedObject) {
+		if (ClientGameObject *sel = selected.get()) {
+			int assignmentMode = g_modCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (g_modShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
+			client->sendCommand(sel, rightClickCommand, nextSelectedObject, assignmentMode);
+		}
 	}
 
 	if (g_keyPressed[SDL_SCANCODE_P]) {

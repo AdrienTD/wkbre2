@@ -1,11 +1,14 @@
+#include "window.h"
 #include <SDL.h>
 #include "imgui/imgui.h"
 #include "gfx/renderer.h"
+#include "gfx/bitmap.h"
 
 SDL_Window *g_sdlWindow = nullptr;
 bool g_windowQuit = false;
 int g_windowWidth = 1366, g_windowHeight = 768;
 bool g_keyDown[SDL_NUM_SCANCODES], g_keyPressed[SDL_NUM_SCANCODES];
+bool g_modCtrl = false, g_modShift = false, g_modAlt = false;
 IRenderer *g_gfxRenderer = nullptr;
 bool g_mouseDown[16];
 int g_mouseX, g_mouseY, g_mouseWheel;
@@ -59,6 +62,11 @@ void HandleWindow()
 		igWantsMouse = io.WantCaptureMouse;
 	}
 
+	SDL_Keymod kmod = SDL_GetModState();
+	g_modCtrl = kmod & KMOD_CTRL;
+	g_modShift = kmod & KMOD_SHIFT;
+	g_modAlt = kmod & KMOD_ALT;
+
 	while (SDL_PollEvent(&event)) {
 		if (imguion)
 			HandleImGui(event);
@@ -107,4 +115,30 @@ void HandleWindow()
 void SetRenderer(IRenderer *gfx)
 {
 	g_gfxRenderer = gfx;
+}
+
+struct Cursor
+{
+	SDL_Cursor *sdlCursor = nullptr;
+	int w = 0, h = 0;
+};
+
+Cursor *WndCreateCursor(const char *path) {
+	Bitmap *bmp = LoadBitmap(path);
+	Bitmap *cvtbmp = ConvertBitmapToR8G8B8A8(bmp);
+	int width = cvtbmp->width, height = cvtbmp->height;
+	SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormatFrom(cvtbmp->pixels, cvtbmp->width, cvtbmp->height, 32, cvtbmp->width * 4, SDL_PIXELFORMAT_RGBA32);
+	SDL_Cursor *cursor = SDL_CreateColorCursor(surface, 0, 0);
+	SDL_FreeSurface(surface);
+	FreeBitmap(cvtbmp);
+	FreeBitmap(bmp);
+	return new Cursor { cursor, width, height };
+}
+
+Cursor *WndCreateSystemCursor(int id) {
+	return new Cursor { SDL_CreateSystemCursor((SDL_SystemCursor)id), 24, 24 };
+}
+
+void WndSetCursor(Cursor *cursor) {
+	SDL_SetCursor(cursor->sdlCursor);
 }

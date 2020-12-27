@@ -86,6 +86,7 @@ struct ValueEquationResult : CommonEval<ValueEquationResult, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
 		AnyGameObject *obj = finder->getFirst(self);
+		if (!obj) return 0.0f;
 		return AnyGameObject::Program::instance->gameSet->equations[equation]->eval(obj);
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
@@ -150,15 +151,15 @@ struct ValueHasAppearance : ValueDeterminer {
 	}
 };
 
-struct ValueSamePlayer : ValueDeterminer {
+struct ValueSamePlayer : CommonEval<ValueSamePlayer, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> fnd1, fnd2;
-	virtual float eval(ServerGameObject *self) override {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
 		auto vec1 = fnd1->eval(self);
 		auto vec2 = fnd2->eval(self);
 		if (vec1.empty() || vec2.empty()) return 0.0f;
-		for (ServerGameObject *b : vec2) {
-			ServerGameObject *bp = b->getPlayer();
-			if (std::find_if(vec1.begin(), vec1.end(), [&bp](ServerGameObject * a) {return a->getPlayer() == bp;}) == vec1.end())
+		for (AnyGameObject *b : vec2) {
+			AnyGameObject *bp = b->getPlayer();
+			if (std::find_if(vec1.begin(), vec1.end(), [&bp](AnyGameObject * a) {return a->getPlayer() == bp;}) == vec1.end())
 				return 0.0f;
 		}
 		return 1.0f;
@@ -169,10 +170,10 @@ struct ValueSamePlayer : ValueDeterminer {
 	}
 };
 
-struct ValueObjectType : ValueDeterminer {
+struct ValueObjectType : CommonEval<ValueObjectType, ValueDeterminer> {
 	GameObjBlueprint *type;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject *self) override {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
 		auto vec = finder->eval(self);
 		if (vec.empty()) return 0.0f;
 		for (auto *obj : vec)
@@ -230,6 +231,50 @@ struct ValueValueTagInterpretation : ValueDeterminer {
 	}
 };
 
+struct ValueDiplomaticStatusAtLeast : CommonEval<ValueDiplomaticStatusAtLeast, ValueDeterminer> {
+	int status;
+	std::unique_ptr<ObjectFinder> a, b;
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
+		// TODO
+		return 1.0f;
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		status = gs.diplomaticStatuses.readIndex(gsf);
+		a.reset(ReadFinder(gsf, gs));
+		b.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueAreAssociated : ValueDeterminer {
+	int category;
+	std::unique_ptr<ObjectFinder> a, b;
+	virtual float eval(ServerGameObject *self) override {
+		ServerGameObject *x = a->getFirst(self), *y = b->getFirst(self);
+		if (!(x && y)) return 0.0f;
+		return x->associates[category].count(y) ? 1.0f : 0.0f;
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		a.reset(ReadFinder(gsf, gs));
+		category = gs.associations.readIndex(gsf);
+		b.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueBlueprintItemValue : CommonEval<ValueBlueprintItemValue, ValueDeterminer> {
+	int item;
+	GameObjBlueprint *type;
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
+		auto it = type->startItemValues.find(item);
+		if (it != type->startItemValues.end())
+			return it->second;
+		else return 0.0f;
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		item = gs.items.readIndex(gsf);
+		type = gs.readObjBlueprintPtr(gsf);
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -248,65 +293,14 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_OBJECT_TYPE: vd = new ValueObjectType; break;
 	case Tags::VALUE_DISTANCE_BETWEEN: vd = new ValueDistanceBetween; break;
 	case Tags::VALUE_VALUE_TAG_INTERPRETATION: vd = new ValueValueTagInterpretation; break;
+	case Tags::VALUE_DIPLOMATIC_STATUS_AT_LEAST: vd = new ValueDiplomaticStatusAtLeast; break;
+	case Tags::VALUE_ARE_ASSOCIATED: vd = new ValueAreAssociated; break;
+	case Tags::VALUE_BLUEPRINT_ITEM_VALUE: vd = new ValueBlueprintItemValue; break;
 	default: vd = new ValueUnknown; break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));
 	return vd;
 }
-
-struct EnodeAddition : ValueDeterminer {
-	std::unique_ptr<ValueDeterminer> a, b;
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) + b->eval(self); }
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
-		a.reset(ReadEquationNode(gsf, gs));
-		b.reset(ReadEquationNode(gsf, gs));
-	}
-	EnodeAddition() {}
-	EnodeAddition(ValueDeterminer *a, ValueDeterminer *b) : a(a), b(b) {}
-};
-
-struct EnodeNegate : ValueDeterminer {
-	std::unique_ptr<ValueDeterminer> a;
-	virtual float eval(ServerGameObject *self) override { return -a->eval(self); }
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
-		a.reset(ReadEquationNode(gsf, gs));
-	}
-	EnodeNegate() {}
-	EnodeNegate(ValueDeterminer *a) : a(a) {}
-};
-
-struct EnodeSubtraction : ValueDeterminer {
-	std::unique_ptr<ValueDeterminer> a, b;
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) - b->eval(self); }
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
-		a.reset(ReadEquationNode(gsf, gs));
-		b.reset(ReadEquationNode(gsf, gs));
-	}
-	EnodeSubtraction() {}
-	EnodeSubtraction(ValueDeterminer *a, ValueDeterminer *b) : a(a), b(b) {}
-};
-
-struct EnodeMultiplication : ValueDeterminer {
-	std::unique_ptr<ValueDeterminer> a, b;
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) * b->eval(self); }
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
-		a.reset(ReadEquationNode(gsf, gs));
-		b.reset(ReadEquationNode(gsf, gs));
-	}
-	EnodeMultiplication() {}
-	EnodeMultiplication(ValueDeterminer *a, ValueDeterminer *b) : a(a), b(b) {}
-};
-
-struct EnodeDivision : ValueDeterminer {
-	std::unique_ptr<ValueDeterminer> a, b;
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) / b->eval(self); }
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
-		a.reset(ReadEquationNode(gsf, gs));
-		b.reset(ReadEquationNode(gsf, gs));
-	}
-	EnodeDivision() {}
-	EnodeDivision(ValueDeterminer *a, ValueDeterminer *b) : a(a), b(b) {}
-};
 
 // Unary equation nodes
 
@@ -317,20 +311,28 @@ struct UnaryEnode : ValueDeterminer {
 	}
 };
 
-struct EnodeNot : UnaryEnode {
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) <= 0.0f; }
+struct EnodeNot : CommonEval<EnodeNot, UnaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) <= 0.0f; }
 };
 
-struct EnodeIsZero : UnaryEnode {
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) == 0.0f; }
+struct EnodeIsZero : CommonEval<EnodeIsZero, UnaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) == 0.0f; }
 };
 
-struct EnodeIsPositive : UnaryEnode {
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) > 0.0f; }
+struct EnodeIsPositive : CommonEval<EnodeIsPositive, UnaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) > 0.0f; }
 };
 
-struct EnodeAbsoluteValue : UnaryEnode {
-	virtual float eval(ServerGameObject *self) override { return std::abs(a->eval(self)); }
+struct EnodeIsNegative : CommonEval<EnodeIsNegative, UnaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) < 0.0f; }
+};
+
+struct EnodeAbsoluteValue : CommonEval<EnodeAbsoluteValue, UnaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return std::abs(a->eval(self)); }
+};
+
+struct EnodeNegate : CommonEval<EnodeNegate, UnaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return -a->eval(self); }
 };
 
 // Binary equation nodes
@@ -343,40 +345,60 @@ struct BinaryEnode : ValueDeterminer {
 	}
 };
 
-struct EnodeAnd : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override { return (a->eval(self) > 0.0f) && (b->eval(self) > 0.0f); }
+struct EnodeAddition : CommonEval<EnodeAddition, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) + b->eval(self); }
 };
 
-struct EnodeOr : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override { return (a->eval(self) > 0.0f) || (b->eval(self) > 0.0f); }
+struct EnodeSubtraction : CommonEval<EnodeSubtraction, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) - b->eval(self); }
 };
 
-struct EnodeLessThan : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) < b->eval(self); }
+struct EnodeMultiplication : CommonEval<EnodeMultiplication, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) * b->eval(self); }
 };
 
-struct EnodeLessThanOrEqualTo : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) <= b->eval(self); }
+struct EnodeDivision : CommonEval<EnodeDivision, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) / b->eval(self); }
 };
 
-struct EnodeGreaterThan : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) > b->eval(self); }
+struct EnodeAnd : CommonEval<EnodeAnd, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return (a->eval(self) > 0.0f) && (b->eval(self) > 0.0f); }
 };
 
-struct EnodeGreaterThanOrEqualTo : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override { return a->eval(self) >= b->eval(self); }
+struct EnodeOr : CommonEval<EnodeOr, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return (a->eval(self) > 0.0f) || (b->eval(self) > 0.0f); }
 };
 
-struct EnodeMax : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override { return std::max(a->eval(self), b->eval(self)); }
+struct EnodeLessThan : CommonEval<EnodeLessThan, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) < b->eval(self); }
 };
 
-struct EnodeMin : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override { return std::min(a->eval(self), b->eval(self)); }
+struct EnodeLessThanOrEqualTo : CommonEval<EnodeLessThanOrEqualTo, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) <= b->eval(self); }
 };
 
-struct EnodeRandomInteger : BinaryEnode {
-	virtual float eval(ServerGameObject *self) override {
+struct EnodeGreaterThan : CommonEval<EnodeGreaterThan, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) > b->eval(self); }
+};
+
+struct EnodeGreaterThanOrEqualTo : CommonEval<EnodeGreaterThanOrEqualTo, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) >= b->eval(self); }
+};
+
+struct EnodeEquals : CommonEval<EnodeEquals, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) == b->eval(self); }
+};
+
+struct EnodeMax : CommonEval<EnodeMax, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return std::max(a->eval(self), b->eval(self)); }
+};
+
+struct EnodeMin : CommonEval<EnodeMin, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return std::min(a->eval(self), b->eval(self)); }
+};
+
+struct EnodeRandomInteger : CommonEval<EnodeRandomInteger, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
 		int x = (int)a->eval(self), y = (int)b->eval(self);
 		return (float)(rand() % (y - x + 1) + x);
 	}
@@ -393,8 +415,8 @@ struct TernaryEnode : ValueDeterminer {
 	}
 };
 
-struct EnodeIfThenElse : TernaryEnode {
-	virtual float eval(ServerGameObject *self) override {
+struct EnodeIfThenElse : CommonEval<EnodeIfThenElse, TernaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
 		if (a->eval(self) > 0.0f)
 			return b->eval(self);
 		else
@@ -421,6 +443,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_NOT: vd = new EnodeNot; break;
 			case Tags::ENODE_IS_ZERO: vd = new EnodeIsZero; break;
 			case Tags::ENODE_IS_POSITIVE: vd = new EnodeIsPositive; break;
+			case Tags::ENODE_IS_NEGATIVE: vd = new EnodeIsNegative; break;
 			case Tags::ENODE_ABSOLUTE_VALUE: vd = new EnodeAbsoluteValue; break;
 			case Tags::ENODE_AND: vd = new EnodeAnd; break;
 			case Tags::ENODE_OR: vd = new EnodeOr; break;
@@ -428,6 +451,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_LESS_THAN_OR_EQUAL_TO: vd = new EnodeLessThanOrEqualTo; break;
 			case Tags::ENODE_GREATER_THAN: vd = new EnodeGreaterThan; break;
 			case Tags::ENODE_GREATER_THAN_OR_EQUAL_TO: vd = new EnodeGreaterThanOrEqualTo; break;
+			case Tags::ENODE_EQUALS: vd = new EnodeEquals; break;
 			case Tags::ENODE_MAX: vd = new EnodeMax; break;
 			case Tags::ENODE_MIN: vd = new EnodeMin; break;
 			case Tags::ENODE_RANDOM_INTEGER: vd = new EnodeRandomInteger; break;

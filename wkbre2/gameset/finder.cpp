@@ -74,6 +74,10 @@ struct FinderAlias : ObjectFinder {
 				res.push_back(ref);
 		return res;
 	}
+	virtual std::vector<ClientGameObject*> eval(ClientGameObject *self) override {
+		// TODO when Alias is received by Client
+		return {};
+	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		aliasIndex = gs.aliases.readIndex(gsf);
 	}
@@ -95,6 +99,11 @@ struct FinderTarget : ObjectFinder {
 			if (ServerGameObject *target = order->getCurrentTask()->target.get())
 				return { target };
 		return {};
+	}
+	virtual std::vector<ClientGameObject*> eval(ClientGameObject* self) override {
+		auto obj = CliScriptContext::target.get();
+		if (obj) return { obj };
+		else return {};
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 	}

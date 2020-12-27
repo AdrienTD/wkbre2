@@ -4,6 +4,7 @@
 #include "../gameset/gameset.h"
 #include "../gameset/GameObjBlueprint.h"
 #include "../tags.h"
+#include "../window.h"
 
 void ClientDebugger::draw()
 {
@@ -48,7 +49,7 @@ void ClientDebugger::draw()
 	ImGui::Begin("Client Object Properties");
 	if (selectedObject) {
 		ClientGameObject *sel = selectedObject;
-		ImGui::Text("Object ID %i at %p", sel->id, sel);
+		ImGui::Text("Object ID %i at %p\n%s", sel->id, sel, sel->blueprint->getFullName().c_str());
 		ImGui::DragFloat3("Position", &sel->position.x);
 		ImGui::DragFloat2("Orientation", &sel->orientation.x);
 		ImGui::Text("Subtype=%i, Appearance=%i", sel->subtype, sel->appearance);
@@ -74,6 +75,20 @@ void ClientDebugger::draw()
 	ImGui::DragFloat2("Orientation", &client->camera.orientation.x, 0.1f);
 	ImGui::DragFloat2("Cam distance", &client->camera.nearDist);
 	ImGui::End();
+
+	if (client->gameSet) {
+		ImGui::Begin("Stampdown");
+		ImGui::Text("En chantier");
+		ImGui::Separator();
+		ImGui::BeginChild("StampdownList", ImVec2(0, 0), false);
+		for (auto &cls : client->gameSet->objBlueprints) {
+			for (GameObjBlueprint &type : cls.blueprints) {
+				ImGui::Selectable(type.getFullName().c_str());
+			}
+		}
+		ImGui::EndChild();
+		ImGui::End();
+	}
 
 	client->timeManager.imgui();
 }

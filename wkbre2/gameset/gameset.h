@@ -61,6 +61,7 @@ struct GameSet
 	GSBlueprintList<void> associations;
 	GSBlueprintList<void> typeTags;
 	GSBlueprintList<std::unique_ptr<ValueDeterminer>> valueTags;
+	GSBlueprintList<void> diplomaticStatuses;
 
 	std::map<std::string, float, StriCompare> definedValues;
 
