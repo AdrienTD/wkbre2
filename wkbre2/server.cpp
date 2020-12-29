@@ -276,6 +276,13 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 				//obj->associateObject(category, findObject(gsf.nextInt()));
 			break;
 		}
+		case Tags::GAMEOBJ_DIPLOMATIC_STATUS_BETWEEN: {
+			int id1 = gsf.nextInt();
+			int id2 = gsf.nextInt();
+			int status = gameSet->diplomaticStatuses.readIndex(gsf);
+			setDiplomaticStatus(findObject(id1), findObject(id2), status);
+			break;
+		}
 		case Tags::GAMEOBJ_PLAYER:
 		case Tags::GAMEOBJ_CHARACTER:
 		case Tags::GAMEOBJ_BUILDING:
@@ -525,6 +532,19 @@ void Server::syncTime()
 	sendToAll(msg);
 }
 
+void Server::setDiplomaticStatus(ServerGameObject * a, ServerGameObject * b, int status)
+{
+	if (getDiplomaticStatus(a, b) != status) {
+		int &ref = (a->id <= b->id) ? diplomaticStatuses[{ a->id, b->id }] : diplomaticStatuses[{ b->id, a->id }];
+		ref = status;
+		NetPacketWriter msg{ NETCLIMSG_DIPLOMATIC_STATUS_SET };
+		msg.writeUint32(a->id);
+		msg.writeUint32(b->id);
+		msg.writeUint8(status);
+		sendToAll(msg);
+	}
+}
+
 void Server::tick()
 {
 	timeManager.tick();
@@ -543,7 +563,9 @@ void Server::tick()
 	delayedSequences.erase(delayedSequences.begin(), it);
 
 	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
+		SrvGORef goref = obj; // to check if object gets deleted during order processing
 		obj->orderConfig.process();
+		if (!obj) return;
 		if (obj->movement.isMoving()) {
 			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
 			newpos.y = terrain->getHeight(obj->position.x, obj->position.z);
@@ -586,9 +608,10 @@ void Server::tick()
 			case NETSRVMSG_COMMAND: {
 				int cmdid = br.readUint32();
 				int objid = br.readUint32();
-				int targetid = br.readUint32();
 				int mode = br.readUint8();
-				gameSet->commands[cmdid].execute(findObject(objid), findObject(targetid), mode);
+				int targetid = br.readUint32();
+				Vector3 destination = br.readVector3();
+				gameSet->commands[cmdid].execute(findObject(objid), findObject(targetid), mode, destination);
 				break;
 			}
 			case NETSRVMSG_PAUSE: {
@@ -598,6 +621,15 @@ void Server::tick()
 				else
 					timeManager.unpause();
 				syncTime();
+				break;
+			}
+			case NETSRVMSG_STAMPDOWN: {
+				uint32_t bpid = br.readUint32();
+				uint32_t playerid = br.readUint32();
+				Vector3 pos = br.readVector3();
+				ServerGameObject *obj = createObject(gameSet->getBlueprint(bpid));
+				obj->setParent(findObject(playerid));
+				obj->setPosition(pos);
 				break;
 			}
 			}

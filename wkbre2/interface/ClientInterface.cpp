@@ -182,13 +182,22 @@ void ClientInterface::iter()
 		if (true || nextSelectedObject) {
 			auto _ = CliScriptContext::target.change(nextSelectedObject);
 			for (Command *cmd : sel->blueprint->offeredCommands) {
-				if (cmd->cursor)
-					if (std::all_of(cmd->cursorConditions.begin(), cmd->cursorConditions.end(), [&](int eq) {return client->gameSet->equations[eq]->eval(sel) > 0.0f; }))
-					{
-						nextCursor = cmd->cursor;
+				Cursor *cmdCursor = nullptr;
+				for (auto &avcond : cmd->cursorAvailable) {
+					if (avcond.first->test->eval(sel)) {
+						cmdCursor = avcond.second;
+						break;
+					}
+				}
+				if (!cmdCursor)
+					cmdCursor = cmd->cursor;
+				if (cmdCursor) {
+					if (std::all_of(cmd->cursorConditions.begin(), cmd->cursorConditions.end(), [&](int eq) {return client->gameSet->equations[eq]->eval(sel) > 0.0f; })) {
+						nextCursor = cmdCursor;
 						rightClickCommand = cmd;
 						break;
 					}
+				}
 			}
 		}
 	}
@@ -236,12 +245,18 @@ void ClientInterface::iter()
 	if (g_mouseDown[SDL_BUTTON_LEFT]) {
 		debugger.selectObject(nextSelectedObject);
 		selected = nextSelectedObject;
+		stampdownBlueprint = nullptr;
 	}
 
-	if (g_mouseDown[SDL_BUTTON_RIGHT] && nextSelectedObject) {
-		if (ClientGameObject *sel = selected.get()) {
-			int assignmentMode = g_modCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (g_modShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
-			client->sendCommand(sel, rightClickCommand, nextSelectedObject, assignmentMode);
+	if (g_mouseDown[SDL_BUTTON_RIGHT]) {
+		if (stampdownBlueprint) {
+			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos);
+		}
+		else if (rightClickCommand) {
+			if (ClientGameObject *sel = selected.get()) {
+				int assignmentMode = g_modCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (g_modShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
+				client->sendCommand(sel, rightClickCommand, assignmentMode, nextSelectedObject, peapos);
+			}
 		}
 	}
 
@@ -285,10 +300,18 @@ void ClientInterface::iter()
 		if(client->terrain)
 			peapos = CalcStampdownPos(client->camera.position, rayDirection, *client->terrain);
 		SceneEntity test;
-		test.model = client->gameSet->modelCache.getModel("Warrior Kings Game Set\\Characters\\Peasant\\Male\\Peasant1.MESH3");
-		test.transform = Matrix::getTranslationMatrix(peapos);
-		test.color = 0;
-		scene->add(&test);
+		if (stampdownBlueprint && stampdownPlayer) {
+			//test.model = client->gameSet->modelCache.getModel("Warrior Kings Game Set\\Characters\\Peasant\\Male\\Peasant1.MESH3");
+			try {
+				test.model = stampdownBlueprint->subtypes.at(0).appearances.at(0).animations.at(0).at(0);
+				test.transform = Matrix::getTranslationMatrix(peapos);
+				test.color = stampdownPlayer->color;
+				scene->add(&test);
+			}
+			catch (const std::out_of_range &) {
+				// nop
+			}
+		}
 		//
 		if (!sceneRenderer)
 			sceneRenderer = new DefaultSceneRenderer(gfx, scene);

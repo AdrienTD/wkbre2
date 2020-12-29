@@ -27,7 +27,7 @@ struct ClientGameObject : CommonGameObject<ClientGameObject> {
 	SceneEntity sceneEntity;
 };
 
-struct Client
+struct Client : CommonGameState<Client, ClientGameObject>
 {
 	using GameObject = ClientGameObject;
 	static Client *instance;
@@ -65,8 +65,9 @@ struct Client
 	void tick();
 
 	void sendMessage(const std::string &msg);
-	void sendCommand(ClientGameObject *obj, Command *cmd, ClientGameObject *target, int assignmentMode);
+	void sendCommand(ClientGameObject *obj, Command *cmd, int assignmentMode, ClientGameObject *target = nullptr, const Vector3 & destination = Vector3());
 	void sendPauseRequest(uint8_t pauseState);
+	void sendStampdown(GameObjBlueprint *blueprint, ClientGameObject *player, const Vector3 &position);
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }
 

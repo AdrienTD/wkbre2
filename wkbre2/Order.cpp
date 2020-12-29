@@ -152,6 +152,18 @@ void Task::process()
 	else if (this->state != OTS_PROCESSING)
 		this->start();
 	if (this->state == OTS_PROCESSING) {
+		// TODO: Make derived classes of Task to avoid future if elses
+		// Move tasks
+		if (this->blueprint->classType == Tags::ORDTSKTYPE_MOVE) {
+			ServerGameObject *go = this->order->gameObject;
+			if ((go->position - this->destination).sqlen2xz() < 0.1f) {
+				terminate();
+			}
+			if (!go->movement.isMoving())
+				go->startMovement(this->destination);
+			return;
+		}
+		// Target tasks
 		if (this->target) {
 			if (!this->startSequenceExecuted) {
 				this->blueprint->startSequence.run(order->gameObject);
@@ -208,7 +220,7 @@ void Task::stopTriggers()
 
 
 
-void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target)
+void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination)
 {
 	Order *neworder;
 	switch (assignMode) {
@@ -231,6 +243,9 @@ void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMod
 		neworder->tasks.push_back(new Task(neworder->nextTaskId++, taskBp, neworder));
 	if (target) {
 		neworder->tasks.at(0)->target = target;
+	}
+	if (destination.x >= 0.0f) {
+		neworder->tasks.at(0)->destination = destination;
 	}
 	neworder->init();
 }

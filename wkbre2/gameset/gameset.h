@@ -16,6 +16,7 @@
 #include "../util/StriCompare.h"
 #include "reaction.h"
 #include "ObjectCreation.h"
+#include "condition.h"
 
 struct GameObjBlueprint;
 
@@ -62,8 +63,10 @@ struct GameSet
 	GSBlueprintList<void> typeTags;
 	GSBlueprintList<std::unique_ptr<ValueDeterminer>> valueTags;
 	GSBlueprintList<void> diplomaticStatuses;
+	GSBlueprintList<GSCondition> conditions;
 
 	std::map<std::string, float, StriCompare> definedValues;
+	int defaultDiplomaticStatus = 0;
 
 	ModelCache modelCache;
 

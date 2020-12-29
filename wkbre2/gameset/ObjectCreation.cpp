@@ -34,7 +34,7 @@ void ObjectCreation::run(ServerGameObject * creator)
 	ServerGameObject *created = Server::instance->createObject(typeToCreate);
 	auto _ = SrvScriptContext::creator.change(creator);
 	created->setParent(controller->getFirst(creator));
-	OrientedPosition opos = createAt->eval(creator);
+	OrientedPosition opos = createAt ? createAt->eval(creator) : OrientedPosition({ creator->position, creator->orientation.y, creator->orientation.x });
 	created->setPosition(opos.position);
 	created->setOrientation(Vector3(opos.yRotation, opos.xRotation, 0.0f));
 	postCreationSequence.run(created);

@@ -216,6 +216,13 @@ struct FinderNearestToSatisfy : ObjectFinder {
 	}
 };
 
+struct FinderLevel : CommonEval<FinderLevel, ObjectFinder> {
+	template<typename AnyGameObject> std::vector<AnyGameObject*> common_eval(AnyGameObject *self) {
+		return { AnyGameObject::Program::instance->level };
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+};
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -239,6 +246,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_PACKAGE_SENDER: finder = new FinderPackageSender; break;
 	case Tags::FINDER_SEQUENCE_EXECUTOR: finder = new FinderSequenceExecutor; break;
 	case Tags::FINDER_NEAREST_TO_SATISFY: finder = new FinderNearestToSatisfy; break;
+	case Tags::FINDER_LEVEL: finder = new FinderLevel; break;
 	default: finder = new FinderUnknown; break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));
@@ -312,9 +320,9 @@ struct FinderNSubs : ObjectFinder {
 	}
 };
 
-struct FinderUnion : FinderNSubs {
-	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
-		std::unordered_set<ServerGameObject*> set;
+struct FinderUnion : CommonEval<FinderUnion, FinderNSubs> {
+	template<typename AnyGameObject> std::vector<AnyGameObject*> common_eval(AnyGameObject *self) {
+		std::unordered_set<AnyGameObject*> set;
 		for (auto &finder : finders) {
 			auto vec = finder->eval(self);
 			set.insert(vec.begin(), vec.end());
@@ -323,9 +331,9 @@ struct FinderUnion : FinderNSubs {
 	}
 };
 
-struct FinderChain : FinderNSubs {
-	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
-		std::vector<ServerGameObject*> vec = { self };
+struct FinderChain : CommonEval<FinderChain, FinderNSubs> {
+	template<typename AnyGameObject> std::vector<AnyGameObject*> common_eval(AnyGameObject *self) {
+		std::vector<AnyGameObject*> vec = { self };
 		for (auto &finder : finders) {
 			vec = finder->eval(vec[0]);
 			if (vec.empty())
@@ -335,8 +343,8 @@ struct FinderChain : FinderNSubs {
 	}
 };
 
-struct FinderAlternative : FinderNSubs {
-	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
+struct FinderAlternative : CommonEval<FinderAlternative, FinderNSubs> {
+	template<typename AnyGameObject> std::vector<AnyGameObject*> common_eval(AnyGameObject *self) {
 		for (auto &finder : finders) {
 			auto vec = finder->eval(self);
 			if (!vec.empty())

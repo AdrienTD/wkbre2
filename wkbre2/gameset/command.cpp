@@ -22,6 +22,11 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 		}
 		else if (strtag == "CURSOR_CONDITION")
 			cursorConditions.push_back(gs.equations.readIndex(gsf));
+		else if (strtag == "CURSOR_AVAILABLE") {
+			GSCondition *cond = gs.conditions.readPtr(gsf);
+			Cursor *cursor = WndCreateCursor(gsf.nextString(true).c_str());
+			cursorAvailable.push_back({ cond, cursor });
+		}
 		else if (strtag == "END_COMMAND")
 			return;
 		gsf.advanceLine();
@@ -29,10 +34,10 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 	ferr("Command reached end of file without END_COMMAND!");
 }
 
-void Command::execute(ServerGameObject *self, ServerGameObject *target, int assignmentMode) {
+void Command::execute(ServerGameObject *self, ServerGameObject *target, int assignmentMode, const Vector3 &destination) {
 	this->startSequence.run(self);
 	// TODO: order (what to do first?)
 	if (this->order) {
-		self->orderConfig.addOrder(this->order, assignmentMode, target);
+		self->orderConfig.addOrder(this->order, assignmentMode, target, destination);
 	}
 }

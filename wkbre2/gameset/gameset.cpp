@@ -157,6 +157,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				}
 				break;
 			}
+			case Tags::GAMESET_CONDITION: {
+				conditions.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -281,7 +286,15 @@ void GameSet::parseFile(const char * fn, int pass)
 					valueTags[vt].reset(ReadValueDeterminer(gsf, *this));
 				break;
 			}
-
+			case Tags::GAMESET_DEFAULT_DIPLOMATIC_STATUS: {
+				defaultDiplomaticStatus = diplomaticStatuses.readIndex(gsf);
+				break;
+			}
+			case Tags::GAMESET_CONDITION: {
+				GSCondition &cond = conditions.readRef(gsf);
+				cond.parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -334,6 +347,8 @@ void GameSet::load(const char * fn)
 	associations.pass();
 	typeTags.pass();
 	valueTags.pass();
+	diplomaticStatuses.pass();
+	conditions.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

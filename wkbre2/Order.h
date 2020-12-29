@@ -5,6 +5,7 @@
 #include <deque>
 #include "gameset/actions.h"
 #include "GameObjectRef.h"
+#include "util/vecmat.h"
 
 struct OrderBlueprint;
 struct TaskBlueprint;
@@ -60,6 +61,7 @@ struct Task {
 	std::vector<Trigger*> triggers;
 	bool startSequenceExecuted = false;
 	SrvGORef target;
+	Vector3 destination;
 	float proximity = -1.0f; bool proximitySatisfied = false, lastDestinationValid = false;
 
 	Task(int id, TaskBlueprint *blueprint, Order *order);
@@ -112,7 +114,7 @@ struct OrderConfiguration {
 
 	OrderConfiguration(ServerGameObject *gameobj) : gameobj(gameobj) {}
 	void process();
-	void addOrder(OrderBlueprint *orderBlueprint, int assignMode = 0, ServerGameObject *target = nullptr);
+	void addOrder(OrderBlueprint *orderBlueprint, int assignMode = 0, ServerGameObject *target = nullptr, const Vector3 &destination = Vector3(-1.0f,-1.0f,-1.0f));
 	void cancelAllOrders();
 
 	Order *getCurrentOrder() { return orders.empty() ? nullptr : &orders[0]; }

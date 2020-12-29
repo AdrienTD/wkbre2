@@ -196,6 +196,16 @@ void Client::tick()
 				}
 				break;
 			}
+			case NETCLIMSG_DIPLOMATIC_STATUS_SET: {
+				uint32_t id1 = br.readUint32();
+				uint32_t id2 = br.readUint32();
+				uint8_t status = br.readUint8();
+				ClientGameObject *a = findObject(id1), *b = findObject(id2);
+				if (a && b) {
+					int &ref = (a->id <= b->id) ? diplomaticStatuses[{ a->id, b->id }] : diplomaticStatuses[{ b->id, a->id }];
+					ref = status;
+				}
+			}
 			}
 		}
 	}
@@ -207,13 +217,14 @@ void Client::sendMessage(const std::string &msg) {
 	serverLink->send(packet);
 }
 
-void Client::sendCommand(ClientGameObject * obj, Command * cmd, ClientGameObject *target, int assignmentMode)
+void Client::sendCommand(ClientGameObject * obj, Command * cmd, int assignmentMode, ClientGameObject *target, const Vector3 & destination)
 {
 	NetPacketWriter packet(NETSRVMSG_COMMAND);
 	packet.writeUint32(cmd->id);
 	packet.writeUint32(obj->id);
-	packet.writeUint32(target ? target->id : 0);
 	packet.writeUint8(assignmentMode);
+	packet.writeUint32(target ? target->id : 0);
+	packet.writeVector3(destination);
 	serverLink->send(packet);
 }
 
@@ -222,6 +233,15 @@ void Client::sendPauseRequest(uint8_t pauseState)
 	NetPacketWriter packet(NETSRVMSG_PAUSE);
 	packet.writeUint8(pauseState);
 	serverLink->send(packet);
+}
+
+void Client::sendStampdown(GameObjBlueprint * blueprint, ClientGameObject * player, const Vector3 & position)
+{
+	NetPacketWriter msg(NETSRVMSG_STAMPDOWN);
+	msg.writeUint32(blueprint->getFullId());
+	msg.writeUint32(player->id);
+	msg.writeVector3(position);
+	serverLink->send(msg);
 }
 
 ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t id)

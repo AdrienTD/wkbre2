@@ -5,6 +5,60 @@
 #include "../gameset/GameObjBlueprint.h"
 #include "../tags.h"
 #include "../window.h"
+#include "ClientInterface.h"
+
+namespace {
+	const ImVec4 ivcolortable[8] = {
+		ImVec4(0.5f, 0.25f, 0.25f, 1), ImVec4(0, 0, 1, 1), ImVec4(1, 1, 0, 1), ImVec4(1, 0, 0, 1),
+		ImVec4(0, 1, 0, 1), ImVec4(1, 0, 1, 1), ImVec4(1, 0.5f, 0, 1), ImVec4(0, 1, 1, 1)
+	};
+
+	bool IGPlayerChooser(char *popupid, CliGORef &ref, Client *client)
+	{
+		bool r = false;
+		ImGui::PushID(popupid);
+		ImGui::PushItemWidth(-1);
+		ImVec2 bpos = ImGui::GetCursorPos();
+		int tlh = ImGui::GetTextLineHeight();
+		if (ImGui::BeginCombo("##Combo", "", 0))
+		{
+			for (auto &type : client->level->children) {
+				if ((type.first & 63) == Tags::GAMEOBJCLASS_PLAYER) {
+					for (ClientGameObject *player : type.second) {
+						ImGui::PushID(player->id);
+						if (ImGui::Selectable("##PlayerSelectable")) {
+							ref = player;
+							r = true;
+						}
+						ImGui::SameLine();
+						ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ivcolortable[player->color]);
+						ImGui::SameLine();
+						ImGui::Text("%S (%u)", L"TODO", player->id);
+						ImGui::PopID();
+					}
+				}
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::SetCursorPos(bpos);
+		ImGui::AlignTextToFramePadding();
+		tlh = ImGui::GetTextLineHeightWithSpacing();
+		ClientGameObject *player = ref.get();
+		if (player) {
+			ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ivcolortable[player->color]);
+			ImGui::SameLine();
+			ImGui::Text("%S (%u)", L"TODO", player->id);
+		}
+		else {
+			ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ImVec4(1, 1, 1, 1));
+			ImGui::SameLine();
+			ImGui::Text("Click me to select a player.");
+		}
+		ImGui::PopItemWidth();
+		ImGui::PopID();
+		return r;
+	}
+}
 
 void ClientDebugger::draw()
 {
@@ -64,7 +118,7 @@ void ClientDebugger::draw()
 		int assignmentMode = io.KeyCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (io.KeyShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
 		for (Command *cmd : sel->blueprint->offeredCommands)
 			if (ImGui::Button(client->gameSet->commands.names.getString(cmd->id).c_str()))
-				client->sendCommand(sel, cmd, client->findObject(targetid), assignmentMode);
+				client->sendCommand(sel, cmd, assignmentMode, client->findObject(targetid));
 	}
 	else
 		ImGui::Text("No object selected.");
@@ -78,12 +132,15 @@ void ClientDebugger::draw()
 
 	if (client->gameSet) {
 		ImGui::Begin("Stampdown");
-		ImGui::Text("En chantier");
+		//ImGui::Text("En chantier");
+		IGPlayerChooser("StampdownPlayerSelect", cliUi->stampdownPlayer, client);
 		ImGui::Separator();
 		ImGui::BeginChild("StampdownList", ImVec2(0, 0), false);
 		for (auto &cls : client->gameSet->objBlueprints) {
-			for (GameObjBlueprint &type : cls.blueprints) {
-				ImGui::Selectable(type.getFullName().c_str());
+			for (auto &el : cls.names.str2idMap) {
+				GameObjBlueprint &type = cls.blueprints[el.second];
+				if (ImGui::Selectable(type.getFullName().c_str()))
+					cliUi->stampdownBlueprint = &type;
 			}
 		}
 		ImGui::EndChild();

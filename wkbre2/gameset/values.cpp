@@ -102,6 +102,8 @@ struct ValueIsSubsetOf : CommonEval<ValueIsSubsetOf, ValueDeterminer> {
 	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
 		auto sub = fnd_sub->eval(self);
 		auto super = fnd_super->eval(self);
+		if (sub.empty() || super.empty())
+			return 0.0f;
 		for (auto *obj : sub)
 			if (std::find(super.begin(), super.end(), obj) == super.end())
 				return 0.0f;
@@ -235,8 +237,9 @@ struct ValueDiplomaticStatusAtLeast : CommonEval<ValueDiplomaticStatusAtLeast, V
 	int status;
 	std::unique_ptr<ObjectFinder> a, b;
 	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		// TODO
-		return 1.0f;
+		AnyGameObject *x = a->getFirst(self), *y = b->getFirst(self);
+		if (!(x && y)) return 0.0f;
+		return AnyGameObject::Program::instance->getDiplomaticStatus(x->getPlayer(), y->getPlayer()) <= status;
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		status = gs.diplomaticStatuses.readIndex(gsf);
@@ -275,6 +278,21 @@ struct ValueBlueprintItemValue : CommonEval<ValueBlueprintItemValue, ValueDeterm
 	}
 };
 
+struct ValueTotalItemValue : CommonEval<ValueTotalItemValue, ValueDeterminer> {
+	int item;
+	std::unique_ptr<ObjectFinder> finder;
+	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
+		float sum = 0.0f;
+		for (AnyGameObject* obj : finder->eval(self))
+			sum += obj->getItem(item);
+		return sum;
+	}
+	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+		item = gs.items.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -296,6 +314,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_DIPLOMATIC_STATUS_AT_LEAST: vd = new ValueDiplomaticStatusAtLeast; break;
 	case Tags::VALUE_ARE_ASSOCIATED: vd = new ValueAreAssociated; break;
 	case Tags::VALUE_BLUEPRINT_ITEM_VALUE: vd = new ValueBlueprintItemValue; break;
+	case Tags::VALUE_TOTAL_ITEM_VALUE: vd = new ValueTotalItemValue; break;
 	default: vd = new ValueUnknown; break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

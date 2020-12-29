@@ -2,9 +2,12 @@
 
 #include <cstdint>
 #include <map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 #include "util/vecmat.h"
 #include "Movement.h"
+#include "GameObjectRef.h"
 
 struct GameObjBlueprint;
 
@@ -52,4 +55,19 @@ template<class AnyGameObject> struct CommonGameObject {
 	}
 
 	CommonGameObject(uint32_t id, GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr) {}
+};
+
+template<typename Program, typename AnyGameObject> struct CommonGameState {
+	std::map<int, std::unordered_set<GameObjectRef<Program, AnyGameObject>>> aliases;
+	std::map<std::pair<int, int>, int> diplomaticStatuses;
+
+	int getDiplomaticStatus(AnyGameObject *a, AnyGameObject *b) const {
+		if (a == b) return 0; // player is always friendly with itself :)
+		auto it = (a->id <= b->id) ? diplomaticStatuses.find({ a->id, b->id }) : diplomaticStatuses.find({ b->id, a->id });
+		if (it != diplomaticStatuses.end())
+			return it->second;
+		else
+			return ((Program*)this)->gameSet->defaultDiplomaticStatus;
+	}
+
 };

@@ -11,7 +11,7 @@ struct GameSet;
 struct ObjectCreation {
 	GameObjBlueprint *typeToCreate;
 	ObjectFinder *controller;
-	PositionDeterminer *createAt;
+	PositionDeterminer *createAt = nullptr;
 	ActionSequence postCreationSequence;
 
 	void parse(GSFileParser &gsf, GameSet &gs);

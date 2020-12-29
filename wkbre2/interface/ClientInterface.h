@@ -3,12 +3,14 @@
 #include "ClientDebugger.h"
 #include "../scene.h"
 #include <ctime>
+#include "../GameObjectRef.h"
 
 struct Client;
 struct TerrainRenderer;
 struct IRenderer;
 struct SceneRenderer;
 struct ClientGameObject;
+struct GameObjBlueprint;
 
 struct ClientInterface {
 	Client *client;
@@ -26,8 +28,10 @@ struct ClientInterface {
 	void updateTerrain();
 
 	ClientInterface(Client *client, IRenderer *gfx) : client(client), gfx(gfx), terrainRenderer(nullptr),
-		sceneRenderer(nullptr), debugger(client), scene(nullptr) {}
+		sceneRenderer(nullptr), debugger(client, this), scene(nullptr) {}
 
+	GameObjBlueprint *stampdownBlueprint = nullptr;
+	CliGORef stampdownPlayer;
 private:
 	int camrotoffx, camrotoffy;
 	float camrotorix, camrotoriy;

@@ -49,7 +49,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void updatePosition(const Vector3 &newposition);
 };
 
-struct Server
+struct Server : CommonGameState<Server, ServerGameObject>
 {
 	using GameObject = ServerGameObject;
 	static Server *instance;
@@ -72,8 +72,6 @@ struct Server
 	};
 	std::multimap<game_time_t, DelayedSequence> delayedSequences;
 
-	std::map<int, std::unordered_set<SrvGORef>> aliases;
-
 	std::vector<std::string> chatMessages;
 
 	std::vector<NetLink*> clientLinks;
@@ -91,6 +89,8 @@ struct Server
 	ServerGameObject *findObject(uint32_t id) { return idmap[id]; }
 
 	void syncTime();
+
+	void setDiplomaticStatus(ServerGameObject *a, ServerGameObject *b, int status);
 
 	void tick();
 
