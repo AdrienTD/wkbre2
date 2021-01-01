@@ -6,10 +6,10 @@
 
 void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir, bool overrideAnims) {
 	//printf("Loading anims from %s\n", dir.c_str());
-	GrowStringList *gsl = ListFiles(dir.c_str());
+	std::vector<std::string> gsl;
+	ListFiles(dir.c_str(), &gsl);
 	std::set<int> alreadyOverridenAnims;
-	for (unsigned int i = 0; i < gsl->len; i++) {
-		std::string fn = gsl->getdp(i);
+	for (const std::string &fn : gsl) {
 		size_t pp = fn.find('.');
 		std::string name = fn.substr(0, pp);
 		std::string ext = fn.substr(pp + 1);

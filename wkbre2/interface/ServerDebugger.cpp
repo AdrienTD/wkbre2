@@ -3,13 +3,12 @@
 #include "../imgui/imgui.h"
 #include "../gameset/gameset.h"
 #include "../file.h"
-#include "../util/growbuffer.h"
 #include "../terrain.h"
 
 void ServerDebugger::draw() {
-	static GrowStringList savegameList;
+	static std::vector<std::string> savegameList;
 	static int selsavegame = 0;
-	if (savegameList.len == 0) {
+	if (savegameList.empty()) {
 		ListFiles("Save_Games", &savegameList);
 	}
 
@@ -17,9 +16,9 @@ void ServerDebugger::draw() {
 	//ImGui::ListBoxHeader("Savegame");
 	//ImGui::Selectable("abc");
 	//ImGui::ListBoxFooter();
-	ImGui::ListBox("Savegame", &selsavegame, [](void *data, int idx, const char **out_text) -> bool {*out_text = ((GrowStringList*)data)->getdp(idx); return true; }, &savegameList, savegameList.len);
+	ImGui::ListBox("Savegame", &selsavegame, [](void *data, int idx, const char **out_text) -> bool {*out_text = ((std::vector<std::string>*)data)->at(idx).c_str(); return true; }, &savegameList, (int)savegameList.size());
 	if (ImGui::Button("Load save")) {
-		server->loadSaveGame(std::string("Save_Games\\").append(savegameList.getdp(selsavegame)).c_str()); //("Save_Games\\heymap.sav");
+		server->loadSaveGame(std::string("Save_Games\\").append(savegameList[selsavegame]).c_str()); //("Save_Games\\heymap.sav");
 	}
 	for (const std::string &str : server->chatMessages)
 		ImGui::Text("%s", str.c_str());
@@ -56,7 +55,7 @@ void ServerDebugger::draw() {
 
 		ImGui::Text("Subtype=%i, Appearance=%i", sel->subtype, sel->appearance);
 		ImGui::Text("Items:");
-		for (auto item : sel->items)
+		for (auto &item : sel->items)
 			if (item.first != -1)
 				ImGui::BulletText("\"%s\": %f", server->gameSet->items.names.getString(item.first).c_str(), item.second);
 

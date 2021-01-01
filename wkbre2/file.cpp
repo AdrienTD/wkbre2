@@ -18,6 +18,7 @@
 #include "file.h"
 #include <io.h>
 #include <Windows.h>
+#include "util/util.h"
 
 extern "C" {
 
@@ -68,29 +69,25 @@ struct BCPReader
 	BCPDirectory *getDirectory(const char *dn);
 	bool loadFile(const char *fn, char **out, int *outsize, int extraBytes);
 	bool fileExists(const char *fn);
-	void listFileNames(const char *dn, GrowStringList *gsl);
-	void listDirectories(const char *dn, GrowStringList *gsl);
+	void listFileNames(const char *dn, std::vector<std::string>* gsl);
+	void listDirectories(const char *dn, std::vector<std::string>* gsl);
 };
 
 char gamedir[384] = "C:\\Users\\Adrien\\Desktop\\WKMods\\wkbre2_data"; //".";
 bool allowBCPPatches = false, allowDataDirectory = true, macFileNamesFallbackEnabled = true;
-GrowList<BCPReader*> bcpacks;
+std::vector<BCPReader*> bcpacks;
 
 std::string BCPReader::BCPReadString()
 {
-	uint8_t cs = fgetc(bcpfile);
-	char *r = (char*)malloc(cs+1);
-	if(bcpver == 0)
-		fread(r, cs, 1, bcpfile);
+	uint8_t cs = (uint8_t)fgetc(bcpfile);
+	std::string str(cs, 0);
+	if (bcpver == 0)
+		fread((char*)str.data(), cs, 1, bcpfile);
 	else
-	{
-		char *o = r;
-		for(int i = 0; i < cs; i++)
-			{*(o++) = fgetc(bcpfile); fgetc(bcpfile);}
-	}
-	r[cs] = 0;
-	std::string str(r);
-	free(r);
+		for (int i = 0; i < cs; i++) {
+			str[i] = fgetc(bcpfile);
+			fgetc(bcpfile);
+		}
 	return str;
 }
 
@@ -191,14 +188,11 @@ void BCPReader::ExtractFile(int id, char **out, int *outsize, int extraBytes)
 BCPFile *BCPReader::getFile(const char *fn)
 {
 	char *p, *c; BCPDirectory *ad = &bcproot;
-	char *ftb;
-	int s = strlen(fn);
-	ftb = (char*)malloc(s+1);
-	strcpy(ftb, fn);
-	p = ftb;
-	for(int i = 0; i < s; i++)
-		if(p[i] == '/')
-			p[i] = '\\';
+	std::string ftb = fn;
+	p = (char*)ftb.c_str();
+	for(auto &e : ftb)
+		if(e == '/')
+			e = '\\';
 	while(1)
 	{
 lflp:		c = strchr(p, '\\');
@@ -209,7 +203,7 @@ lflp:		c = strchr(p, '\\');
 			if(!_stricmp(p, ad->files[i].name.c_str()))
 			{
 				// File found!
-				free(ftb); return &ad->files[i];
+				return &ad->files[i];
 			}
 			break; // File not found.
 
@@ -236,20 +230,17 @@ lflp:		c = strchr(p, '\\');
 			break; // Dir not found.
 		}
 	}
-	free(ftb); return 0;
+	return 0;
 }
 
 BCPDirectory *BCPReader::getDirectory(const char *dn)
 {
 	char *p, *c; BCPDirectory *ad = &bcproot;
-	char *ftb;
-	int s = strlen(dn);
-	ftb = (char*)malloc(s+1);
-	strcpy(ftb, dn);
-	p = ftb;
-	for(int i = 0; i < s; i++)
-		if(p[i] == '/')
-			p[i] = '\\';
+	std::string ftb = dn;
+	p = (char*)ftb.c_str();
+	for (auto& e : ftb)
+		if (e == '/')
+			e = '\\';
 	while(1)
 	{
 lflp:		c = strchr(p, '\\');
@@ -274,30 +265,28 @@ lflp:		c = strchr(p, '\\');
 				ad = &ad->dirs[i];
 				goto lflp;
 			}
-			goto savdir; // Dir not found.
+			return 0; // Dir not found.
 		} else {
 			// A directory!
-			if(!*p) goto lend;
+			if(!*p) return ad;
 			if(!strcmp(p, "."))
-				goto lend;
+				return ad;
 			if(!strcmp(p, ".."))
 			{
 				// Go one directory backwards
 				ad = ad->parent;
-				goto lend;
+				return ad;
 			}
 			for(int i = 0; i < ad->ndirs; i++)
 			if(!_stricmp(p, ad->dirs[i].name.c_str()))
 			{
 				// Dir found!
 				ad = &ad->dirs[i];
-				goto lend;
+				return ad;
 			}
-			goto savdir; // Dir not found.
+			return 0; // Dir not found.
 		}
 	}
-lend:	free(ftb); return ad;
-savdir:	free(ftb); return 0;
 }
 
 bool BCPReader::loadFile(const char *fn, char **out, int *outsize, int extraBytes)
@@ -314,22 +303,22 @@ bool BCPReader::fileExists(const char *fn)
 	return bf ? 1 : 0;
 }
 
-void BCPReader::listFileNames(const char *dn, GrowStringList *gsl)
+void BCPReader::listFileNames(const char *dn, std::vector<std::string> *gsl)
 {
 	BCPDirectory *ad = getDirectory(dn);
 	if(!ad) return;
 	for(int i = 0; i < ad->nfiles; i++)
-		if(!gsl->has(ad->files[i].name.c_str()))
-			gsl->add(ad->files[i].name.c_str());
+		if (std::find_if(gsl->begin(), gsl->end(), [&](const std::string& s) { return !_stricmp(s.c_str(), ad->files[i].name.c_str()); }) == gsl->end())
+			gsl->push_back(ad->files[i].name);
 }
 
-void BCPReader::listDirectories(const char *dn, GrowStringList *gsl)
+void BCPReader::listDirectories(const char *dn, std::vector<std::string> *gsl)
 {
 	BCPDirectory *ad = getDirectory(dn);
 	if(!ad) return;
 	for(int i = 0; i < ad->ndirs; i++)
-		if(!gsl->has(ad->dirs[i].name.c_str()))
-			gsl->add(ad->dirs[i].name.c_str());
+		if (std::find_if(gsl->begin(), gsl->end(), [&](const std::string& s) { return !_stricmp(s.c_str(), ad->files[i].name.c_str()); }) == gsl->end())
+			gsl->push_back(ad->dirs[i].name);
 }
 
 BCPReader *mainbcp;
@@ -339,23 +328,22 @@ void LoadBCP(const char *fn)
 	//mainbcp = new BCPack(fn);
 
 	if(!allowBCPPatches)
-		{bcpacks.add(new BCPReader(fn)); return;}
+		{bcpacks.push_back(new BCPReader(fn)); return;}
 	char sn[384]; HANDLE hf; WIN32_FIND_DATA fnd;
 	strcpy(sn, gamedir);
 	strcat(sn, "\\*.bcp");
 	hf = FindFirstFile(sn, &fnd);
 	if(hf == INVALID_HANDLE_VALUE) return;
 	do {
-		bcpacks.add(new BCPReader(fnd.cFileName));
+		bcpacks.push_back(new BCPReader(fnd.cFileName));
 	} while(FindNextFile(hf, &fnd));
 }
 
 BCPReader *GetBCPWithMostRecentFile(const char *fn)
 {
 	BCPReader *bestpack = 0; uint64_t besttime = 0;
-	for(int i = 0; i < bcpacks.len; i++)
+	for(BCPReader *t : bcpacks)
 	{
-		BCPReader *t = bcpacks[i];
 		BCPFile *f = t->getFile(fn);
 		if(!f) continue;
 		if(f->time >= besttime)
@@ -455,8 +443,8 @@ void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 int FileExists(const char *fn)
 {
 	//if(mainbcp->fileExists(fn)) return 1;
-	for(int i = 0; i < bcpacks.len; i++)
-		if(bcpacks[i]->fileExists(fn))
+	for(BCPReader *bcp : bcpacks)
+		if(bcp->fileExists(fn))
 			return 1;
 
 	// File not found in the BCPs. Find it in the "saved" and "redata" folder.
@@ -489,25 +477,25 @@ int FileExists(const char *fn)
 	return 0;
 }
 
-void FindFiles(const char *sn, GrowStringList *gsl)
+void FindFiles(const char *sn, std::vector<std::string>* gsl)
 {
 	HANDLE hf; WIN32_FIND_DATA fnd;
 	hf = FindFirstFile(sn, &fnd);
 	if(hf == INVALID_HANDLE_VALUE) return;
 	do {
 		if(!(fnd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-			if(!gsl->has(fnd.cFileName))
-				gsl->add(fnd.cFileName);
+			if (std::find_if(gsl->begin(), gsl->end(), [&](const std::string& s) { return !_stricmp(s.c_str(), fnd.cFileName); }) == gsl->end())
+				gsl->push_back(fnd.cFileName);
 	} while(FindNextFile(hf, &fnd));
 }
 
-GrowStringList *ListFiles(const char *dn, GrowStringList *gsl)
+std::vector<std::string>* ListFiles(const char *dn, std::vector<std::string>* gsl)
 {
-	if(!gsl) gsl = new GrowStringList;
+	if(!gsl) gsl = new std::vector<std::string>;
 
 	//mainbcp->listFileNames(dn, gsl);
-	for(int i = 0; i < bcpacks.len; i++)
-		bcpacks[i]->listFileNames(dn, gsl);
+	for (BCPReader* bcp : bcpacks)
+		bcp->listFileNames(dn, gsl);
 
 	char sn[384];
 
@@ -525,11 +513,11 @@ GrowStringList *ListFiles(const char *dn, GrowStringList *gsl)
 	return gsl;
 }
 
-GrowStringList *ListDirectories(const char *dn)
+std::vector<std::string>* ListDirectories(const char *dn)
 {
-	GrowStringList *gsl = new GrowStringList;
-	for(int i = 0; i < bcpacks.len; i++)
-		bcpacks[i]->listDirectories(dn, gsl);
+	std::vector<std::string>* gsl = new std::vector<std::string>;
+	for (BCPReader* bcp : bcpacks)
+		bcp->listDirectories(dn, gsl);
 	return gsl;
 }
 
@@ -538,13 +526,14 @@ BCPWriter::WDirectory* BCPWriter::WDirectory::addDir(char *name)
 	WDirectory* nwd = new WDirectory;
 	nwd->writer = writer;
 	nwd->name = name;
-	dirs.add(nwd);
+	this->dirs.push_back(nwd);
 	return nwd;
 }
 
 void BCPWriter::WDirectory::insertFile(uint id, char *name)
 {
-	BCPFile* wf = files.addp();
+	files.emplace_back();
+	BCPFile* wf = &files.back();
 	wf->id = id;
 	wf->name = strdup(name);
 	wf->time = 0;
@@ -552,7 +541,7 @@ void BCPWriter::WDirectory::insertFile(uint id, char *name)
 
 BCPWriter::WDirectory::~WDirectory()
 {
-	for (uint i = 0; i < dirs.len; i++)
+	for (size_t i = 0; i < dirs.size(); i++)
 		delete dirs[i];
 }
 
@@ -572,8 +561,9 @@ BCPWriter::BCPWriter(char *fn)
 
 uint BCPWriter::createFile(void *pnt, uint siz)
 {
-	uint id = ftable.len;
-	BCPFileData *e = ftable.addp();
+	uint id = (uint)ftable.size();
+	ftable.emplace_back();
+	BCPFileData* e = &ftable.back();
 	e->offset = ftell(file);
 	e->size = siz;
 	e->unk = 0;
@@ -601,15 +591,15 @@ uint BCPWriter::createFile(void *pnt, uint siz)
 void BCPWriter::finalize()
 {
 	uint ftoff = ftell(file);
-	write32(ftable.len);
-	for (uint i = 0; i < ftable.len; i++)
+	write32((uint)ftable.size());
+	for (uint i = 0; i < (uint)ftable.size(); i++)
 	{
-		BCPFileData* e = ftable.getpnt(i);
-		write32(e->offset);
-		write32(e->endos);
-		write32(e->size);
-		write32(e->unk);
-		write32(e->form);
+		BCPFileData& e = ftable[i];
+		write32(e.offset);
+		write32(e.endos);
+		write32(e.size);
+		write32(e.unk);
+		write32(e.form);
 	}
 	root.write();
 	uint eof = ftell(file);
@@ -621,22 +611,23 @@ void BCPWriter::finalize()
 
 void BCPWriter::WDirectory::write()
 {
-	writer->write32(files.len);
-	for (uint i = 0; i < files.len; i++)
+	writer->write32((uint)files.size());
+	for (uint i = 0; i < (uint)files.size(); i++)
 	{
-		BCPFile *f = files.getpnt(i);
-		writer->write32(f->id);
-		writer->write32(f->time);
-		writer->write32(f->time >> 32);
-		uint sl = f->name.size();
+		BCPFile &f = files[i];
+		writer->write32(f.id);
+		writer->write32(f.time & 0xFFFFFFFF);
+		writer->write32(f.time >> 32);
+		uint sl = f.name.size();
 		writer->write8(sl);
 		for (uint j = 0; j < sl; j++)
-			writer->write16((unsigned char)f->name[j]);
+			writer->write16((unsigned char)f.name[j]);
 	}
-	writer->write32(dirs.len);
-	for (uint i = 0; i < dirs.len; i++)
+	writer->write32((uint)dirs.size());
+	for (uint i = 0; i < (uint)dirs.size(); i++)
 	{
 		WDirectory *d = dirs[i];
+		//WDirectory *d = dirs.at(i);
 		uint sl = d->name.size();
 		writer->write8(sl);
 		for (uint j = 0; j < sl; j++)
@@ -652,7 +643,7 @@ void BCPWriter::copyFile(char *fn)
 	char *p = fncopy;
 	while (char *s = strchr(p, '\\')) {
 		*s = 0;
-		for (uint i = 0; i < d->dirs.len; i++)
+		for (uint i = 0; i < (uint)d->dirs.size(); i++)
 			if (!_stricmp(d->dirs[i]->name.c_str(), p)) {
 				d = d->dirs[i];
 				goto dirfnd;

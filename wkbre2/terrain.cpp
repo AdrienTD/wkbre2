@@ -1,5 +1,6 @@
 #include "terrain.h"
 #include "file.h"
+#include "util/util.h"
 
 float Terrain::getHeight(float ipx, float ipy) const {
 	//int tx = floorf(x / 5) + edge, tz = floorf(z / 5) + edge;

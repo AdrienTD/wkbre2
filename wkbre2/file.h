@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "util/growbuffer.h"
 #include <string>
+#include <vector>
 
 struct BCPFileData
 {
@@ -33,7 +33,7 @@ class BCPWriter
 {
 private:
 	FILE * file;
-	GrowList<BCPFileData> ftable;
+	std::vector<BCPFileData> ftable;
 
 	void write8(uint8_t n) { fwrite(&n, 1, 1, file); }
 	void write16(uint16_t n) { fwrite(&n, 2, 1, file); }
@@ -42,8 +42,8 @@ private:
 public:
 	struct WDirectory
 	{
-		GrowList<WDirectory*> dirs;
-		GrowList<BCPFile> files;
+		std::vector<WDirectory*> dirs;
+		std::vector<BCPFile> files;
 		std::string name;
 		BCPWriter *writer;
 
@@ -68,6 +68,6 @@ void LoadBCP(const char *fn);
 void LoadFile(const char *fn, char **out, int *outsize, int extraBytes = 0);
 //void TestBCP();
 int FileExists(const char *fn);
-GrowStringList *ListFiles(const char *dn, GrowStringList *gsl = 0);
-GrowStringList *ListDirectories(const char *dn);
+std::vector<std::string> *ListFiles(const char *dn, std::vector<std::string> *gsl = nullptr);
+std::vector<std::string> *ListDirectories(const char *dn);
 //void SetGameDir();

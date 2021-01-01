@@ -245,27 +245,27 @@ void Test_Terrain() {
 
 
 std::string t29curdir = ".", feselfile;
-GrowStringList *t29curfiles = 0;
+std::vector<std::string> *t29curfiles = nullptr;
 
 void T29_UpdateFiles()
 {
 	if (t29curfiles) delete t29curfiles;
-	t29curfiles = ListFiles(t29curdir.c_str(), 0);
+	t29curfiles = ListFiles(t29curdir.c_str());
 }
 
 void T29_TreeDir(const char *s)
 {
-	GrowStringList *dirs = ListDirectories(s);
-	for (int i = 0; i < dirs->len; i++)
+	std::vector<std::string>* dirs = ListDirectories(s);
+	for (std::string &dir : *dirs)
 	{
 		bool b_open, b_click;
-		b_open = ImGui::TreeNodeEx(dirs->getdp(i), ImGuiTreeNodeFlags_OpenOnArrow);
+		b_open = ImGui::TreeNodeEx(dir.c_str(), ImGuiTreeNodeFlags_OpenOnArrow);
 		b_click = ImGui::IsItemClicked();
 		if(b_open)
 		{
 			std::string tb = s;
 			tb.push_back('\\');
-			tb += dirs->getdp(i);
+			tb += dir;
 			T29_TreeDir(tb.c_str());
 			ImGui::TreePop();
 		}
@@ -273,7 +273,7 @@ void T29_TreeDir(const char *s)
 		{
 			t29curdir = s;
 			t29curdir.push_back('\\');
-			t29curdir += dirs->getdp(i);
+			t29curdir += dir;
 			T29_UpdateFiles();
 		}
 	}
@@ -298,17 +298,16 @@ void FileExplorer()
 	ImGui::NextColumn();
 	ImGui::BeginChild("FileCol");
 	if (t29curfiles)
-		for (int i = 0; i < t29curfiles->len; i++) {
-			const char *filename = t29curfiles->getdp(i);
-			const char *ext = strrchr(filename, '.');
+		for (const std::string &filename : *t29curfiles) {
+			const char *ext = strrchr(filename.c_str(), '.');
 			if (!_stricmp(ext, ".mesh3")) {
-				if (ImGui::Selectable(filename)) {
-					feselfile = t29curdir + "\\" + t29curfiles->getdp(i);
+				if (ImGui::Selectable(filename.c_str())) {
+					feselfile = t29curdir + "\\" + filename;
 					printf("Selected file: %s\n", feselfile.c_str());
 				}
 			}
 			else {
-				ImGui::TextDisabled("%s", filename);
+				ImGui::TextDisabled("%s", filename.c_str());
 			}
 		}
 	ImGui::EndChild();
@@ -434,7 +433,7 @@ void Test_Network()
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);
 
-	GrowStringList *gsl = ListFiles("Save_Games");
+	std::vector<std::string> *gsl = ListFiles("Save_Games");
 
 	bool savchosen = false;
 	int savselected = 0;
@@ -442,8 +441,8 @@ void Test_Network()
 		ImGuiImpl_NewFrame();
 		ImGui::Begin("Select sav");
 		ImGui::ListBoxHeader("##SaveBox");
-		for (int i = 0; i < gsl->len; i++)
-			if (ImGui::Selectable(gsl->getdp(i), savselected == i))
+		for (int i = 0; i < (int)gsl->size(); i++)
+			if (ImGui::Selectable(gsl->at(i).c_str(), savselected == i))
 				savselected = i;
 		ImGui::ListBoxFooter();
 		if (ImGui::Button("Let me in"))
@@ -457,7 +456,7 @@ void Test_Network()
 		HandleWindow();
 	}
 
-	std::string savfile = std::string("Save_Games\\") + gsl->getdp(savselected);
+	std::string savfile = std::string("Save_Games\\") + gsl->at(savselected);
 	std::thread srvThread([&server, savfile]() {
 		server.loadSaveGame(savfile.c_str());
 		while (!g_windowQuit) {
