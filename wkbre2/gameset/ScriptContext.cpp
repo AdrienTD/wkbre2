@@ -2,14 +2,15 @@
 #include "../server.h"
 #include "../client.h"
 
-template struct ScriptContext<Server, ServerGameObject>;
-template struct ScriptContext<Client, ClientGameObject>;
+//template struct ScriptContext<Server, ServerGameObject>;
+//template struct ScriptContext<Client, ClientGameObject>;
 
-SrvScriptContext::CtxElement SrvScriptContext::candidate;
-SrvScriptContext::CtxElement SrvScriptContext::creator;
-SrvScriptContext::CtxElement SrvScriptContext::packageSender;
-SrvScriptContext::CtxElement SrvScriptContext::sequenceExecutor;
-
-CliScriptContext::CtxElement CliScriptContext::candidate;
-CliScriptContext::CtxElement CliScriptContext::creator;
-CliScriptContext::CtxElement CliScriptContext::target;
+//template<> SrvScriptContext::CtxElement SrvScriptContext::candidate;
+////template<> ScriptContext<Server, ServerGameObject>::CtxElement ScriptContext<Server, ServerGameObject>::candidate;
+//template<> SrvScriptContext::CtxElement SrvScriptContext::creator;
+//template<> SrvScriptContext::CtxElement SrvScriptContext::packageSender;
+//template<> SrvScriptContext::CtxElement SrvScriptContext::sequenceExecutor;
+//
+//template<> CliScriptContext::CtxElement CliScriptContext::candidate;
+//template<> CliScriptContext::CtxElement CliScriptContext::creator;
+//template<> CliScriptContext::CtxElement CliScriptContext::target;

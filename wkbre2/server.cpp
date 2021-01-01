@@ -549,7 +549,7 @@ void Server::tick()
 {
 	timeManager.tick();
 
-	auto &it = delayedSequences.begin();
+	auto it = delayedSequences.begin();
 	for (; it != delayedSequences.end(); it++) {
 		if (it->first > timeManager.currentTime) {
 			break;

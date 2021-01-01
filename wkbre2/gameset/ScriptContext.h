@@ -26,11 +26,18 @@ template<typename Program, typename AnyGO> struct ScriptContext {
 	static CtxElement candidate, creator, packageSender, sequenceExecutor, target;
 };
 
-extern template struct ScriptContext<Server, ServerGameObject>;
-extern template struct ScriptContext<Client, ClientGameObject>;
+//extern template struct ScriptContext<Server, ServerGameObject>;
+//extern template struct ScriptContext<Client, ClientGameObject>;
 
 using SrvScriptContext = ScriptContext<Server, ServerGameObject>;
 using CliScriptContext = ScriptContext<Client, ClientGameObject>;
+
+template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::candidate;
+template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::creator;
+template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::packageSender;
+template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::sequenceExecutor;
+template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::target;
+
 
 //template<typename T> ScriptContext<T> g_scriptCtx;
 //

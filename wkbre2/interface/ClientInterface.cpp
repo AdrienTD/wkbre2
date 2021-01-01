@@ -17,6 +17,7 @@
 #include "../terrain.h"
 #include <SDL_timer.h>
 #include "../gameset/ScriptContext.h"
+#include <stdexcept>
 
 namespace {
 	Vector3 getRay(const Camera &cam) {

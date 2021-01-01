@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <map>
+#include <memory>
 
 struct TerrainTextureGroup;
 struct TerrainTexture;
