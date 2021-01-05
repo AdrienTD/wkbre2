@@ -36,6 +36,7 @@ enum NetServerMessages {
 	NETSRVMSG_COMMAND,
 	NETSRVMSG_PAUSE,
 	NETSRVMSG_STAMPDOWN,
+	NETSRVMSG_START_LEVEL,
 };
 
 struct NetPacketWriter {

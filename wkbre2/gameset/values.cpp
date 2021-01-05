@@ -12,6 +12,10 @@
 #include "CommonEval.h"
 #include "position.h"
 
+namespace {
+	float RandomFromZeroToOne() { return (float)(rand() & 0xFFFF) / 32768.0f; }
+}
+
 //namespace Script
 //{
 
@@ -293,6 +297,57 @@ struct ValueTotalItemValue : CommonEval<ValueTotalItemValue, ValueDeterminer> {
 	}
 };
 
+struct ValueIsIdle : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		auto vec = finder->eval(self);
+		return std::all_of(vec.begin(), vec.end(), [](ServerGameObject* obj) {return obj->orderConfig.orders.empty(); });
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueFinderResultsCount : ValueDeterminer {
+	int ofd;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		ServerGameObject* obj = finder->getFirst(self);
+		if (!obj) return 0.0f;
+		return Server::instance->gameSet->objectFinderDefinitions[ofd]->eval(obj).size();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		ofd = gs.objectFinderDefinitions.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueHasDirectLineOfSightTo : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> finder1;
+	std::unique_ptr<PositionDeterminer> pos;
+	std::unique_ptr<ObjectFinder> finder2;
+	virtual float eval(ServerGameObject* self) override {
+		// TODO
+		return 1.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder1.reset(ReadFinder(gsf, gs));
+		pos.reset(PositionDeterminer::createFrom(gsf, gs));
+		finder2.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueWaterBeneath : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		// TODO
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -315,6 +370,10 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_ARE_ASSOCIATED: vd = new ValueAreAssociated; break;
 	case Tags::VALUE_BLUEPRINT_ITEM_VALUE: vd = new ValueBlueprintItemValue; break;
 	case Tags::VALUE_TOTAL_ITEM_VALUE: vd = new ValueTotalItemValue; break;
+	case Tags::VALUE_IS_IDLE: vd = new ValueIsIdle; break;
+	case Tags::VALUE_FINDER_RESULTS_COUNT: vd = new ValueFinderResultsCount; break;
+	case Tags::VALUE_HAS_DIRECT_LINE_OF_SIGHT_TO: vd = new ValueHasDirectLineOfSightTo; break;
+	case Tags::VALUE_WATER_BENEATH: vd = new ValueWaterBeneath; break;
 	default: vd = new ValueUnknown; break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));
@@ -352,6 +411,10 @@ struct EnodeAbsoluteValue : CommonEval<EnodeAbsoluteValue, UnaryEnode> {
 
 struct EnodeNegate : CommonEval<EnodeNegate, UnaryEnode> {
 	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return -a->eval(self); }
+};
+
+struct EnodeRandomUpTo : CommonEval<EnodeRandomUpTo, UnaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject* self) { return RandomFromZeroToOne() * a->eval(self); }
 };
 
 // Binary equation nodes
@@ -423,6 +486,13 @@ struct EnodeRandomInteger : CommonEval<EnodeRandomInteger, BinaryEnode> {
 	}
 };
 
+struct EnodeRandomRange : CommonEval<EnodeRandomRange, BinaryEnode> {
+	template<typename AnyGameObject> float common_eval(AnyGameObject* self) {
+		float x = a->eval(self), y = b->eval(self);
+		return RandomFromZeroToOne() * (y - x) + x;
+	}
+};
+
 // Ternary equation nodes
 
 struct TernaryEnode : ValueDeterminer {
@@ -464,6 +534,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_IS_POSITIVE: vd = new EnodeIsPositive; break;
 			case Tags::ENODE_IS_NEGATIVE: vd = new EnodeIsNegative; break;
 			case Tags::ENODE_ABSOLUTE_VALUE: vd = new EnodeAbsoluteValue; break;
+			case Tags::ENODE_RANDOM_UP_TO: vd = new EnodeRandomUpTo; break;
 			case Tags::ENODE_AND: vd = new EnodeAnd; break;
 			case Tags::ENODE_OR: vd = new EnodeOr; break;
 			case Tags::ENODE_LESS_THAN: vd = new EnodeLessThan; break;
@@ -474,6 +545,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_MAX: vd = new EnodeMax; break;
 			case Tags::ENODE_MIN: vd = new EnodeMin; break;
 			case Tags::ENODE_RANDOM_INTEGER: vd = new EnodeRandomInteger; break;
+			case Tags::ENODE_RANDOM_RANGE: vd = new EnodeRandomRange; break;
 			case Tags::ENODE_IF_THEN_ELSE: vd = new EnodeIfThenElse; break;
 			default: 
 				gsf.cursor = oldcur;

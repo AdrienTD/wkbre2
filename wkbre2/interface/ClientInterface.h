@@ -32,6 +32,7 @@ struct ClientInterface {
 
 	GameObjBlueprint *stampdownBlueprint = nullptr;
 	CliGORef stampdownPlayer;
+	bool sendStampdownEvent = false;
 private:
 	int camrotoffx, camrotoffy;
 	float camrotorix, camrotoriy;

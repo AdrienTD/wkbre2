@@ -251,7 +251,7 @@ void ClientInterface::iter()
 
 	if (g_mouseDown[SDL_BUTTON_RIGHT]) {
 		if (stampdownBlueprint) {
-			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos);
+			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos, sendStampdownEvent);
 		}
 		else if (rightClickCommand) {
 			if (ClientGameObject *sel = selected.get()) {
@@ -275,6 +275,8 @@ void ClientInterface::iter()
 	ImGui::Text("ODPF: %i", numObjectsDrawn);
 	ImGui::Text("FPS: %i", framesPerSecond);
 	ImGui::DragFloat3("peapos", &peapos.x);
+	if (ImGui::Button("Start level"))
+		client->sendStartLevelRequest();
 	ImGui::End();
 
 	//----- Rendering -----//

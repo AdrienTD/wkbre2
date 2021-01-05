@@ -67,7 +67,8 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	void sendMessage(const std::string &msg);
 	void sendCommand(ClientGameObject *obj, Command *cmd, int assignmentMode, ClientGameObject *target = nullptr, const Vector3 & destination = Vector3());
 	void sendPauseRequest(uint8_t pauseState);
-	void sendStampdown(GameObjBlueprint *blueprint, ClientGameObject *player, const Vector3 &position);
+	void sendStampdown(GameObjBlueprint *blueprint, ClientGameObject *player, const Vector3 &position, bool sendEvent = false);
+	void sendStartLevelRequest();
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }
 

@@ -235,13 +235,19 @@ void Client::sendPauseRequest(uint8_t pauseState)
 	serverLink->send(packet);
 }
 
-void Client::sendStampdown(GameObjBlueprint * blueprint, ClientGameObject * player, const Vector3 & position)
+void Client::sendStampdown(GameObjBlueprint * blueprint, ClientGameObject * player, const Vector3 & position, bool sendEvent)
 {
 	NetPacketWriter msg(NETSRVMSG_STAMPDOWN);
 	msg.writeUint32(blueprint->getFullId());
 	msg.writeUint32(player->id);
 	msg.writeVector3(position);
+	msg.writeUint8(sendEvent);
 	serverLink->send(msg);
+}
+
+void Client::sendStartLevelRequest()
+{
+	serverLink->send(NetPacketWriter(NETSRVMSG_START_LEVEL));
 }
 
 ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t id)

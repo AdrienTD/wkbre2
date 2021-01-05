@@ -69,8 +69,10 @@ void ClientDebugger::draw()
 	ImGui::SameLine();
 	if (ImGui::Button("Send"))
 		client->sendMessage(newmsg);
+	ImGui::SameLine();
 	if (ImGui::Button("Send number"))
 		client->sendMessage(itoa(num++, newmsg, 10));
+	ImGui::SameLine();
 	if (ImGui::Button("Stress")) {
 		for (int i = 0; i < 256; i++)
 			client->sendMessage(itoa(num++, newmsg, 10));
@@ -134,6 +136,7 @@ void ClientDebugger::draw()
 		ImGui::Begin("Stampdown");
 		//ImGui::Text("En chantier");
 		IGPlayerChooser("StampdownPlayerSelect", cliUi->stampdownPlayer, client);
+		ImGui::Checkbox("Send Stampdown Event", &cliUi->sendStampdownEvent);
 		ImGui::Separator();
 		ImGui::BeginChild("StampdownList", ImVec2(0, 0), false);
 		for (auto &cls : client->gameSet->objBlueprints) {

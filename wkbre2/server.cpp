@@ -562,17 +562,11 @@ void Server::tick()
 	}
 	delayedSequences.erase(delayedSequences.begin(), it);
 
+	static std::vector<SrvGORef> toprocess;
+	toprocess.clear();
 	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
-		SrvGORef goref = obj; // to check if object gets deleted during order processing
-		obj->orderConfig.process();
-		if (!obj) return;
-		if (obj->movement.isMoving()) {
-			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
-			newpos.y = terrain->getHeight(obj->position.x, obj->position.z);
-			obj->updatePosition(newpos);
-			Vector3 dir = obj->movement.getDirection();
-			obj->orientation.y = atan2f(dir.x, -dir.z);
-		}
+		if (!obj->orderConfig.orders.empty())
+			toprocess.emplace_back(obj);
 		for (auto &childtype : obj->children) {
 			for (ServerGameObject *child : childtype.second)
 				func(child, func);
@@ -580,6 +574,18 @@ void Server::tick()
 	};
 	if(level)
 		processObjOrders(level, processObjOrders);
+	for (const SrvGORef& ref : toprocess) {
+		ServerGameObject* obj = ref.get();
+		obj->orderConfig.process();
+		if (!ref) return;
+		if (obj->movement.isMoving()) {
+			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
+			newpos.y = terrain->getHeight(obj->position.x, obj->position.z);
+			obj->updatePosition(newpos);
+			Vector3 dir = obj->movement.getDirection();
+			obj->orientation.y = atan2f(dir.x, -dir.z);
+		}
+	}
 
 	time_t curtime = time(NULL);
 	if (curtime - lastSync >= 1) {
@@ -627,9 +633,23 @@ void Server::tick()
 				uint32_t bpid = br.readUint32();
 				uint32_t playerid = br.readUint32();
 				Vector3 pos = br.readVector3();
+				bool sendEvent = br.readUint8();
 				ServerGameObject *obj = createObject(gameSet->getBlueprint(bpid));
 				obj->setParent(findObject(playerid));
 				obj->setPosition(pos);
+				if (sendEvent)
+					obj->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
+				break;
+			}
+			case NETSRVMSG_START_LEVEL: {
+				auto walk = [](ServerGameObject* obj, auto rec) -> void {
+					obj->sendEvent(Tags::PDEVENT_ON_LEVEL_START);
+					for (auto& t : obj->children) {
+						for (ServerGameObject* child : t.second)
+							rec(child, rec);
+					}
+				};
+				walk(level, walk);
 				break;
 			}
 			}

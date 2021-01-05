@@ -223,6 +223,19 @@ struct FinderLevel : CommonEval<FinderLevel, ObjectFinder> {
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
 };
 
+struct FinderDisabledAssociates : ObjectFinder {
+	int category;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject* self) override {
+		//const auto& set = self->associates[category];
+		//return { set.begin(), set.end() };
+		return {}; // TODO
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		category = gs.associations.readIndex(gsf);
+	}
+};
+
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -247,6 +260,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_SEQUENCE_EXECUTOR: finder = new FinderSequenceExecutor; break;
 	case Tags::FINDER_NEAREST_TO_SATISFY: finder = new FinderNearestToSatisfy; break;
 	case Tags::FINDER_LEVEL: finder = new FinderLevel; break;
+	case Tags::FINDER_DISABLED_ASSOCIATES: finder = new FinderDisabledAssociates; break;
 	default: finder = new FinderUnknown; break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));

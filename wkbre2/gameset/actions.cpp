@@ -483,6 +483,56 @@ struct ActionRepeatSequence : Action {
 	}
 };
 
+struct ActionIdentifyAndMarkClusters : Action {
+	GameObjBlueprint* objtype;
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<ValueDeterminer> vcr;
+	std::unique_ptr<ValueDeterminer> vir;
+	std::unique_ptr<ValueDeterminer> vmr;
+	virtual void run(ServerGameObject* self) override {
+		ServerGameObject* player = self->getPlayer();
+		auto gl = finder->eval(self);
+		float rad = vcr->eval(self);
+		float fmr = vmr->eval(self);
+		float sqrad = rad * rad;
+		DynArray<bool> taken(gl.size());
+		for (bool& b : taken) b = false;
+		for (size_t i = 0; i < gl.size(); i++) {
+			if (taken[i]) continue;
+			ServerGameObject* o = gl[i];
+
+			float clrat = 0;
+			for (size_t j = 0; j < gl.size(); j++) {
+				if (taken[j]) continue;
+				ServerGameObject* p = gl[j];
+				if ((p->position - o->position).sqlen2xz() < sqrad) {
+					clrat += vir->eval(p);
+				}
+			}
+
+			if (clrat >= fmr) {
+				ServerGameObject* mark = Server::instance->createObject(objtype);
+				mark->setParent(player);
+				mark->setPosition(o->position);
+				for (size_t j = 0; j < gl.size(); j++) {
+					if (taken[j]) continue;
+					ServerGameObject* p = gl[j];
+					if ((p->position - o->position).sqlen2xz() < sqrad) {
+						taken[j] = true;
+					}
+				}
+			}
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		objtype = gs.objBlueprints[Tags::GAMEOBJCLASS_MARKER].readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+		vcr.reset(ReadValueDeterminer(gsf, gs));
+		vir.reset(ReadValueDeterminer(gsf, gs));
+		vmr.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -518,12 +568,45 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_SWITCH_APPEARANCE: action = new ActionSwitchAppearance; break;
 	case Tags::ACTION_CONVERT_ACCORDING_TO_TAG: action = new ActionConvertAccordingToTag; break;
 	case Tags::ACTION_REPEAT_SEQUENCE: action = new ActionRepeatSequence; break;
+	case Tags::ACTION_IDENTIFY_AND_MARK_CLUSTERS: action = new ActionIdentifyAndMarkClusters; break;
 		// Below are ignored actions (that should not affect gameplay very much)
+	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:
+	case Tags::ACTION_PLAY_SOUND_AT_POSITION:
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT:
+	case Tags::ACTION_PLAY_SPECIAL_EFFECT_BETWEEN:
 	case Tags::ACTION_ATTACH_SPECIAL_EFFECT:
 	case Tags::ACTION_ATTACH_LOOPING_SPECIAL_EFFECT:
 	case Tags::ACTION_DETACH_LOOPING_SPECIAL_EFFECT:
+	case Tags::ACTION_REVEAL_FOG_OF_WAR:
+	case Tags::ACTION_COLLAPSING_CIRCLE_ON_MINIMAP:
+	case Tags::ACTION_SHOW_BLINKING_DOT_ON_MINIMAP:
+	case Tags::ACTION_ENABLE_GAME_INTERFACE:
+	case Tags::ACTION_DISABLE_GAME_INTERFACE:
+	case Tags::ACTION_SET_ACTIVE_MISSION_OBJECTIVES:
+	case Tags::ACTION_SHOW_MISSION_OBJECTIVES_ENTRY:
+	case Tags::ACTION_SHOW_MISSION_OBJECTIVES_ENTRY_INACTIVE:
+	case Tags::ACTION_HIDE_MISSION_OBJECTIVES_ENTRY:
+	case Tags::ACTION_TRACK_OBJECT_POSITION_FROM_MISSION_OBJECTIVES_ENTRY:
+	case Tags::ACTION_STOP_INDICATING_POSITION_OF_MISSION_OBJECTIVES_ENTRY:
+	case Tags::ACTION_FORCE_PLAY_MUSIC:
+	case Tags::ACTION_ADOPT_APPEARANCE_FOR:
+	case Tags::ACTION_ADOPT_DEFAULT_APPEARANCE_FOR:
+	case Tags::ACTION_ACTIVATE_COMMISSION:
+	case Tags::ACTION_DEACTIVATE_COMMISSION:
+	case Tags::ACTION_SWITCH_ON_INTENSITY_MAP:
+	case Tags::ACTION_FADE_STOP_MUSIC:
+	case Tags::ACTION_DECLINE_DIPLOMATIC_OFFER:
+	case Tags::ACTION_SEND_CHAT_MESSAGE:
+	case Tags::ACTION_MAKE_DIPLOMATIC_OFFER:
+	case Tags::ACTION_SET_CHAT_PERSONALITY:
+	case Tags::ACTION_UPDATE_USER_PROFILE:
+	case Tags::ACTION_UNLOCK_LEVEL:
+	case Tags::ACTION_BOOT_LEVEL:
+	case Tags::ACTION_EXIT_TO_MAIN_MENU:
+	case Tags::ACTION_CONQUER_LEVEL:
+	case Tags::ACTION_DISPLAY_LOAD_GAME_MENU:
+	case Tags::ACTION_PLAY_MUSIC:
 		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown; break;
