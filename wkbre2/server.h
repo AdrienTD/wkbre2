@@ -24,6 +24,8 @@ struct Reaction;
 struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	using Program = Server;
 
+	bool deleted = false; ServerGameObject* nextDeleted = nullptr;
+
 	OrderConfiguration orderConfig;
 	std::unordered_set<Reaction*> individualReactions;
 	std::unordered_map<int, std::unordered_set<SrvGORef>> associates, associators;
@@ -66,11 +68,20 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	std::vector<SrvGORef> *tileObjList = nullptr;
 
 	struct DelayedSequence {
-		ActionSequence* actionSequence; // or ActionSequence*
+		ActionSequence* actionSequence;
 		SrvGORef executor;
 		std::vector<SrvGORef> selfs;
 	};
+	struct OverPeriodSequence {
+		ActionSequence* actionSequence;
+		SrvGORef executor;
+		float startTime, period;
+		int numTotalExecutions, numExecutionsDone;
+		std::vector<SrvGORef> remainingObjects;
+	};
 	std::multimap<game_time_t, DelayedSequence> delayedSequences;
+	std::vector<OverPeriodSequence> overPeriodSequences;
+	std::vector<OverPeriodSequence> repeatOverPeriodSequences;
 
 	std::vector<std::string> chatMessages;
 
@@ -79,6 +90,8 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	time_t lastSync;
 
 	std::vector<std::tuple<ServerGameObject*, int, int>> postAssociations;
+
+	ServerGameObject* objToDelete = nullptr;
 
 	Server() : gameSet(nullptr), level(nullptr), terrain(nullptr) { instance = this; }
 

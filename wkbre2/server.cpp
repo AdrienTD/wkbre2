@@ -79,6 +79,11 @@ void Server::deleteObject(ServerGameObject * obj)
 {
 	int id = obj->id;
 
+	if (obj->deleted) return;
+	obj->deleted = true;
+	obj->nextDeleted = objToDelete;
+	objToDelete = obj;
+
 	// remove associations from/to this object
 	for (auto &ref : obj->associates)
 		for (const SrvGORef &ass : ref.second) {
@@ -99,7 +104,7 @@ void Server::deleteObject(ServerGameObject * obj)
 	// remove from ID map
 	idmap.erase(obj->id);
 	// delete the object, bye!
-	delete obj;
+	//delete obj;
 	// report removal to the clients
 	NetPacketWriter msg(NETCLIMSG_OBJECT_REMOVED);
 	msg.writeUint32(id);
@@ -293,6 +298,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		case Tags::GAMEOBJ_TOWN:
 		case Tags::GAMEOBJ_FORMATION:
 		case Tags::GAMEOBJ_ARMY:
+		case Tags::GAMESET_MISSILE:
 		{
 			ServerGameObject *child = loadObject(gsf, strtag);
 			child->setParent(obj);
@@ -562,6 +568,37 @@ void Server::tick()
 	}
 	delayedSequences.erase(delayedSequences.begin(), it);
 
+	for (size_t i = 0; i < overPeriodSequences.size(); i++) {
+		OverPeriodSequence& ops = overPeriodSequences[i];
+		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
+		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
+		for (; ops.numExecutionsDone < predictedExec; ops.numExecutionsDone++) {
+			if (ServerGameObject* obj = ops.remainingObjects.back().get())
+				ops.actionSequence->run(obj);
+			ops.remainingObjects.pop_back();
+		}
+		if (ops.numExecutionsDone >= ops.numTotalExecutions) {
+			std::swap(ops, overPeriodSequences.back());
+			overPeriodSequences.pop_back();
+			i--;
+		}
+	}
+	for (size_t i = 0; i < repeatOverPeriodSequences.size(); i++) {
+		OverPeriodSequence& ops = repeatOverPeriodSequences[i];
+		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
+		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
+		for (; ops.numExecutionsDone < predictedExec; ops.numExecutionsDone++) {
+			for (auto& ref : ops.remainingObjects)
+				if (ServerGameObject* obj = ref.get())
+					ops.actionSequence->run(obj);
+		}
+		if (ops.numExecutionsDone >= ops.numTotalExecutions) {
+			std::swap(ops, repeatOverPeriodSequences.back());
+			repeatOverPeriodSequences.pop_back();
+			i--;
+		}
+	}
+
 	static std::vector<SrvGORef> toprocess;
 	toprocess.clear();
 	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
@@ -654,5 +691,12 @@ void Server::tick()
 			}
 			}
 		}
+	}
+
+	// Free up deleted objects
+	while (objToDelete) {
+		auto next = objToDelete->nextDeleted;
+		deleteObject(objToDelete);
+		objToDelete = next;
 	}
 }

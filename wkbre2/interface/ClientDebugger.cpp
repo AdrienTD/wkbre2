@@ -66,7 +66,6 @@ void ClientDebugger::draw()
 
 	static char newmsg[256]; static int num = 0;
 	ImGui::InputText("##newmsg", newmsg, sizeof(newmsg));
-	ImGui::SameLine();
 	if (ImGui::Button("Send"))
 		client->sendMessage(newmsg);
 	ImGui::SameLine();

@@ -533,6 +533,54 @@ struct ActionIdentifyAndMarkClusters : Action {
 	}
 };
 
+struct ActionExecuteSequenceOverPeriod : Action {
+	ActionSequence* sequence;
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<ValueDeterminer> vdperiod;
+	virtual void run(ServerGameObject* self) override {
+		auto vec = finder->eval(self);
+		Server::OverPeriodSequence ops;
+		ops.actionSequence = sequence;
+		ops.executor = self;
+		ops.startTime = Server::instance->timeManager.currentTime;
+		ops.period = vdperiod->eval(self);
+		ops.remainingObjects = std::vector<SrvGORef>(vec.begin(), vec.end());
+		ops.numExecutionsDone = 0;
+		ops.numTotalExecutions = ops.remainingObjects.size();
+		Server::instance->overPeriodSequences.push_back(std::move(ops));
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		sequence = gs.actionSequences.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+		vdperiod.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
+struct ActionRepeatSequenceOverPeriod : Action {
+	ActionSequence* sequence;
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<ValueDeterminer> vdcount;
+	std::unique_ptr<ValueDeterminer> vdperiod;
+	virtual void run(ServerGameObject* self) override {
+		auto vec = finder->eval(self);
+		Server::OverPeriodSequence ops;
+		ops.actionSequence = sequence;
+		ops.executor = self;
+		ops.startTime = Server::instance->timeManager.currentTime;
+		ops.period = vdperiod->eval(self);
+		ops.remainingObjects = std::vector<SrvGORef>(vec.begin(), vec.end());
+		ops.numExecutionsDone = 0;
+		ops.numTotalExecutions = (int)vdcount->eval(self);
+		Server::instance->repeatOverPeriodSequences.push_back(std::move(ops));
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		sequence = gs.actionSequences.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+		vdcount.reset(ReadValueDeterminer(gsf, gs));
+		vdperiod.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -569,6 +617,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_CONVERT_ACCORDING_TO_TAG: action = new ActionConvertAccordingToTag; break;
 	case Tags::ACTION_REPEAT_SEQUENCE: action = new ActionRepeatSequence; break;
 	case Tags::ACTION_IDENTIFY_AND_MARK_CLUSTERS: action = new ActionIdentifyAndMarkClusters; break;
+	case Tags::ACTION_EXECUTE_SEQUENCE_OVER_PERIOD: action = new ActionExecuteSequenceOverPeriod; break;
+	case Tags::ACTION_REPEAT_SEQUENCE_OVER_PERIOD: action = new ActionRepeatSequenceOverPeriod; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:

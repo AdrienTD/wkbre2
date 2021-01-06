@@ -174,6 +174,7 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_TOWN:
 			case Tags::GAMESET_FORMATION:
 			case Tags::GAMESET_ARMY:
+			case Tags::GAMESET_MISSILE:
 			{
 				int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
 				objBlueprints[cls].names.insertString(gsf.nextString(true));
@@ -201,6 +202,7 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_TOWN_EXTENSION:
 			case Tags::GAMESET_FORMATION_EXTENSION:
 			case Tags::GAMESET_ARMY_EXTENSION:
+			case Tags::GAMESET_MISSILE_EXTENSION:
 				isExtension = true;
 				strtag.resize(strtag.find("_EXTENSION"));
 			case Tags::GAMESET_LEVEL:
@@ -214,6 +216,7 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_TOWN:
 			case Tags::GAMESET_FORMATION:
 			case Tags::GAMESET_ARMY:
+			case Tags::GAMESET_MISSILE:
 			{
 				int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
 				std::string name = gsf.nextString(true);

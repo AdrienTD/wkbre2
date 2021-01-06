@@ -197,6 +197,29 @@ struct PDOffsetFrom : public PositionDeterminer {
 	}
 };
 
+struct PDNearestAttachmentPoint : public PositionDeterminer {
+	int attachTag;
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<PositionDeterminer> pos;
+	std::unique_ptr<ValueDeterminer> tochoose;
+	virtual OrientedPosition eval(ServerGameObject* self) override {
+		// TODO
+		return PosFromObjVec(finder->eval(self)) + OrientedPosition(Vector3(0.0f, 1.0f, 0.0f));
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		gsf.nextString(true);
+		finder.reset(ReadFinder(gsf, gs));
+		pos.reset(PositionDeterminer::createFrom(gsf, gs));
+		const char* prevcur = gsf.cursor;
+		if (!gsf.eol) {
+			if (gsf.nextString() == "CHOOSE_FROM_NEAREST")
+				tochoose.reset(ReadValueDeterminer(gsf, gs));
+			else
+				gsf.cursor = prevcur;
+		}
+	}
+};
+
 PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet & gs)
 {
 	PositionDeterminer *pos;
@@ -213,6 +236,7 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet 
 	case Tags::POSITION_AWAY_FROM: pos = new PDAwayFrom; break;
 	case Tags::POSITION_IN_FRONT_OF: pos = new PDInFrontOf; break;
 	case Tags::POSITION_OFFSET_FROM: pos = new PDOffsetFrom; break;
+	case Tags::POSITION_NEAREST_ATTACHMENT_POINT: pos = new PDNearestAttachmentPoint; break;
 	default: pos = new PDUnknown; break;
 	}
 	pos->parse(gsf, gs);

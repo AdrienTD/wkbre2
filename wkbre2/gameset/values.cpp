@@ -348,6 +348,32 @@ struct ValueWaterBeneath : ValueDeterminer {
 	}
 };
 
+struct ValueAngleBetween : ValueDeterminer {
+	int mode;
+	std::unique_ptr<ObjectFinder> a, b;
+	virtual float eval(ServerGameObject* self) override {
+		// TODO (apparently it always returns 0?)
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		gsf.nextString();
+		a.reset(ReadFinder(gsf, gs));
+		b.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueIsMusicPlaying : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		// TODO
+		// For now, let's make it return 1 so that the Maestro army won't try to constantly change the music
+		return 1.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -374,6 +400,8 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_FINDER_RESULTS_COUNT: vd = new ValueFinderResultsCount; break;
 	case Tags::VALUE_HAS_DIRECT_LINE_OF_SIGHT_TO: vd = new ValueHasDirectLineOfSightTo; break;
 	case Tags::VALUE_WATER_BENEATH: vd = new ValueWaterBeneath; break;
+	case Tags::VALUE_ANGLE_BETWEEN: vd = new ValueAngleBetween; break;
+	case Tags::VALUE_IS_MUSIC_PLAYING: vd = new ValueIsMusicPlaying; break;
 	default: vd = new ValueUnknown; break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));
