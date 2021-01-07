@@ -107,6 +107,8 @@ struct Server : CommonGameState<Server, ServerGameObject>
 
 	void setDiplomaticStatus(ServerGameObject *a, ServerGameObject *b, int status);
 	void showGameTextWindow(ServerGameObject* player, int gtwIndex);
+	void hideGameTextWindow(ServerGameObject* player, int gtwIndex);
+	void hideCurrentGameTextWindow(ServerGameObject* player);
 
 	void tick();
 

@@ -274,20 +274,23 @@ struct FinderSubordinates : ObjectFinder {
 	GameObjBlueprint *objbp = nullptr;
 	bool immediateLevel = false;
 	static /*thread_local*/ std::vector<ServerGameObject*> results;
-	bool eligible(ServerGameObject *obj) {
-		if (!objbp || (objbp == obj->blueprint))
-			if ((bpclass == -1) || (bpclass == obj->blueprint->bpClass))
-				if ((equation == -1) || (Server::instance->gameSet->equations[equation]->eval(obj) > 0.0f))
+	bool eligible(ServerGameObject *obj, ServerGameObject *ctx) {
+		if (!objbp || (objbp == obj->blueprint)) {
+			if ((bpclass == -1) || (bpclass == obj->blueprint->bpClass)) {
+				auto _ = SrvScriptContext::candidate.change(obj);
+				if ((equation == -1) || (Server::instance->gameSet->equations[equation]->eval(ctx) > 0.0f))
 					return true;
+			}
+		}
 		return false;
 	}
-	void walk(ServerGameObject *obj) {
+	void walk(ServerGameObject *obj, ServerGameObject* ctx) {
 		for (auto &it : obj->children) {
 			for (ServerGameObject *child : it.second) {
-				if (eligible(child))
+				if (eligible(child, ctx))
 					results.push_back(child);
 				if (!immediateLevel)
-					walk(child);
+					walk(child, ctx);
 			}
 		}
 	}
@@ -297,10 +300,10 @@ struct FinderSubordinates : ObjectFinder {
 		for (ServerGameObject *par : vec) {
 			static const auto scl = { Tags::GAMEOBJCLASS_BUILDING, Tags::GAMEOBJCLASS_CHARACTER, Tags::GAMEOBJCLASS_CONTAINER, Tags::GAMEOBJCLASS_MARKER, Tags::GAMEOBJCLASS_PROP };
 			if (std::find(scl.begin(), scl.end(), par->blueprint->bpClass) != scl.end()) {
-				if (eligible(par))
+				if (eligible(par, self))
 					results.push_back(par);
 			}
-			walk(par);
+			walk(par, self);
 		}
 		return std::move(results);
 	}
@@ -490,6 +493,22 @@ struct FinderNearestCandidate : ObjectFinder {
 	}
 };
 
+struct FinderTileRadius : ObjectFinder {
+	std::unique_ptr<ValueDeterminer> vdradius;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject* self) override {
+		float radius = vdradius->eval(self);
+		NNSearch search;
+		search.start(Server::instance, self->position, radius);
+		std::vector<ServerGameObject*> res;
+		while (ServerGameObject* obj = search.next())
+			res.push_back(obj);
+		return res;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		vdradius.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
 ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	gsf.advanceLine();
@@ -512,6 +531,7 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::FINDER_METRE_RADIUS: finder = new FinderMetreRadius; break;
 			case Tags::FINDER_GRADE_SELECT: finder = new FinderGradeSelect; break;
 			case Tags::FINDER_NEAREST_CANDIDATE: finder = new FinderNearestCandidate; break;
+			case Tags::FINDER_TILE_RADIUS: finder = new FinderTileRadius; break;
 			default:
 				gsf.cursor = oldcur;
 				return ReadFinder(gsf, gs);

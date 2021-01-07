@@ -452,7 +452,8 @@ void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 	for (Reaction *r : blueprint->intrinsicReactions)
 		if (r->canBeTriggeredBy(evt, this))
 			r->actions.run(this);
-	for (Reaction *r : individualReactions)
+	const auto ircopy = individualReactions;
+	for (Reaction *r : ircopy)
 		if (r->canBeTriggeredBy(evt, this))
 			r->actions.run(this);
 }
@@ -573,6 +574,19 @@ void Server::showGameTextWindow(ServerGameObject* player, int gtwIndex)
 	sendToAll(msg); // TODO: Only send to one player's client, not all clients
 }
 
+void Server::hideGameTextWindow(ServerGameObject* player, int gtwIndex)
+{
+	NetPacketWriter msg{ NETCLIMSG_HIDE_GAME_TEXT_WINDOW };
+	msg.writeUint32(gtwIndex);
+	sendToAll(msg); // TODO: Only send to one player's client, not all clients
+}
+
+void Server::hideCurrentGameTextWindow(ServerGameObject* player)
+{
+	NetPacketWriter msg{ NETCLIMSG_HIDE_CURRENT_GAME_TEXT_WINDOW };
+	sendToAll(msg); // TODO: Only send to one player's client, not all clients
+}
+
 void Server::tick()
 {
 	timeManager.tick();
@@ -594,6 +608,7 @@ void Server::tick()
 		OverPeriodSequence& ops = overPeriodSequences[i];
 		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
 		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
+		auto _ = SrvScriptContext::sequenceExecutor.change(ops.executor);
 		for (; ops.numExecutionsDone < predictedExec; ops.numExecutionsDone++) {
 			if (ServerGameObject* obj = ops.remainingObjects.back().get())
 				ops.actionSequence->run(obj);
@@ -609,6 +624,7 @@ void Server::tick()
 		OverPeriodSequence& ops = repeatOverPeriodSequences[i];
 		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
 		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
+		auto _ = SrvScriptContext::sequenceExecutor.change(ops.executor);
 		for (; ops.numExecutionsDone < predictedExec; ops.numExecutionsDone++) {
 			for (auto& ref : ops.remainingObjects)
 				if (ServerGameObject* obj = ref.get())
@@ -664,6 +680,13 @@ void Server::tick()
 				std::string msg = br.readStringZ();
 				chatMessages.push_back(msg);
 				printf("Server got message: %s\n", msg.c_str());
+
+				if (msg.size() >= 2 && msg[0] == '!') {
+					GSFileParser gsf = GSFileParser(msg.c_str() + 1);
+					Action* act = ReadAction(gsf, *gameSet);
+					act->run(findObject(1027));
+					delete act;
+				}
 
 				NetPacketWriter echo(NETCLIMSG_TEST);
 				echo.writeStringZ(msg);

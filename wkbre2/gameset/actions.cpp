@@ -7,10 +7,12 @@
 #include "ScriptContext.h"
 
 struct ActionUnknown : Action {
+	std::string name;
 	virtual void run(ServerGameObject *self) override {
-		ferr("Unknown action!");
+		ferr("Unknown action %s!", name.c_str());
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
+	ActionUnknown(const std::string& name) : name(name) {}
 };
 
 struct ActionTrace : Action {
@@ -623,10 +625,35 @@ struct ActionTerminate : Action {
 	}
 };
 
+struct ActionHideGameTextWindow : Action {
+	int gtwIndex;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* player : finder->eval(self))
+			Server::instance->hideGameTextWindow(player, gtwIndex);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		gtwIndex = gs.gameTextWindows.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionHideCurrentGameTextWindow : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* player : finder->eval(self))
+			Server::instance->hideCurrentGameTextWindow(player);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
-	switch (Tags::ACTION_tagDict.getTagID(gsf.nextString().c_str())) {
+	const auto name = gsf.nextString();
+	switch (Tags::ACTION_tagDict.getTagID(name.c_str())) {
 	case Tags::ACTION_TRACE: action = new ActionTrace; break;
 	case Tags::ACTION_TRACE_VALUE: action = new ActionTraceValue; break;
 	case Tags::ACTION_TRACE_FINDER_RESULTS: action = new ActionTraceFinderResults; break;
@@ -664,6 +691,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_DISPLAY_GAME_TEXT_WINDOW: action = new ActionDisplayGameTextWindow; break;
 	case Tags::ACTION_SET_SCALE: action = new ActionSetScale; break;
 	case Tags::ACTION_TERMINATE: action = new ActionTerminate; break;
+	case Tags::ACTION_HIDE_GAME_TEXT_WINDOW: action = new ActionHideGameTextWindow; break;
+	case Tags::ACTION_HIDE_CURRENT_GAME_TEXT_WINDOW: action = new ActionHideCurrentGameTextWindow; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:
@@ -713,7 +742,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION:
 		action = new ActionNop; break;
 		//
-	default: action = new ActionUnknown; break;
+	default: action = new ActionUnknown(name); break;
 	}
 	action->parse(gsf, const_cast<GameSet&>(gs));  // FIXME
 	return action;

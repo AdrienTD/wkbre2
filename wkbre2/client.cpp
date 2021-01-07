@@ -219,6 +219,15 @@ void Client::tick()
 					obj->scale = scale;
 				break;
 			}
+			case NETCLIMSG_HIDE_GAME_TEXT_WINDOW: {
+				const int gtwIndex = br.readUint32();
+				gtwStates.erase(gtwIndex);
+				break;
+			}
+			case NETCLIMSG_HIDE_CURRENT_GAME_TEXT_WINDOW: {
+				gtwStates.clear();
+				break;
+			}
 			}
 		}
 	}

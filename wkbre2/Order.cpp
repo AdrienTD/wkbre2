@@ -164,6 +164,14 @@ void Task::process()
 			return;
 		}
 		// Target tasks
+		if (!this->target) {
+			this->stopTriggers();
+			ServerGameObject* go = this->order->gameObject;
+			if (go->movement.isMoving())
+				go->stopMovement();
+			if (blueprint->taskTarget)
+				this->target = blueprint->taskTarget->getFirst(this->order->gameObject);
+		}
 		if (this->target) {
 			if (!this->startSequenceExecuted) {
 				this->blueprint->startSequence.run(order->gameObject);
