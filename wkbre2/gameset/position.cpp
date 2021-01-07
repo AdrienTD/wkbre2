@@ -220,6 +220,17 @@ struct PDNearestAttachmentPoint : public PositionDeterminer {
 	}
 };
 
+struct PDSpawnTilePosition : PositionDeterminer {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual OrientedPosition eval(ServerGameObject* self) override {
+		// TODO
+		return PosFromObjVec(finder->eval(self));
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet & gs)
 {
 	PositionDeterminer *pos;
@@ -237,6 +248,7 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet 
 	case Tags::POSITION_IN_FRONT_OF: pos = new PDInFrontOf; break;
 	case Tags::POSITION_OFFSET_FROM: pos = new PDOffsetFrom; break;
 	case Tags::POSITION_NEAREST_ATTACHMENT_POINT: pos = new PDNearestAttachmentPoint; break;
+	case Tags::POSITION_SPAWN_TILE_POSITION: pos = new PDSpawnTilePosition; break;
 	default: pos = new PDUnknown; break;
 	}
 	pos->parse(gsf, gs);

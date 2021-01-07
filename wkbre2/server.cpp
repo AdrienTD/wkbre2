@@ -493,6 +493,21 @@ void ServerGameObject::convertTo(GameObjBlueprint * postbp)
 	Server::instance->sendToAll(npw);
 }
 
+void ServerGameObject::setScale(const Vector3& scale)
+{
+	this->scale = scale;
+	NetPacketWriter npw{ NETCLIMSG_OBJECT_SCALE_SET };
+	npw.writeUint32(this->id);
+	npw.writeVector3(scale);
+	Server::instance->sendToAll(npw);
+}
+
+void ServerGameObject::terminate()
+{
+	// Termination depends on the object class
+	Server::instance->deleteObject(this);
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition)
 {
 	Server *server = Server::instance;
@@ -549,6 +564,13 @@ void Server::setDiplomaticStatus(ServerGameObject * a, ServerGameObject * b, int
 		msg.writeUint8(status);
 		sendToAll(msg);
 	}
+}
+
+void Server::showGameTextWindow(ServerGameObject* player, int gtwIndex)
+{
+	NetPacketWriter msg{ NETCLIMSG_SHOW_GAME_TEXT_WINDOW };
+	msg.writeUint32(gtwIndex);
+	sendToAll(msg); // TODO: Only send to one player's client, not all clients
 }
 
 void Server::tick()
@@ -687,6 +709,12 @@ void Server::tick()
 					}
 				};
 				walk(level, walk);
+				break;
+			}
+			case NETSRVMSG_GAME_TEXT_WINDOW_BUTTON_CLICKED: {
+				int gtwid = br.readUint32();
+				int button = br.readUint32();
+				gameSet->gameTextWindows[gtwid].buttons[button].onClickSequence.run(findObject(1027)); // TODO: Correct player object
 				break;
 			}
 			}

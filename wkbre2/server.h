@@ -47,6 +47,8 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void dissociateObject(int category, ServerGameObject *associated);
 	void clearAssociates(int category);
 	void convertTo(GameObjBlueprint *postbp);
+	void setScale(const Vector3& scale);
+	void terminate();
 
 	void updatePosition(const Vector3 &newposition);
 };
@@ -104,6 +106,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	void syncTime();
 
 	void setDiplomaticStatus(ServerGameObject *a, ServerGameObject *b, int status);
+	void showGameTextWindow(ServerGameObject* player, int gtwIndex);
 
 	void tick();
 

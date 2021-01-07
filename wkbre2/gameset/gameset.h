@@ -17,6 +17,7 @@
 #include "reaction.h"
 #include "ObjectCreation.h"
 #include "condition.h"
+#include "GameTextWindow.h"
 
 struct GameObjBlueprint;
 
@@ -64,6 +65,7 @@ struct GameSet
 	GSBlueprintList<std::unique_ptr<ValueDeterminer>> valueTags;
 	GSBlueprintList<void> diplomaticStatuses;
 	GSBlueprintList<GSCondition> conditions;
+	GSBlueprintList<GameTextWindow> gameTextWindows;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

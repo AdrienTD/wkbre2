@@ -44,13 +44,13 @@ struct Client : CommonGameState<Client, ClientGameObject>
 
 	NetLink *serverLink;
 
-	//Vector3 cameraPosition, cameraOrientation;
-	//Matrix perspectiveMatrix, lookatMatrix;
 	Camera camera;
 
 	ClientInterface *cliInterface;
 
 	bool localServer;
+
+	std::map<int, int> gtwStates;
 
 	//void loadSaveGame(const char *filename);
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
@@ -69,6 +69,7 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	void sendPauseRequest(uint8_t pauseState);
 	void sendStampdown(GameObjBlueprint *blueprint, ClientGameObject *player, const Vector3 &position, bool sendEvent = false);
 	void sendStartLevelRequest();
+	void sendGameTextWindowButtonClicked(int gtwIndex, int buttonIndex);
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }
 

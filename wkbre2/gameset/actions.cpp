@@ -581,6 +581,48 @@ struct ActionRepeatSequenceOverPeriod : Action {
 	}
 };
 
+struct ActionDisplayGameTextWindow : Action {
+	int gtwIndex;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* player : finder->eval(self))
+			Server::instance->showGameTextWindow(player, gtwIndex);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		gtwIndex = gs.gameTextWindows.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionSetScale : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<ValueDeterminer> vdx;
+	std::unique_ptr<ValueDeterminer> vdy;
+	std::unique_ptr<ValueDeterminer> vdz;
+	virtual void run(ServerGameObject* self) override {
+		Vector3 scale = Vector3(vdx->eval(self), vdy->eval(self), vdz->eval(self));
+		for (ServerGameObject* obj : finder->eval(self))
+			obj->setScale(scale);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+		vdx.reset(ReadValueDeterminer(gsf, gs));
+		vdy.reset(ReadValueDeterminer(gsf, gs));
+		vdz.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
+struct ActionTerminate : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			obj->terminate();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -619,6 +661,9 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_IDENTIFY_AND_MARK_CLUSTERS: action = new ActionIdentifyAndMarkClusters; break;
 	case Tags::ACTION_EXECUTE_SEQUENCE_OVER_PERIOD: action = new ActionExecuteSequenceOverPeriod; break;
 	case Tags::ACTION_REPEAT_SEQUENCE_OVER_PERIOD: action = new ActionRepeatSequenceOverPeriod; break;
+	case Tags::ACTION_DISPLAY_GAME_TEXT_WINDOW: action = new ActionDisplayGameTextWindow; break;
+	case Tags::ACTION_SET_SCALE: action = new ActionSetScale; break;
+	case Tags::ACTION_TERMINATE: action = new ActionTerminate; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:
@@ -657,6 +702,15 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_CONQUER_LEVEL:
 	case Tags::ACTION_DISPLAY_LOAD_GAME_MENU:
 	case Tags::ACTION_PLAY_MUSIC:
+	case Tags::ACTION_PLAY_CLIP:
+	case Tags::ACTION_SNAP_CAMERA_TO_POSITION:
+	case Tags::ACTION_STORE_CAMERA_POSITION:
+	case Tags::ACTION_SNAP_CAMERA_TO_STORED_POSITION:
+	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION:
+	case Tags::ACTION_PLAY_CAMERA_PATH:
+	case Tags::ACTION_STOP_CAMERA_PATH_PLAYBACK:
+	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK:
+	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION:
 		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown; break;

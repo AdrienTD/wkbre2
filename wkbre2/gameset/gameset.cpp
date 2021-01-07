@@ -7,9 +7,8 @@
 #include <set>
 #include "finder.h"
 
-void ignoreBlueprint(GSFileParser &gsf, const std::string &tag)
+void ignoreBlueprintEx(GSFileParser &gsf, const std::string &endtag)
 {
-	std::string endtag = "END_" + tag;
 	gsf.advanceLine();
 	while (!gsf.eof)
 	{
@@ -18,6 +17,7 @@ void ignoreBlueprint(GSFileParser &gsf, const std::string &tag)
 		gsf.advanceLine();
 	}
 }
+void ignoreBlueprint(GSFileParser& gsf, const std::string& tag) { ignoreBlueprintEx(gsf, "END_" + tag); }
 
 void GameSet::parseFile(const char * fn, int pass)
 {
@@ -162,6 +162,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_GAME_TEXT_WINDOW: {
+				gameTextWindows.names.insertString(gsf.nextString(true));
+				ignoreBlueprintEx(gsf, "GAME_TEXT_WINDOW_END");
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -298,6 +303,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				cond.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_GAME_TEXT_WINDOW: {
+				GameTextWindow& gtw = gameTextWindows.readRef(gsf);
+				gtw.parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -352,6 +362,7 @@ void GameSet::load(const char * fn)
 	valueTags.pass();
 	diplomaticStatuses.pass();
 	conditions.pass();
+	gameTextWindows.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

@@ -205,6 +205,19 @@ void Client::tick()
 					int &ref = (a->id <= b->id) ? diplomaticStatuses[{ a->id, b->id }] : diplomaticStatuses[{ b->id, a->id }];
 					ref = status;
 				}
+				break;
+			}
+			case NETCLIMSG_SHOW_GAME_TEXT_WINDOW: {
+				int gtwIndex = br.readUint32();
+				gtwStates[gtwIndex] = 0;
+				break;
+			}
+			case NETCLIMSG_OBJECT_SCALE_SET: {
+				auto id = br.readUint32();
+				Vector3 scale = br.readVector3();
+				if (ClientGameObject* obj = findObject(id))
+					obj->scale = scale;
+				break;
 			}
 			}
 		}
@@ -248,6 +261,14 @@ void Client::sendStampdown(GameObjBlueprint * blueprint, ClientGameObject * play
 void Client::sendStartLevelRequest()
 {
 	serverLink->send(NetPacketWriter(NETSRVMSG_START_LEVEL));
+}
+
+void Client::sendGameTextWindowButtonClicked(int gtwIndex, int buttonIndex)
+{
+	NetPacketWriter msg(NETSRVMSG_GAME_TEXT_WINDOW_BUTTON_CLICKED);
+	msg.writeUint32(gtwIndex);
+	msg.writeUint32(buttonIndex);
+	serverLink->send(msg);
 }
 
 ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t id)

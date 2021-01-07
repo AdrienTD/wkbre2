@@ -10,7 +10,7 @@ int g_windowWidth = 1366, g_windowHeight = 768;
 bool g_keyDown[SDL_NUM_SCANCODES], g_keyPressed[SDL_NUM_SCANCODES];
 bool g_modCtrl = false, g_modShift = false, g_modAlt = false;
 IRenderer *g_gfxRenderer = nullptr;
-bool g_mouseDown[16];
+bool g_mouseDown[16], g_mousePressed[16];
 int g_mouseX, g_mouseY, g_mouseWheel;
 
 void InitWindow()
@@ -54,6 +54,8 @@ void HandleWindow()
 	bool imguion = ImGui::GetCurrentContext() != nullptr;
 	for (int i = 0; i < SDL_NUM_SCANCODES; i++)
 		g_keyPressed[i] = false;
+	for (bool& b : g_mousePressed)
+		b = false;
 	g_mouseWheel = 0;
 
 	bool igWantsMouse = false;
@@ -92,8 +94,10 @@ void HandleWindow()
 			}
 			break;
 		case SDL_MOUSEBUTTONDOWN:
-			if(!igWantsMouse)
+			if (!igWantsMouse) {
 				g_mouseDown[event.button.button] = true;
+				g_mousePressed[event.button.button] = true;
+			}
 			break;
 		case SDL_MOUSEBUTTONUP:
 			if(!igWantsMouse)

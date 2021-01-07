@@ -137,9 +137,9 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 			else
 				obj->sceneEntity.model = nullptr;
 			if (obj->sceneEntity.model) {
-				obj->sceneEntity.transform = CreateWorldMatrix(Vector3(1,1,1), -obj->orientation, obj->position);
+				obj->sceneEntity.transform = CreateWorldMatrix(obj->scale, -obj->orientation, obj->position);
 				obj->sceneEntity.color = obj->getPlayer()->color;
-				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter(), obj->sceneEntity.model->getSphereRadius())) {
+				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
 					obj->sceneEntity.color = 0;
 					nextSelectedObject = obj;
 				}
@@ -243,13 +243,13 @@ void ClientInterface::iter()
 	if (g_mouseWheel)
 		client->camera.position.y += g_mouseWheel;
 
-	if (g_mouseDown[SDL_BUTTON_LEFT]) {
+	if (g_mousePressed[SDL_BUTTON_LEFT]) {
 		debugger.selectObject(nextSelectedObject);
 		selected = nextSelectedObject;
 		stampdownBlueprint = nullptr;
 	}
 
-	if (g_mouseDown[SDL_BUTTON_RIGHT]) {
+	if (g_mousePressed[SDL_BUTTON_RIGHT]) {
 		if (stampdownBlueprint) {
 			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos, sendStampdownEvent);
 		}
@@ -278,6 +278,36 @@ void ClientInterface::iter()
 	if (ImGui::Button("Start level"))
 		client->sendStartLevelRequest();
 	ImGui::End();
+
+	for (auto& activeGtw : client->gtwStates) {
+		if (activeGtw.second == -1) continue;
+		auto& gtw = client->gameSet->gameTextWindows[activeGtw.first];
+		auto& page = gtw.pages[activeGtw.second];
+		std::string title = "[GTW] " + client->gameSet->gameTextWindows.names[activeGtw.first];
+		ImGui::SetNextWindowPosCenter();
+		ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoSavedSettings);
+		ImGui::Text(page.textBody.c_str());
+		for (size_t i = 0; i < gtw.buttons.size(); i++) {
+			auto& button = gtw.buttons[i];
+			if (ImGui::Button(button.text.c_str())) {
+				switch (button.onClickWindowAction) {
+				case Tags::GTW_BUTTON_WINDOW_ACTION_CLOSE_WINDOW:
+					activeGtw.second = -1; break;
+				case Tags::GTW_BUTTON_WINDOW_ACTION_MOVE_FIRST_PAGE:
+					activeGtw.second = 0; break;
+				case Tags::GTW_BUTTON_WINDOW_ACTION_MOVE_NEXT_PAGE:
+					if (activeGtw.second < gtw.pages.size() - 1) activeGtw.second++; break;
+				case Tags::GTW_BUTTON_WINDOW_ACTION_MOVE_PREVIOUS_PAGE:
+					if (activeGtw.second > 0) activeGtw.second--; break;
+				}
+				if(!button.onClickSequence.actionList.empty())
+					client->sendGameTextWindowButtonClicked(activeGtw.first, i);
+			}
+			ImGui::SameLine();
+		}
+		ImGui::NewLine();
+		ImGui::End();
+	}
 
 	//----- Rendering -----//
 

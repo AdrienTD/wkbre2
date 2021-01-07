@@ -21,7 +21,7 @@ template<class AnyGameObject> struct CommonGameObject {
 	std::map<int, float> items;
 	std::map<std::pair<int, int>, float> indexedItems;
 
-	Vector3 position, orientation;
+	Vector3 position, orientation, scale = Vector3(1.0f, 1.0f, 1.0f);
 
 	int subtype = 0, appearance = 0;
 	int color = 0;
