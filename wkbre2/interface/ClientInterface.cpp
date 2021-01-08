@@ -125,18 +125,20 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 			goto drawsub;
 		Vector3 ttpp = obj->position.transformScreenCoords(client->camera.sceneMatrix);
 		if (!(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)) {
+			Model* model = nullptr;
 			const auto &ap = obj->blueprint->subtypes[obj->subtype].appearances[obj->appearance];
 			auto it = ap.animations.find(obj->animationIndex);
 			if (it == ap.animations.end())
 				it = ap.animations.find(0);
-			if (it == ap.animations.end())
-				goto drawsub;
-			const auto &anim = it->second;
-			if (!anim.empty())
-				obj->sceneEntity.model = anim[obj->animationVariant]; //anim[rand() % anim.size()];
-			else
-				obj->sceneEntity.model = nullptr;
-			if (obj->sceneEntity.model) {
+			if (it != ap.animations.end()) {
+				const auto& anim = it->second;
+				if (!anim.empty())
+					model = anim[obj->animationVariant];
+			}
+			if (!model)
+				model = obj->blueprint->representAs;
+			if (model) {
+				obj->sceneEntity.model = model;
 				obj->sceneEntity.transform = CreateWorldMatrix(obj->scale, -obj->orientation, obj->position);
 				obj->sceneEntity.color = obj->getPlayer()->color;
 				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {

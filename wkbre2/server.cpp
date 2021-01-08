@@ -509,6 +509,26 @@ void ServerGameObject::terminate()
 	Server::instance->deleteObject(this);
 }
 
+void ServerGameObject::updateFlags(int value)
+{
+	flags = value;
+	NetPacketWriter npw{ NETCLIMSG_OBJECT_FLAGS_SET };
+	npw.writeUint32(this->id);
+	npw.writeUint8(flags);
+	Server::instance->sendToAll(npw);
+}
+
+void ServerGameObject::disable()
+{
+	disableCount++;
+}
+
+void ServerGameObject::enable()
+{
+	if (disableCount > 0)
+		disableCount--;
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition)
 {
 	Server *server = Server::instance;

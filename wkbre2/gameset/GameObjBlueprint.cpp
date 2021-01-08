@@ -115,6 +115,10 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			mappedTypeTags[tag] = gameSet->readObjBlueprintPtr(gsf);
 			break;
 		}
+		case Tags::CBLUEPRINT_REPRESENT_AS: {
+			representAs = gameSet->modelCache.getModel("Warrior Kings Game Set\\" + gsf.nextString(true));
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

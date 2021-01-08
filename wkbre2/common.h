@@ -33,6 +33,16 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	Movement movement;
 
+	enum Flags {
+		fSelectable = 1,
+		fTargetable = 2,
+		fRenderable = 4,
+		fTerminated = 8,
+		fPlayerTerminated = 16,
+	};
+	int flags = fSelectable | fTargetable | fRenderable;
+	int disableCount = 0;
+
 	float getItem(int item)
 	{
 		auto it = items.find(item);

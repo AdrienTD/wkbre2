@@ -49,6 +49,9 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void convertTo(GameObjBlueprint *postbp);
 	void setScale(const Vector3& scale);
 	void terminate();
+	void updateFlags(int value);
+	void disable();
+	void enable();
 
 	void updatePosition(const Vector3 &newposition);
 };

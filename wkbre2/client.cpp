@@ -228,6 +228,14 @@ void Client::tick()
 				gtwStates.clear();
 				break;
 			}
+			case NETCLIMSG_OBJECT_FLAGS_SET: {
+				uint32_t objid = br.readUint32();
+				uint8_t flags = br.readUint8();
+				if (ClientGameObject* obj = findObject(objid)) {
+					obj->flags = flags;
+				}
+				break;
+			}
 			}
 		}
 	}

@@ -649,6 +649,67 @@ struct ActionHideCurrentGameTextWindow : Action {
 	}
 };
 
+struct ActionDisable : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			obj->disable();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionEnable : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			obj->enable();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionSetSelectable : Action {
+	bool value;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			obj->updateFlags((obj->flags & ~ServerGameObject::fSelectable) | (value ? ServerGameObject::fSelectable : 0));
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		value = gsf.nextInt();
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionSetTargetable : Action {
+	bool value;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			obj->updateFlags((obj->flags & ~ServerGameObject::fTargetable) | (value ? ServerGameObject::fTargetable : 0));
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		value = gsf.nextInt();
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionSetRenderable : Action {
+	bool value;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			obj->updateFlags((obj->flags & ~ServerGameObject::fRenderable) | (value ? ServerGameObject::fRenderable : 0));
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		value = gsf.nextInt();
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -693,6 +754,11 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_TERMINATE: action = new ActionTerminate; break;
 	case Tags::ACTION_HIDE_GAME_TEXT_WINDOW: action = new ActionHideGameTextWindow; break;
 	case Tags::ACTION_HIDE_CURRENT_GAME_TEXT_WINDOW: action = new ActionHideCurrentGameTextWindow; break;
+	case Tags::ACTION_DISABLE: action = new ActionDisable; break;
+	case Tags::ACTION_ENABLE: action = new ActionEnable; break;
+	case Tags::ACTION_SET_SELECTABLE: action = new ActionSetSelectable; break;
+	case Tags::ACTION_SET_TARGETABLE: action = new ActionSetTargetable; break;
+	case Tags::ACTION_SET_RENDERABLE: action = new ActionSetRenderable; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:
