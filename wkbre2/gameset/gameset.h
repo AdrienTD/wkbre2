@@ -66,6 +66,8 @@ struct GameSet
 	GSBlueprintList<void> diplomaticStatuses;
 	GSBlueprintList<GSCondition> conditions;
 	GSBlueprintList<GameTextWindow> gameTextWindows;
+	GSBlueprintList<void> taskCategories;
+	GSBlueprintList<void> orderCategories;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

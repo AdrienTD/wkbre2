@@ -20,6 +20,7 @@ struct TriggerBlueprint {
 struct OrderBlueprint {
 	int bpid;
 	int classType;
+	int category = -1;
 	bool cycleOrder = false;
 	std::vector<TaskBlueprint*> tasks;
 	ActionSequence initSequence, startSequence, resumptionSequence, terminationSequence, cancellationSequence;
@@ -30,6 +31,7 @@ struct OrderBlueprint {
 struct TaskBlueprint {
 	int bpid;
 	int classType;
+	int category = -1;
 	ObjectFinder *taskTarget = nullptr;
 	ActionSequence initSequence, startSequence, resumptionSequence, terminationSequence, cancellationSequence;
 	std::vector<TriggerBlueprint> triggers;
@@ -47,5 +49,5 @@ struct OrderAssignmentBlueprint {
 	int orderAssignmentMode = 0;
 	ObjectFinder *orderTarget = nullptr;
 	void parse(GSFileParser &gsf, GameSet &gs);
-	void assignTo(ServerGameObject *gameobj) const;
+	void assignTo(ServerGameObject *gameobj, ServerGameObject *giver = nullptr) const;
 };

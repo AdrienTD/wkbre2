@@ -3,6 +3,7 @@
 #include "../gameset/gameset.h"
 #include "finder.h"
 #include "../server.h"
+#include "ScriptContext.h"
 
 void OrderBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 {
@@ -11,6 +12,8 @@ void OrderBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 		std::string tag = gsf.nextTag();
 		if (tag == "END_ORDER")
 			break;
+		else if (tag == "IN_ORDER_CATEGORY")
+			category = gs.orderCategories.readIndex(gsf);
 		else if (tag == "CLASS_TYPE")
 			this->classType = Tags::ORDTSKTYPE_tagDict.getTagID(gsf.nextString().c_str());
 		else if (tag == "USE_TASK")
@@ -41,6 +44,8 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 		std::string tag = gsf.nextTag();
 		if (tag == "END_TASK")
 			break;
+		else if (tag == "IN_TASK_CATEGORY")
+			category = gs.taskCategories.readIndex(gsf);
 		else if (tag == "CLASS_TYPE")
 			this->classType = Tags::ORDTSKTYPE_tagDict.getTagID(gsf.nextString().c_str());
 		else if (tag == "TASK_TARGET")
@@ -91,8 +96,9 @@ void OrderAssignmentBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 	}
 }
 
-void OrderAssignmentBlueprint::assignTo(ServerGameObject * gameobj) const
+void OrderAssignmentBlueprint::assignTo(ServerGameObject * gameobj, ServerGameObject* giver) const
 {
+	auto _ = SrvScriptContext::orderGiver.change(giver);
 	ServerGameObject *target = this->orderTarget ? this->orderTarget->getFirst(gameobj) : nullptr;
 	gameobj->orderConfig.addOrder(this->orderToAssign, this->orderAssignmentMode, target);
 }

@@ -65,6 +65,7 @@ struct Task {
 	float proximity = -1.0f; bool proximitySatisfied = false, lastDestinationValid = false;
 
 	Task(int id, TaskBlueprint *blueprint, Order *order);
+	~Task();
 
 	bool isDone() const { return state >= OTS_ABORTED; }
 	bool isWorking() const { return (state == OTS_PROCESSING) || (state == OTS_SUSPENDED); }
@@ -79,6 +80,8 @@ struct Task {
 	void process();
 	void startTriggers();
 	void stopTriggers();
+
+	void setTarget(ServerGameObject* obj);
 };
 
 struct Trigger {

@@ -23,7 +23,7 @@ template<typename Program, typename AnyGO> struct ScriptContext {
 		}
 		AnyGO *get() { return object.get(); }
 	};
-	static CtxElement candidate, creator, packageSender, sequenceExecutor, target;
+	static CtxElement candidate, creator, packageSender, sequenceExecutor, target, orderGiver, chainOriginalSelf;
 };
 
 //extern template struct ScriptContext<Server, ServerGameObject>;
@@ -37,6 +37,8 @@ template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO
 template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::packageSender;
 template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::sequenceExecutor;
 template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::target;
+template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::orderGiver;
+template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::chainOriginalSelf;
 
 
 //template<typename T> ScriptContext<T> g_scriptCtx;

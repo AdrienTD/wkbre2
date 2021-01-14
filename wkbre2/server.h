@@ -30,6 +30,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	std::unordered_set<Reaction*> individualReactions;
 	std::unordered_map<int, std::unordered_set<SrvGORef>> associates, associators;
 	int tileIndex = -1;
+	std::vector<SrvGORef> referencers;
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 

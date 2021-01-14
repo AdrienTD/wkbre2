@@ -11,6 +11,7 @@ void Order::init()
 	this->blueprint->initSequence.run(this->gameObject);
 	for (Task *task : this->tasks)
 		task->init();
+	this->currentTask = 0;
 }
 
 void Order::start()
@@ -64,6 +65,7 @@ void Order::process()
 
 Task * Order::getCurrentTask()
 {
+	if (currentTask == -1) return nullptr;
 	return this->tasks[this->currentTask];
 }
 
@@ -91,6 +93,11 @@ Task::Task(int id, TaskBlueprint * blueprint, Order * order) : id(id), blueprint
 	}
 }
 
+Task::~Task()
+{
+	setTarget(nullptr);
+}
+
 void Task::init()
 {
 	this->blueprint->initSequence.run(this->order->gameObject);
@@ -101,7 +108,7 @@ void Task::start()
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
 	if (!this->target && blueprint->taskTarget)
-		this->target = blueprint->taskTarget->getFirst(this->order->gameObject); // FIXME: that would override the order's target!!!
+		this->setTarget(blueprint->taskTarget->getFirst(this->order->gameObject)); // FIXME: that would override the order's target!!!
 	this->startSequenceExecuted = false; // is this correct?
 }
 
@@ -170,7 +177,7 @@ void Task::process()
 			if (go->movement.isMoving())
 				go->stopMovement();
 			if (blueprint->taskTarget)
-				this->target = blueprint->taskTarget->getFirst(this->order->gameObject);
+				this->setTarget(blueprint->taskTarget->getFirst(this->order->gameObject));
 		}
 		if (this->target) {
 			if (!this->startSequenceExecuted) {
@@ -226,6 +233,22 @@ void Task::stopTriggers()
 	triggersStarted = false;
 }
 
+void Task::setTarget(ServerGameObject* newtarget)
+{
+	ServerGameObject* oldtarget = target.get();
+	//if (oldtarget == newtarget)
+	//	return;
+	// potential problem: if oldtarget was on deleted obj, and newtarget is null, the equality above will also turn true, leaving oldtarget on deleted obj
+	// only becomes problem when suddenly new object is created with the deleted object's ID, which should "rarely" happen
+	if (oldtarget) {
+		std::swap(*std::find(oldtarget->referencers.begin(), oldtarget->referencers.end(), this->order->gameObject), oldtarget->referencers.back());
+		oldtarget->referencers.pop_back();
+	}
+	target = newtarget;
+	if (newtarget)
+		newtarget->referencers.push_back(this->order->gameObject);
+}
+
 
 
 void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination)
@@ -250,7 +273,7 @@ void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMod
 	for (TaskBlueprint *taskBp : orderBlueprint->tasks)
 		neworder->tasks.push_back(new Task(neworder->nextTaskId++, taskBp, neworder));
 	if (target) {
-		neworder->tasks.at(0)->target = target;
+		neworder->tasks.at(0)->setTarget(target);
 	}
 	if (destination.x >= 0.0f) {
 		neworder->tasks.at(0)->destination = destination;

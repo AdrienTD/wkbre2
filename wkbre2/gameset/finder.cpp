@@ -7,6 +7,7 @@
 #include "CommonEval.h"
 #include "../NNSearch.h"
 #include "ScriptContext.h"
+#include <cassert>
 
 std::vector<ClientGameObject*> ObjectFinder::eval(ClientGameObject * self)
 {
@@ -235,6 +236,36 @@ struct FinderDisabledAssociates : ObjectFinder {
 	}
 };
 
+struct FinderReferencers : ObjectFinder {
+	int category;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject* self) override {
+		std::set<ServerGameObject*> vec;
+		for (ServerGameObject* obj : self->referencers) {
+			if (obj) {
+				Order* order = obj->orderConfig.getCurrentOrder();
+				if (!order) continue;
+				Task* task = order->getCurrentTask();
+				if (!task) continue;
+				//assert(task->target.get() == self);
+				if (task->blueprint->category == category)
+					vec.insert(obj);
+			}
+		}
+		return { vec.begin(), vec.end() };
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		category = gs.taskCategories.readIndex(gsf);
+	}
+};
+
+struct FinderOrderGiver : ObjectFinder {
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject* self) override {
+		auto obj = SrvScriptContext::orderGiver.get();
+		if (obj) return { obj };
+		else return {};
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+};
 
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
@@ -261,6 +292,8 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_NEAREST_TO_SATISFY: finder = new FinderNearestToSatisfy; break;
 	case Tags::FINDER_LEVEL: finder = new FinderLevel; break;
 	case Tags::FINDER_DISABLED_ASSOCIATES: finder = new FinderDisabledAssociates; break;
+	case Tags::FINDER_REFERENCERS: finder = new FinderReferencers; break;
+	case Tags::FINDER_ORDER_GIVER: finder = new FinderOrderGiver; break;
 	default: finder = new FinderUnknown; break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));
@@ -418,18 +451,54 @@ struct FinderFilter : ObjectFinder {
 
 struct FinderMetreRadius : ObjectFinder {
 	std::unique_ptr<ValueDeterminer> vdradius;
+	bool useOriginalSelf = false;
+	int relationship = 0;
+	int classFilter = 0;
+	bool eligible(ServerGameObject* obj, ServerGameObject* refplayer) {
+		ServerGameObject* objplayer = obj->getPlayer();
+		switch (relationship) {
+		case 1: if (objplayer != refplayer) return false; break;
+		case 2: if (objplayer != refplayer && Server::instance->getDiplomaticStatus(objplayer, refplayer) >= 1) return false; break;
+		case 3: if (objplayer == refplayer || Server::instance->getDiplomaticStatus(objplayer, refplayer) < 2) return false; break;
+		default:;
+		}
+		int objclass = obj->blueprint->bpClass;
+		switch (classFilter) {
+		case 1: if (objclass != Tags::GAMEOBJCLASS_BUILDING) return false; break;
+		case 2: if (objclass != Tags::GAMEOBJCLASS_CHARACTER) return false; break;
+		case 3: if (objclass != Tags::GAMEOBJCLASS_BUILDING && objclass != Tags::GAMEOBJCLASS_CHARACTER) return false; break;
+		default:;
+		}
+		return true;
+	}
 	virtual std::vector<ServerGameObject*> eval(ServerGameObject *self) override {
 		float radius = vdradius->eval(self);
+		ServerGameObject* player = (useOriginalSelf ? SrvScriptContext::chainOriginalSelf.get() : self)->getPlayer();
 		NNSearch search;
 		search.start(Server::instance, self->position, radius);
 		std::vector<ServerGameObject*> res;
-		while (ServerGameObject *obj = search.next())
-			res.push_back(obj);
+		while (ServerGameObject* obj = search.next())
+			if (eligible(obj, player))
+				res.push_back(obj);
 		return res;
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		vdradius.reset(ReadValueDeterminer(gsf, gs));
 		// ...
+		std::string word = gsf.nextString();
+		while (!word.empty()) {
+			if (word == "SAME_PLAYER_UNITS") relationship = 1;
+			else if (word == "ALLIED_UNITS") relationship = 2;
+			else if (word == "ENEMY_UNITS") relationship = 3;
+			else if (word == "ORIGINAL_SAME_PLAYER_UNITS") { useOriginalSelf = true; relationship = 1; }
+			else if (word == "ORIGINAL_ALLIED_UNITS") { useOriginalSelf = true; relationship = 2; }
+			else if (word == "ORIGINAL_ENEMY_UNITS") { useOriginalSelf = true; relationship = 3; }
+			else if (word == "BUILDINGS_ONLY") classFilter = 1;
+			else if (word == "CHARACTERS_ONLY") classFilter = 2;
+			else if (word == "CHARACTERS_AND_BUILDINGS_ONLY") classFilter = 3;
+			else printf("Unknown METRE_RADIUS term %s\n", word.c_str());
+			word = gsf.nextString();
+		}
 	}
 };
 

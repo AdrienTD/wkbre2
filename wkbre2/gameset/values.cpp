@@ -374,6 +374,38 @@ struct ValueIsMusicPlaying : ValueDeterminer {
 	}
 };
 
+struct ValueCurrentlyDoingOrder : ValueDeterminer {
+	int category;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		auto vec = finder->eval(self);
+		return std::all_of(vec.begin(), vec.end(), [this](ServerGameObject* obj) {
+			auto order = obj->orderConfig.getCurrentOrder();
+			return order && (order->blueprint->category == category);
+		});
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		category = gs.orderCategories.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueCurrentlyDoingTask : ValueDeterminer {
+	int category;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		auto vec = finder->eval(self);
+		return std::all_of(vec.begin(), vec.end(), [this](ServerGameObject* obj) {
+			auto order = obj->orderConfig.getCurrentOrder();
+			return order && (order->getCurrentTask()->blueprint->category == category);
+			});
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		category = gs.taskCategories.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -402,6 +434,8 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_WATER_BENEATH: vd = new ValueWaterBeneath; break;
 	case Tags::VALUE_ANGLE_BETWEEN: vd = new ValueAngleBetween; break;
 	case Tags::VALUE_IS_MUSIC_PLAYING: vd = new ValueIsMusicPlaying; break;
+	case Tags::VALUE_CURRENTLY_DOING_ORDER: vd = new ValueCurrentlyDoingOrder; break;
+	case Tags::VALUE_CURRENTLY_DOING_TASK: vd = new ValueCurrentlyDoingTask; break;
 	default: vd = new ValueUnknown; break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

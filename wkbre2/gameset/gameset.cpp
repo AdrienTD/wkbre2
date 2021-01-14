@@ -167,6 +167,14 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprintEx(gsf, "GAME_TEXT_WINDOW_END");
 				break;
 			}
+			case Tags::GAMESET_TASK_CATEGORY: {
+				taskCategories.names.insertString(gsf.nextString(true));
+				break;
+			}
+			case Tags::GAMESET_ORDER_CATEGORY: {
+				orderCategories.names.insertString(gsf.nextString(true));
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -363,6 +371,8 @@ void GameSet::load(const char * fn)
 	diplomaticStatuses.pass();
 	conditions.pass();
 	gameTextWindows.pass();
+	taskCategories.pass();
+	orderCategories.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

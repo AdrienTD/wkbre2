@@ -245,7 +245,7 @@ struct ActionAssignOrderVia : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(ServerGameObject *self) override {
 		for (ServerGameObject *obj : finder->eval(self)) {
-			oabp->assignTo(obj);
+			oabp->assignTo(obj, self);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {

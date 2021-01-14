@@ -216,7 +216,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 							while (!gsf.eof) {
 								std::string tsktag = gsf.nextTag();
 								if (tsktag == "TARGET") {
-									task.target = gsf.nextInt();
+									task.setTarget(findObject(gsf.nextInt()));
 								}
 								else if (tsktag == "PROXIMITY") {
 									task.proximity = gsf.nextFloat();
