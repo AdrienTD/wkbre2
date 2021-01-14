@@ -157,7 +157,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		case Tags::GAMEOBJ_MAP: {
 			std::string mapfp = gsf.nextString(true);
 			this->terrain = new Terrain();
-			this->terrain->readBCM(mapfp.c_str());
+			this->terrain->readFromFile(mapfp.c_str());
 			NetPacketWriter packet(NETCLIMSG_TERRAIN_SET);
 			packet.writeStringZ(mapfp);
 			sendToAll(packet);
@@ -341,6 +341,7 @@ void Server::loadSavePredec(GSFileParser & gsf)
 
 void ServerGameObject::setItem(int index, float value)
 {
+	assert(index != -1);
 	items[index] = value;
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_ITEM_SET);

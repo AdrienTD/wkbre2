@@ -142,6 +142,18 @@ struct ValueCanReach : ValueDeterminer {
 	}
 };
 
+struct ValueIsAccessible : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> finder1, finder2;
+	virtual float eval(ServerGameObject* self) override {
+		// everything is reachable from anywhere for now
+		return 1.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder1.reset(ReadFinder(gsf, gs));
+		finder2.reset(ReadFinder(gsf, gs));
+	}
+};
+
 struct ValueHasAppearance : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	int appear;
@@ -406,6 +418,19 @@ struct ValueCurrentlyDoingTask : ValueDeterminer {
 	}
 };
 
+struct ValueTileItem : CommonEval<ValueTileItem, ValueDeterminer> {
+	int item;
+	std::unique_ptr<ObjectFinder> finder;
+	template<typename AnyGameObject> float common_eval(AnyGameObject* self) {
+		// TODO
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		item = gs.items.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -419,6 +444,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_IS_SUBSET_OF: vd = new ValueIsSubsetOf; break;
 	case Tags::VALUE_NUM_OBJECTS: vd = new ValueNumObjects; break;
 	case Tags::VALUE_CAN_REACH: vd = new ValueCanReach; break;
+	case Tags::VALUE_IS_ACCESSIBLE: vd = new ValueIsAccessible; break;
 	case Tags::VALUE_HAS_APPEARANCE: vd = new ValueHasAppearance; break;
 	case Tags::VALUE_SAME_PLAYER: vd = new ValueSamePlayer; break;
 	case Tags::VALUE_OBJECT_TYPE: vd = new ValueObjectType; break;
@@ -436,6 +462,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_IS_MUSIC_PLAYING: vd = new ValueIsMusicPlaying; break;
 	case Tags::VALUE_CURRENTLY_DOING_ORDER: vd = new ValueCurrentlyDoingOrder; break;
 	case Tags::VALUE_CURRENTLY_DOING_TASK: vd = new ValueCurrentlyDoingTask; break;
+	case Tags::VALUE_TILE_ITEM: vd = new ValueTileItem; break;
 	default: vd = new ValueUnknown; break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

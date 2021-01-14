@@ -76,6 +76,9 @@ struct Terrain
 
 	static int GetMaxBits(int x);
 
+	void readFromFile(const char* filename);
 	void readBCM(const char *filename);
+	void readSNR(const char* filename);
+	void readTRN(const char* filename);
 };
 		

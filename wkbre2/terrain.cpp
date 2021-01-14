@@ -1,6 +1,8 @@
 #include "terrain.h"
 #include "file.h"
 #include "util/util.h"
+#include "util/GSFileParser.h"
+#include "gfx/bitmap.h"
 
 float Terrain::getHeight(float ipx, float ipy) const {
 	//int tx = floorf(x / 5) + edge, tz = floorf(z / 5) + edge;
@@ -64,6 +66,15 @@ int Terrain::GetMaxBits(int x)
 			return i;
 	//assert(0 & (int)"no max bits found");
 	return 0;
+}
+
+void Terrain::readFromFile(const char* filename)
+{
+	const char* ext = strrchr(filename, '.');
+	if (!_stricmp(ext, ".bcm"))
+		readBCM(filename);
+	else
+		readSNR(filename);
 }
 
 void Terrain::readBCM(const char * filename) {
@@ -161,4 +172,115 @@ void Terrain::readBCM(const char * filename) {
 		vertices[i] = (uint8_t)br.readnb(8);
 
 	free(fcnt);
+}
+
+void Terrain::readSNR(const char* filename)
+{
+	char* text; int textsize;
+	LoadFile(filename, &text, &textsize, 1);
+	text[textsize] = 0;
+
+	GSFileParser gsf(text);
+	while (!gsf.eof) {
+		auto tag = gsf.nextTag();
+		if (tag == "SCENARIO_DIMENSIONS") {
+			width = gsf.nextInt();
+			height = gsf.nextInt();
+		}
+		else if (tag == "SCENARIO_EDGE_WIDTH")
+			edge = gsf.nextInt();
+		else if (tag == "SCENARIO_TEXTURE_DATABASE") {
+			auto str = gsf.nextString(true);
+			texDbPath = std::wstring(str.begin(), str.end());
+			texDb.load(str.c_str());
+		}
+		else if (tag == "SCENARIO_TERRAIN") {
+			auto str = gsf.nextString(true);
+			readTRN(str.c_str());
+		}
+		else if (tag == "SCENARIO_HEIGHTMAP") {
+			int numVerts = (width + 1) * (height + 1);
+			vertices = (uint8_t*)malloc(numVerts);
+			if (!vertices) ferr("No mem. left for heightmap.");
+			Bitmap *bmp = LoadBitmap(gsf.nextString(true).c_str());
+			if (bmp->width != width + 1 || bmp->height != height + 1)
+				ferr("Incorrect heightmap bitmap size");
+			vertices = bmp->pixels;
+			// TODO: Free bitmap without pixels
+		}
+		else if (tag == "SCENARIO_HEIGHT_SCALE_FACTOR") {
+			scale = gsf.nextFloat();
+		}
+		else if (tag == "SCENARIO_SUN_COLOUR") {
+			sunColor = 0;
+			for (int i = 0; i < 3; i++)
+				sunColor = (sunColor << 8) | gsf.nextInt();
+		}
+		else if (tag == "SCENARIO_SUN_VECTOR") {
+			for (float& f : sunVector)
+				f = gsf.nextFloat();
+		}
+		else if (tag == "SCENARIO_FOG_COLOUR") {
+			fogColor = 0;
+			for (int i = 0; i < 3; i++)
+				fogColor = (fogColor << 8) | gsf.nextInt();
+		}
+		else if (tag == "SCENARIO_SKY_TEXTURES_DIRECTORY") {
+			auto str = gsf.nextString(true);
+			skyTextureDirectory = std::wstring(str.begin(), str.end());
+		}
+		else if (tag == "SCENARIO_MINIMAP") {
+		}
+		else if (tag == "SCENARIO_LAKE") {
+		}
+
+		gsf.advanceLine();
+	}
+
+	free(text);
+}
+
+void Terrain::readTRN(const char* filename)
+{
+	tiles = new Tile[width * height];
+
+	char* text; int textsize;
+	LoadFile(filename, &text, &textsize, 1);
+	text[textsize] = 0;
+
+	GSFileParser gsf(text);
+	while (!gsf.eof) {
+		std::string str;
+
+		str = gsf.nextString();
+		if (str == "X") {
+			int x = gsf.nextInt() - 1;
+
+			str = gsf.nextString();
+			int z = height - gsf.nextInt();
+
+			str = gsf.nextString();
+			auto grp = gsf.nextString(true);
+
+			str = gsf.nextString();
+			int id = gsf.nextInt();
+
+			str = gsf.nextString();
+			int rot = gsf.nextInt();
+
+			str = gsf.nextString();
+			bool xflip = gsf.nextInt();
+
+			str = gsf.nextString();
+			bool zflip = gsf.nextInt();
+
+			Tile& t = tiles[width * z + x];
+			t.x = x; t.z = z;
+			t.rot = rot; t.xflip = xflip; t.zflip = zflip;
+			t.texture = texDb.groups.at(grp)->textures.at(id).get();
+		}
+		gsf.advanceLine();
+	}
+
+	free(text);
 }

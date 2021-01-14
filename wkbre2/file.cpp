@@ -73,7 +73,8 @@ struct BCPReader
 	void listDirectories(const char *dn, std::vector<std::string>* gsl);
 };
 
-char gamedir[384] = "C:\\Users\\Adrien\\Desktop\\WKMods\\wkbre2_data"; //".";
+//char gamedir[384] = "C:\\Users\\Adrien\\Desktop\\WKMods\\wkbre2_data"; //".";
+char gamedir[384] = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Warrior Kings";
 bool allowBCPPatches = false, allowDataDirectory = true, macFileNamesFallbackEnabled = true;
 std::vector<BCPReader*> bcpacks;
 

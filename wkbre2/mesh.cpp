@@ -42,7 +42,7 @@ void Mesh::load(const char * filename)
 	this->sphereRadius = br.readFloat();
 
 	// Vertex remapper
-	if (!(flags & 1)) {
+	if (version < 4) {
 		uint16_t nremap = br.readUint16();
 		assert(nremap == numVertices);
 		this->vertexRemapper.resize(nremap);

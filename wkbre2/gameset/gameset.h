@@ -18,6 +18,7 @@
 #include "ObjectCreation.h"
 #include "condition.h"
 #include "GameTextWindow.h"
+#include "Package.h"
 
 struct GameObjBlueprint;
 
@@ -68,6 +69,7 @@ struct GameSet
 	GSBlueprintList<GameTextWindow> gameTextWindows;
 	GSBlueprintList<void> taskCategories;
 	GSBlueprintList<void> orderCategories;
+	GSBlueprintList<GSPackage> packages;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

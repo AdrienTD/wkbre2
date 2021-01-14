@@ -66,7 +66,8 @@ void DefaultSceneRenderer::render()
 						float z2 = ((ac.verts[frame+1][i / 3] >> (11 * (i % 3))) & 1023) / 1023.0f;
 						float v1 = ac.vertadd[frame] + ac.vertmul[frame] * z1;
 						float v2 = ac.vertadd[frame+1] + ac.vertmul[frame+1] * z2;
-						animverts[3 * i + c] = v1 + (v2 - v1) * (animtime - ac.frameTimes[frame]) / (ac.frameTimes[frame+1] - ac.frameTimes[frame]);
+						int rmi = mesh.vertexRemapper[i];
+						animverts[3 * rmi + c] = v1 + (v2 - v1) * (animtime - ac.frameTimes[frame]) / (ac.frameTimes[frame+1] - ac.frameTimes[frame]);
 					}
 				}
 			}

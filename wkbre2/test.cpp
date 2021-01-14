@@ -192,8 +192,8 @@ void Test_TrnTexDb() {
 void Test_Terrain() {
 	LoadBCP("data.bcp");
 	Terrain trn;
-	trn.readBCM("Maps\\128_4Peaks\\128_4Peaks.bcm");
-	//trn.readBCM("Maps\\rotfliptest\\rotfliptest.bcm");
+	trn.readFromFile("Maps\\128_4Peaks\\128_4Peaks.bcm");
+	//trn.readFromFile("Maps\\rotfliptest\\rotfliptest.bcm");
 	printf("yeah!\n");
 
 	InitWindow();

@@ -710,6 +710,19 @@ struct ActionSetRenderable : Action {
 	}
 };
 
+struct ActionSendPackage : Action {
+	GSPackage* package;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			package->send(obj, self);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		package = gs.packages.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -759,6 +772,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_SET_SELECTABLE: action = new ActionSetSelectable; break;
 	case Tags::ACTION_SET_TARGETABLE: action = new ActionSetTargetable; break;
 	case Tags::ACTION_SET_RENDERABLE: action = new ActionSetRenderable; break;
+	case Tags::ACTION_SEND_PACKAGE: action = new ActionSendPackage; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:

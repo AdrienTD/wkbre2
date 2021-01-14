@@ -175,6 +175,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				orderCategories.names.insertString(gsf.nextString(true));
 				break;
 			}
+			case Tags::GAMESET_PACKAGE: {
+				packages.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -316,6 +321,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				gtw.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_PACKAGE: {
+				GSPackage& pack = packages.readRef(gsf);
+				pack.parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -373,6 +383,7 @@ void GameSet::load(const char * fn)
 	gameTextWindows.pass();
 	taskCategories.pass();
 	orderCategories.pass();
+	packages.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

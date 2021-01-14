@@ -103,7 +103,8 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 		}
 		case Tags::CBLUEPRINT_OFFERS_COMMAND: {
 			int x = gameSet->commands.readIndex(gsf);
-			offeredCommands.push_back(&gameSet->commands[x]);
+			if(x != -1) // TODO: WARNING
+				offeredCommands.push_back(&gameSet->commands[x]);
 			break;
 		}
 		case Tags::CBLUEPRINT_INTRINSIC_REACTION: {

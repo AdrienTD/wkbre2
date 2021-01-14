@@ -31,7 +31,7 @@ void Client::tick()
 		walkObj(level, walkObj);
 
 	if (serverLink) {
-		int pcnt = 100;
+		int pcnt = 1000000; //100;
 		while (serverLink->available() && (pcnt--)) {
 			NetPacket packet = serverLink->receive();
 			BinaryReader br(packet.data.c_str());
@@ -94,7 +94,7 @@ void Client::tick()
 			case NETCLIMSG_TERRAIN_SET: {
 				std::string mapfp = br.readStringZ();
 				terrain = new Terrain;
-				terrain->readBCM(mapfp.c_str());
+				terrain->readFromFile(mapfp.c_str());
 				if (cliInterface)
 					cliInterface->updateTerrain();
 				break;
