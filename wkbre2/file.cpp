@@ -42,7 +42,7 @@ void compress(unsigned short action, unsigned char *wrk_mem, unsigned char *src_
 // Fixs for wkbre2 until refactor of file.cpp
 uint32_t readInt(FILE *f) { uint32_t temp; fread(&temp, 4, 1, f); return temp; } 
 
-#define MEM_REQ ( 4096*sizeof(char*) + 16 )
+#define MEM_REQ ( 4096*sizeof(char*) + 16 + 16 ) // TODO: Check if correct, there are rare crashes of mem corruption!!!
 
 struct BCPDirectory
 {
@@ -73,8 +73,8 @@ struct BCPReader
 	void listDirectories(const char *dn, std::vector<std::string>* gsl);
 };
 
-//char gamedir[384] = "C:\\Users\\Adrien\\Desktop\\WKMods\\wkbre2_data"; //".";
-char gamedir[384] = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Warrior Kings";
+char gamedir[384] = "C:\\Users\\Adrien\\Desktop\\WKMods\\wkbre2_data"; //".";
+//char gamedir[384] = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Warrior Kings";
 bool allowBCPPatches = false, allowDataDirectory = true, macFileNamesFallbackEnabled = true;
 std::vector<BCPReader*> bcpacks;
 

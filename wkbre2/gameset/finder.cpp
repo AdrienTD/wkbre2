@@ -267,6 +267,16 @@ struct FinderOrderGiver : ObjectFinder {
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
 };
 
+struct FinderBeingTransferredToMe : ObjectFinder {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual std::vector<ServerGameObject*> eval(ServerGameObject* self) override {
+		return {};
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -294,6 +304,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_DISABLED_ASSOCIATES: finder = new FinderDisabledAssociates; break;
 	case Tags::FINDER_REFERENCERS: finder = new FinderReferencers; break;
 	case Tags::FINDER_ORDER_GIVER: finder = new FinderOrderGiver; break;
+	case Tags::FINDER_BEING_TRANSFERRED_TO_ME: finder = new FinderBeingTransferredToMe; break;
 	default: finder = new FinderUnknown; break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));
@@ -383,6 +394,7 @@ struct FinderUnion : CommonEval<FinderUnion, FinderNSubs> {
 
 struct FinderChain : CommonEval<FinderChain, FinderNSubs> {
 	template<typename AnyGameObject> std::vector<AnyGameObject*> common_eval(AnyGameObject *self) {
+		auto _ = ScriptContext<AnyGameObject::Program, AnyGameObject>::chainOriginalSelf.change(self);
 		std::vector<AnyGameObject*> vec = { self };
 		for (auto &finder : finders) {
 			vec = finder->eval(vec[0]);

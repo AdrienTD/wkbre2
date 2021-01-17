@@ -137,7 +137,8 @@ void Client::tick()
 				break;
 			}
 			case NETCLIMSG_TIME_SYNC: {
-				timeManager.currentTime = br.readFloat();
+				timeManager.psCurrentTime = br.readUint32();
+				timeManager.currentTime = (float)timeManager.psCurrentTime / 1000.0f;
 				timeManager.paused = br.readUint8();
 				break;
 			}

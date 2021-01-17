@@ -19,6 +19,7 @@
 #include "condition.h"
 #include "GameTextWindow.h"
 #include "Package.h"
+#include "3DClip.h"
 
 struct GameObjBlueprint;
 
@@ -32,7 +33,7 @@ template<typename T> struct GSBlueprintList {
 	int readIndex(GSFileParser &gsf) const { return names.getIndex(gsf.nextString(true)); }
 	T & readRef(GSFileParser &gsf) { return blueprints[readIndex(gsf)]; }
 	const T & readRef(GSFileParser &gsf) const { return blueprints[readIndex(gsf)]; }
-	T * readPtr(GSFileParser &gsf) { return &blueprints[readIndex(gsf)]; }
+	T* readPtr(GSFileParser& gsf) { int x = readIndex(gsf); return (x != -1) ? &blueprints[x] : nullptr; }
 	const T * readPtr(GSFileParser &gsf) const { return &blueprints[readIndex(gsf)]; }
 };
 
@@ -70,6 +71,7 @@ struct GameSet
 	GSBlueprintList<void> taskCategories;
 	GSBlueprintList<void> orderCategories;
 	GSBlueprintList<GSPackage> packages;
+	GSBlueprintList<GS3DClip> clips;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

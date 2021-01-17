@@ -108,7 +108,8 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			break;
 		}
 		case Tags::CBLUEPRINT_INTRINSIC_REACTION: {
-			intrinsicReactions.push_back(gameSet->reactions.readPtr(gsf));
+			if (Reaction* react = gameSet->reactions.readPtr(gsf)) // TODO: WARNING
+				intrinsicReactions.push_back(react);
 			break;
 		}
 		case Tags::CBLUEPRINT_MAP_TYPE_TAG: {

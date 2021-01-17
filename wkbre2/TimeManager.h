@@ -8,6 +8,7 @@ struct GSFileParser;
 
 struct TimeManager {
 	// float is baaad!!
+	uint32_t psCurrentTime = 0;
 	game_time_t currentTime = 0.0f, previousTime = 0.0f, elapsedTime = 0.0f, timeSpeed = 1.0f;
 	bool paused = true; uint32_t lockCount = 1;
 	

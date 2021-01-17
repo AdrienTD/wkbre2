@@ -457,35 +457,48 @@ void Test_Network()
 	}
 
 	std::string savfile = std::string("Save_Games\\") + gsl->at(savselected);
-	std::thread srvThread([&server, savfile]() {
+	std::mutex srvMutex;
+	std::thread srvThread([&server, savfile, &srvMutex]() {
+		srvMutex.lock();
 		server.loadSaveGame(savfile.c_str());
+		srvMutex.unlock();
 		while (!g_windowQuit) {
+			srvMutex.lock();
 			server.tick();
+			srvMutex.unlock();
 			//_sleep(1000);
 		}
 	});
 
-	//ClientDebugger clidbg(&client);
 	ClientInterface cliui(&client, gfx);
 	client.attachInterface(&cliui);
+	ServerDebugger srvdbg(&server);
+	bool onServerUi = false;
 
 	while (!g_windowQuit) {
-		/*
-		//server.tick();
 		client.tick();
-
-		ImGuiImpl_NewFrame();
-		clidbg.draw();
-
-		gfx->BeginDrawing();
-		gfx->InitImGuiDrawing();
-		ImGuiImpl_Render(gfx);
-		gfx->EndDrawing();
-		HandleWindow();
-		*/
-		client.tick();
-		cliui.iter();
+		if (g_keyPressed[SDL_SCANCODE_F1]) {
+			onServerUi = !onServerUi;
+			if (onServerUi)
+				srvMutex.lock();
+			else
+				srvMutex.unlock();
+		}
+		if (onServerUi) {
+			server.tick();
+			ImGuiImpl_NewFrame();
+			srvdbg.draw();
+			gfx->BeginDrawing();
+			gfx->InitImGuiDrawing();
+			ImGuiImpl_Render(gfx);
+			gfx->EndDrawing();
+			HandleWindow();
+		}
+		else
+			cliui.iter();
 	}
+	if (onServerUi)
+		srvMutex.unlock();
 
 	srvThread.join();
 }

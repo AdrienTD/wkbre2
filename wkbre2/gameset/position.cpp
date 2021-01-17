@@ -231,6 +231,32 @@ struct PDSpawnTilePosition : PositionDeterminer {
 	}
 };
 
+struct PDMatchingOffset : PositionDeterminer {
+	std::unique_ptr<PositionDeterminer> cp;
+	std::unique_ptr<PositionDeterminer> cr;
+	std::unique_ptr<PositionDeterminer> co;
+
+	virtual OrientedPosition eval(ServerGameObject* self) override {
+		OrientedPosition pp = cp->eval(self);
+		OrientedPosition pr = cr->eval(self);
+		OrientedPosition po = co->eval(self);
+
+		Vector3 v = po.position - pr.position;
+		float vo = atan2f(v.x, -v.z);
+		float ro = vo - pr.rotation.y;
+		float rl = v.len2xz();
+
+		ro += pp.rotation.y;
+		Vector3 nv = Vector3(sinf(ro) * rl, 0.0f, cosf(ro) * rl);
+		return { pp.position + nv };
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		cp.reset(PositionDeterminer::createFrom(gsf, gs));
+		cr.reset(PositionDeterminer::createFrom(gsf, gs));
+		co.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
 PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet & gs)
 {
 	PositionDeterminer *pos;
@@ -249,6 +275,7 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet 
 	case Tags::POSITION_OFFSET_FROM: pos = new PDOffsetFrom; break;
 	case Tags::POSITION_NEAREST_ATTACHMENT_POINT: pos = new PDNearestAttachmentPoint; break;
 	case Tags::POSITION_SPAWN_TILE_POSITION: pos = new PDSpawnTilePosition; break;
+	case Tags::POSITION_MATCHING_OFFSET: pos = new PDMatchingOffset; break;
 	default: pos = new PDUnknown; break;
 	}
 	pos->parse(gsf, gs);

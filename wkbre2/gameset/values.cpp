@@ -431,6 +431,79 @@ struct ValueTileItem : CommonEval<ValueTileItem, ValueDeterminer> {
 	}
 };
 
+struct ValueNumAssociates : ValueDeterminer {
+	int category;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		ServerGameObject* obj = finder->getFirst(self);
+		if (!obj) return 0.0f;
+		auto it = obj->associates.find(category);
+		if (it == obj->associates.end())
+			return 0.0f;
+		return it->second.size();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		category = gs.associations.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueNumAssociators : ValueDeterminer {
+	int category;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		ServerGameObject* obj = finder->getFirst(self);
+		if (!obj) return 0.0f;
+		auto it = obj->associators.find(category);
+		if (it == obj->associators.end())
+			return 0.0f;
+		return it->second.size();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		category = gs.associations.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueBuildingType : CommonEval<ValueBuildingType, ValueDeterminer> {
+	int type;
+	std::unique_ptr<ObjectFinder> finder;
+	template<typename AnyGameObject> float common_eval(AnyGameObject* self) {
+		// TODO
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		type = Tags::BUILDINGTYPE_tagDict.getTagID(gsf.nextString().c_str());
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueNumReferencers : ValueDeterminer {
+	int taskCategory;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ServerGameObject* self) override {
+		ServerGameObject* obj = finder->getFirst(self);
+		if (!obj) return 0.0f;
+		int count = 0;
+		// FIXME risk of duplicates!!!
+		for (ServerGameObject* ref : obj->referencers) {
+			if (ref) {
+				Order* order = ref->orderConfig.getCurrentOrder();
+				if (!order) continue;
+				Task* task = order->getCurrentTask();
+				if (!task) continue;
+				if (task->blueprint->category == taskCategory)
+					count++;
+			}
+		}
+		return (float)count;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		taskCategory = gs.taskCategories.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -463,6 +536,11 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_CURRENTLY_DOING_ORDER: vd = new ValueCurrentlyDoingOrder; break;
 	case Tags::VALUE_CURRENTLY_DOING_TASK: vd = new ValueCurrentlyDoingTask; break;
 	case Tags::VALUE_TILE_ITEM: vd = new ValueTileItem; break;
+	case Tags::VALUE_NUM_ASSOCIATES: vd = new ValueNumAssociates; break;
+	case Tags::VALUE_NUM_ASSOCIATORS: vd = new ValueNumAssociators; break;
+	case Tags::VALUE_BUILDING_TYPE: vd = new ValueBuildingType; break;
+	case Tags::VALUE_BUILDING_TYPE_OPERAND: vd = new ValueBuildingType; break;
+	case Tags::VALUE_NUM_REFERENCERS: vd = new ValueNumReferencers; break;
 	default: vd = new ValueUnknown; break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

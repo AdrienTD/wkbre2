@@ -224,6 +224,30 @@ struct ActionTerminateThisOrder : Action {
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
 };
 
+struct ActionTerminateTask : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			if (Order* order = obj->orderConfig.getCurrentOrder())
+				order->getCurrentTask()->terminate();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionTerminateOrder : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		for (ServerGameObject* obj : finder->eval(self))
+			if (Order* order = obj->orderConfig.getCurrentOrder())
+				order->terminate();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 struct ActionTransferControl : Action {
 	std::unique_ptr<ObjectFinder> togiveFinder, recipientFinder;
 	virtual void run(ServerGameObject *self) override {
@@ -723,6 +747,95 @@ struct ActionSendPackage : Action {
 	}
 };
 
+struct ActionChangeReactionProfile : Action {
+	int mode;
+	Reaction* reaction;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		if (mode == 0)
+			for (ServerGameObject* obj : finder->eval(self))
+				obj->individualReactions.insert(reaction);
+		else if (mode == 1)
+			for (ServerGameObject* obj : finder->eval(self))
+				obj->individualReactions.erase(reaction);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		auto smode = gsf.nextString();
+		mode = 0;
+		if (smode == "ADD") mode = 0;
+		else if (smode == "REMOVE") mode = 1;
+		reaction = gs.reactions.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionSwitchCommon : Action {
+	struct SwitchCase {
+		std::unique_ptr<ValueDeterminer> value;
+		ActionSequence actions;
+	};
+	std::vector<SwitchCase> cases;
+	void parseCases(GSFileParser& gsf, GameSet& gs, const std::string& endtag) {
+		gsf.advanceLine();
+		while (!gsf.eol) {
+			auto tag = gsf.nextTag();
+			if (tag == endtag)
+				break;
+			else if (tag == "CASE") {
+				cases.emplace_back();
+				auto& newcase = cases.back();
+				newcase.value.reset(ReadValueDeterminer(gsf, gs));
+				newcase.actions.init(gsf, gs, "END_CASE");
+			}
+			gsf.advanceLine();
+		}
+	}
+};
+
+struct ActionSwitchCondition : ActionSwitchCommon {
+	std::unique_ptr<ValueDeterminer> valuedet;
+	virtual void run(ServerGameObject* self) override {
+		float value = valuedet->eval(self);
+		for (auto& scase : cases)
+			if (scase.value->eval(self) == value)
+				scase.actions.run(self);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		valuedet.reset(ReadValueDeterminer(gsf, gs));
+		parseCases(gsf, gs, "END_SWITCH_CONDITION");
+	}
+};
+
+struct ActionSwitchHighest : ActionSwitchCommon {
+	virtual void run(ServerGameObject* self) override {
+		float maxvalue = -INFINITY;
+		SwitchCase* maxcase = nullptr;
+		for (auto& scase : cases) {
+			float value = scase.value->eval(self);
+			if (value > maxvalue) {
+				maxvalue = value;
+				maxcase = &scase;
+			}
+		}
+		maxcase->actions.run(self);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		parseCases(gsf, gs, "END_SWITCH_HIGHEST");
+	}
+};
+
+struct ActionPlayClip : Action {
+	int clip;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(ServerGameObject* self) override {
+		Server::instance->gameSet->clips[clip].postClipSequence.run(self->getPlayer());
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		clip = gs.clips.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -741,7 +854,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_EXECUTE_ONE_AT_RANDOM: action = new ActionExecuteOneAtRandom; break;
 	case Tags::ACTION_TERMINATE_THIS_TASK: action = new ActionTerminateThisTask; break;
 	case Tags::ACTION_TERMINATE_THIS_ORDER: action = new ActionTerminateThisOrder; break;
-	case Tags::ACTION_TERMINATE_ORDER: action = new ActionTerminateThisOrder; break;
+	case Tags::ACTION_TERMINATE_TASK: action = new ActionTerminateTask; break;
+	case Tags::ACTION_TERMINATE_ORDER: action = new ActionTerminateOrder; break;
 	case Tags::ACTION_TRANSFER_CONTROL: action = new ActionTransferControl; break;
 	case Tags::ACTION_ASSIGN_ORDER_VIA: action = new ActionAssignOrderVia; break;
 	case Tags::ACTION_REMOVE: action = new ActionRemove; break;
@@ -773,6 +887,10 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_SET_TARGETABLE: action = new ActionSetTargetable; break;
 	case Tags::ACTION_SET_RENDERABLE: action = new ActionSetRenderable; break;
 	case Tags::ACTION_SEND_PACKAGE: action = new ActionSendPackage; break;
+	case Tags::ACTION_CHANGE_REACTION_PROFILE: action = new ActionChangeReactionProfile; break;
+	case Tags::ACTION_SWITCH_CONDITION: action = new ActionSwitchCondition; break;
+	case Tags::ACTION_SWITCH_HIGHEST: action = new ActionSwitchHighest; break;
+	case Tags::ACTION_PLAY_CLIP: action = new ActionPlayClip; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:
@@ -811,7 +929,6 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_CONQUER_LEVEL:
 	case Tags::ACTION_DISPLAY_LOAD_GAME_MENU:
 	case Tags::ACTION_PLAY_MUSIC:
-	case Tags::ACTION_PLAY_CLIP:
 	case Tags::ACTION_SNAP_CAMERA_TO_POSITION:
 	case Tags::ACTION_STORE_CAMERA_POSITION:
 	case Tags::ACTION_SNAP_CAMERA_TO_STORED_POSITION:

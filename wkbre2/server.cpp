@@ -570,7 +570,7 @@ void Server::sendToAll(const NetPacketWriter & packet)
 void Server::syncTime()
 {
 	NetPacketWriter msg(NETCLIMSG_TIME_SYNC);
-	msg.writeFloat(timeManager.currentTime);
+	msg.writeUint32(timeManager.psCurrentTime);
 	msg.writeUint8(timeManager.paused);
 	sendToAll(msg);
 }

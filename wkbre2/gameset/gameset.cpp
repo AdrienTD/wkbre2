@@ -55,7 +55,8 @@ void GameSet::parseFile(const char * fn, int pass)
 		}
 		else if (pass == 0) {
 			switch (tag) {
-			case Tags::GAMESET_DECLARE_ITEM: {
+			case Tags::GAMESET_DECLARE_ITEM:
+			case Tags::GAMESET_INDIVIDUAL_ITEM: {
 				items.names.insertString(gsf.nextString(true));
 				break;
 			}
@@ -177,6 +178,11 @@ void GameSet::parseFile(const char * fn, int pass)
 			}
 			case Tags::GAMESET_PACKAGE: {
 				packages.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+			case Tags::GAMESET_3D_CLIP: {
+				clips.names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
@@ -326,6 +332,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				pack.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_3D_CLIP: {
+				GS3DClip& clip = clips.readRef(gsf);
+				clip.parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -384,6 +395,7 @@ void GameSet::load(const char * fn)
 	taskCategories.pass();
 	orderCategories.pass();
 	packages.pass();
+	clips.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

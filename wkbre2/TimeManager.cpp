@@ -4,7 +4,8 @@
 #include "imgui/imgui.h"
 
 void TimeManager::reset(game_time_t initialTime) {
-	currentTime = previousTime = initialTime; elapsedTime = 0;
+	psCurrentTime = (uint32_t)(initialTime * 1000.0f);
+	currentTime = previousTime = psCurrentTime / 1000.0f; elapsedTime = 0;
 	timeSpeed = 1.0f;
 	paused = true; lockCount = 1;
 	previousSDLTime = SDL_GetTicks();
@@ -14,8 +15,10 @@ void TimeManager::load(GSFileParser &gsf) {
 	gsf.advanceLine();
 	while (!gsf.eof) {
 		std::string tag = gsf.nextTag();
-		if (tag == "CURRENT_TIME")
+		if (tag == "CURRENT_TIME") {
 			currentTime = gsf.nextFloat();
+			psCurrentTime = (uint32_t)(currentTime * 1000.0f);
+		}
 		else if (tag == "PREVIOUS_TIME")
 			previousTime = gsf.nextFloat();
 		else if (tag == "ELAPSED_TIME")
@@ -38,7 +41,8 @@ void TimeManager::tick() {
 	if (elapsedSDLTime >= 1000)
 		elapsedSDLTime = 34;
 	previousTime = currentTime;
-	currentTime += elapsedSDLTime / 1000.0f; // magic
+	psCurrentTime += elapsedSDLTime;
+	currentTime = (float)psCurrentTime / 1000.0f;
 	elapsedTime = currentTime - previousTime;
 }
 
