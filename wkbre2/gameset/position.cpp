@@ -22,7 +22,7 @@ namespace {
 }
 
 struct PDUnknown : PositionDeterminer {
-	virtual OrientedPosition eval(ServerGameObject * self) override
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override
 	{
 		ferr("Unknown position determiner called from Server!");
 		return OrientedPosition();
@@ -34,9 +34,9 @@ struct PDUnknown : PositionDeterminer {
 
 struct PDLocationOf : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual OrientedPosition eval(ServerGameObject * self) override
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override
 	{
-		return PosFromObjVec(finder->eval(self));
+		return PosFromObjVec(finder->eval(ctx));
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override
 	{
@@ -46,7 +46,7 @@ struct PDLocationOf : PositionDeterminer {
 
 struct PDAbsolutePosition : PositionDeterminer {
 	OrientedPosition opos;
-	virtual OrientedPosition eval(ServerGameObject * self) override
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override
 	{
 		return opos;
 	}
@@ -62,7 +62,7 @@ struct PDAbsolutePosition : PositionDeterminer {
 };
 
 struct PDCentreOfMap : PositionDeterminer {
-	virtual OrientedPosition eval(ServerGameObject * self) override {
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
 		Vector3 pos;
 		std::tie(pos.x, pos.z) = Server::instance->terrain->getPlayableArea();
 		pos.y = Server::instance->terrain->getHeight(pos.x, pos.z);
@@ -75,10 +75,10 @@ struct PDCentreOfMap : PositionDeterminer {
 struct PDThisSideOf : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a, b;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(ServerGameObject * self) override {
-		OrientedPosition o = PosFromObjVec(a->eval(self)), p = PosFromObjVec(b->eval(self));
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		OrientedPosition o = PosFromObjVec(a->eval(ctx)), p = PosFromObjVec(b->eval(ctx));
 		Vector3 d = (o.position - p.position).normal();
-		return { p.position + d * v->eval(self), atan2f(d.x, -d.z) };
+		return { p.position + d * v->eval(ctx), atan2f(d.x, -d.z) };
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		a.reset(ReadFinder(gsf, gs));
@@ -90,10 +90,10 @@ struct PDThisSideOf : PositionDeterminer {
 struct PDThisOtherSideOf : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a, b;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(ServerGameObject * self) override {
-		OrientedPosition o = PosFromObjVec(a->eval(self)), p = PosFromObjVec(b->eval(self));
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		OrientedPosition o = PosFromObjVec(a->eval(ctx)), p = PosFromObjVec(b->eval(ctx));
 		Vector3 d = (p.position - o.position).normal();
-		return { p.position + d * v->eval(self), atan2f(d.x, -d.z) };
+		return { p.position + d * v->eval(ctx), atan2f(d.x, -d.z) };
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		a.reset(ReadFinder(gsf, gs));
@@ -105,9 +105,9 @@ struct PDThisOtherSideOf : PositionDeterminer {
 struct PDNearestValidPositionFor : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a;
 	std::unique_ptr<PositionDeterminer> p;
-	virtual OrientedPosition eval(ServerGameObject * self) override {
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
 		// TODO
-		return p->eval(self);
+		return p->eval(ctx);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		a.reset(ReadFinder(gsf, gs));
@@ -119,10 +119,10 @@ struct PDOutAtAngle : public PositionDeterminer
 {
 	std::unique_ptr<ObjectFinder> f;
 	std::unique_ptr<ValueDeterminer> u, v;
-	virtual OrientedPosition eval(ServerGameObject* self) override {
-		OrientedPosition po = PosFromObjVec(f->eval(self));
-		po.rotation.y -= u->eval(self) * M_PI / 180;
-		float l = v->eval(self);
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		OrientedPosition po = PosFromObjVec(f->eval(ctx));
+		po.rotation.y -= u->eval(ctx) * M_PI / 180;
+		float l = v->eval(ctx);
 		po.position.x += l * sin(po.rotation.y);
 		po.position.z -= l * cos(po.rotation.y);
 		return po;
@@ -137,11 +137,11 @@ struct PDOutAtAngle : public PositionDeterminer
 struct PDTowards : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a, b;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(ServerGameObject* self) override {
-		OrientedPosition o = PosFromObjVec(a->eval(self));
-		OrientedPosition p = PosFromObjVec(b->eval(self));
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		OrientedPosition o = PosFromObjVec(a->eval(ctx));
+		OrientedPosition p = PosFromObjVec(b->eval(ctx));
 		Vector3 d = (p.position - o.position).normal2xz();
-		float m = v->eval(self);
+		float m = v->eval(ctx);
 		return { o.position + d * m, atan2f(d.x, -d.z) };
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -154,11 +154,11 @@ struct PDTowards : public PositionDeterminer {
 struct PDAwayFrom : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a, b;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(ServerGameObject* self) override {
-		OrientedPosition o = PosFromObjVec(a->eval(self));
-		OrientedPosition p = PosFromObjVec(b->eval(self));
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		OrientedPosition o = PosFromObjVec(a->eval(ctx));
+		OrientedPosition p = PosFromObjVec(b->eval(ctx));
 		Vector3 d = (o.position - p.position).normal2xz();
-		float m = v->eval(self);
+		float m = v->eval(ctx);
 		return { o.position + d * m, atan2f(d.x, -d.z) };
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -171,10 +171,10 @@ struct PDAwayFrom : public PositionDeterminer {
 struct PDInFrontOf : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> f;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(ServerGameObject* self) override {
-		OrientedPosition op = PosFromObjVec(f->eval(self));
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		OrientedPosition op = PosFromObjVec(f->eval(ctx));
 		Vector3 d{ sinf(op.rotation.y), 0.0f, -cosf(op.rotation.y) };
-		op.position += d * v->eval(self);
+		op.position += d * v->eval(ctx);
 		return op;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -186,8 +186,8 @@ struct PDInFrontOf : public PositionDeterminer {
 struct PDOffsetFrom : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> f;
 	std::unique_ptr<ValueDeterminer> x, y, z;
-	virtual OrientedPosition eval(ServerGameObject* self) override {
-		return PosFromObjVec(f->eval(self)) + OrientedPosition(Vector3(x->eval(self), y->eval(self), z->eval(self)));
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		return PosFromObjVec(f->eval(ctx)) + OrientedPosition(Vector3(x->eval(ctx), y->eval(ctx), z->eval(ctx)));
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		f.reset(ReadFinder(gsf, gs));
@@ -202,9 +202,9 @@ struct PDNearestAttachmentPoint : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<PositionDeterminer> pos;
 	std::unique_ptr<ValueDeterminer> tochoose;
-	virtual OrientedPosition eval(ServerGameObject* self) override {
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
 		// TODO
-		return PosFromObjVec(finder->eval(self)) + OrientedPosition(Vector3(0.0f, 1.0f, 0.0f));
+		return PosFromObjVec(finder->eval(ctx)) + OrientedPosition(Vector3(0.0f, 1.0f, 0.0f));
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		gsf.nextString(true);
@@ -222,9 +222,9 @@ struct PDNearestAttachmentPoint : public PositionDeterminer {
 
 struct PDSpawnTilePosition : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual OrientedPosition eval(ServerGameObject* self) override {
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
 		// TODO
-		return PosFromObjVec(finder->eval(self));
+		return PosFromObjVec(finder->eval(ctx));
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
@@ -236,10 +236,10 @@ struct PDMatchingOffset : PositionDeterminer {
 	std::unique_ptr<PositionDeterminer> cr;
 	std::unique_ptr<PositionDeterminer> co;
 
-	virtual OrientedPosition eval(ServerGameObject* self) override {
-		OrientedPosition pp = cp->eval(self);
-		OrientedPosition pr = cr->eval(self);
-		OrientedPosition po = co->eval(self);
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		OrientedPosition pp = cp->eval(ctx);
+		OrientedPosition pr = cr->eval(ctx);
+		OrientedPosition po = co->eval(ctx);
 
 		Vector3 v = po.position - pr.position;
 		float vo = atan2f(v.x, -v.z);

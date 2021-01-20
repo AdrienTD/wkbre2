@@ -3,6 +3,7 @@
 #include "gameset.h"
 #include "actions.h"
 #include "../server.h"
+#include "ScriptContext.h"
 
 void Reaction::parse(GSFileParser & gsf, GameSet & gs)
 {
@@ -63,8 +64,9 @@ bool PackageReceiptTrigger::canBeTriggeredBy(int evt, ServerGameObject *obj)
 {
 	if(std::find(events.begin(), events.end(), evt) == events.end())
 		return false;
+	SrvScriptContext ctx(Server::instance, obj);
 	for (int ass : assessments)
-		if (Server::instance->gameSet->equations[ass]->eval(obj) <= 0.0f)
+		if (Server::instance->gameSet->equations[ass]->eval(&ctx) <= 0.0f)
 			return false;
 	return true;
 }

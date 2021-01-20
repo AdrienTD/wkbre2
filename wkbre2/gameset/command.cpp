@@ -2,8 +2,8 @@
 #include "gameset.h"
 #include "../util/util.h"
 #include "../server.h"
-
 #include "../window.h"
+#include "../gameset/ScriptContext.h"
 
 void Command::parse(GSFileParser &gsf, GameSet &gs) {
 	gsf.advanceLine();
@@ -35,7 +35,8 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 }
 
 void Command::execute(ServerGameObject *self, ServerGameObject *target, int assignmentMode, const Vector3 &destination) {
-	this->startSequence.run(self);
+	SrvScriptContext ctx(Server::instance, self);
+	this->startSequence.run(&ctx);
 	// TODO: order (what to do first?)
 	if (this->order) {
 		self->orderConfig.addOrder(this->order, assignmentMode, target, destination);

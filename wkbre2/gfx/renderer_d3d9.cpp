@@ -317,10 +317,13 @@ struct D3D9Renderer : public IRenderer
 		ddev->EndScene();
 		//drawframes++;
 		HRESULT r = ddev->Present(NULL, NULL, NULL, NULL);
-		if(r == D3DERR_DEVICELOST)
-			{/*lostdev = 1;*/ Sleep(1000/60);}
-		if(r == D3DERR_DEVICENOTRESET)
-			{printf("Device not reset.\n"); Reset();}
+		if (r == D3DERR_DEVICELOST) {
+			//printf("Device lost\n");
+			if (ddev->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
+				ddev->Reset(&dpp);
+			else
+				Sleep(50);
+		}
 	}
 
 	void InitRectDrawing()

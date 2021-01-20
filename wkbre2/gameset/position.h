@@ -5,6 +5,7 @@
 struct ServerGameObject;
 struct GSFileParser;
 struct GameSet;
+struct SrvScriptContext;
 
 struct OrientedPosition {
 	Vector3 position = Vector3(0.0f, 0.0f, 0.0f);
@@ -24,7 +25,7 @@ struct PositionDeterminer {
 	using EvalRetSrv = OrientedPosition;
 	//using EvalRetCli = OrientedPosition;
 	virtual ~PositionDeterminer() {}
-	virtual OrientedPosition eval(ServerGameObject *self) = 0;
+	virtual OrientedPosition eval(SrvScriptContext* ctx) = 0;
 	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
 
 	static PositionDeterminer *createFrom(GSFileParser &gsf, GameSet &gs);

@@ -98,7 +98,8 @@ void OrderAssignmentBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 
 void OrderAssignmentBlueprint::assignTo(ServerGameObject * gameobj, ServerGameObject* giver) const
 {
-	auto _ = SrvScriptContext::orderGiver.change(giver);
-	ServerGameObject *target = this->orderTarget ? this->orderTarget->getFirst(gameobj) : nullptr;
+	SrvScriptContext ctx(Server::instance, gameobj);
+	auto _ = ctx.orderGiver.change(giver);
+	ServerGameObject *target = this->orderTarget ? this->orderTarget->getFirst(&ctx) : nullptr;
 	gameobj->orderConfig.addOrder(this->orderToAssign, this->orderAssignmentMode, target);
 }

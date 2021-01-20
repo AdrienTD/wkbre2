@@ -5,6 +5,7 @@
 #include "server.h"
 #include "util/GSFileParser.h"
 #include "gameset/finder.h"
+#include "gameset/ScriptContext.h"
 
 void Order::init()
 {
@@ -107,8 +108,10 @@ void Task::start()
 {
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
-	if (!this->target && blueprint->taskTarget)
-		this->setTarget(blueprint->taskTarget->getFirst(this->order->gameObject)); // FIXME: that would override the order's target!!!
+	if (!this->target && blueprint->taskTarget) {
+		SrvScriptContext ctx(Server::instance, this->order->gameObject);
+		this->setTarget(blueprint->taskTarget->getFirst(&ctx)); // FIXME: that would override the order's target!!!
+	}
 	this->startSequenceExecuted = false; // is this correct?
 }
 
@@ -176,15 +179,19 @@ void Task::process()
 			ServerGameObject* go = this->order->gameObject;
 			if (go->movement.isMoving())
 				go->stopMovement();
-			if (blueprint->taskTarget)
-				this->setTarget(blueprint->taskTarget->getFirst(this->order->gameObject));
+			if (blueprint->taskTarget) {
+				SrvScriptContext ctx(Server::instance, this->order->gameObject);
+				this->setTarget(blueprint->taskTarget->getFirst(&ctx));
+			}
 		}
 		if (this->target) {
 			if (!this->startSequenceExecuted) {
 				this->blueprint->startSequence.run(order->gameObject);
 				this->startSequenceExecuted = true;
-				if (this->blueprint->proximityRequirement)
-					this->proximity = this->blueprint->proximityRequirement->eval(this->order->gameObject); // should this be here?
+				if (this->blueprint->proximityRequirement) {
+					SrvScriptContext ctx(Server::instance, this->order->gameObject);
+					this->proximity = this->blueprint->proximityRequirement->eval(&ctx); // should this be here?
+				}
 			}
 			ServerGameObject *go = this->order->gameObject;
 			if (this->proximity < 0.0f || (go->position - this->target->position).sqlen2xz() < this->proximity * this->proximity) {
@@ -312,7 +319,8 @@ void Trigger::parse(GSFileParser &gsf, GameSet &gs)
 
 void TimerTrigger::init()
 {
-	period = this->blueprint->period->eval(this->task->order->gameObject);
+	SrvScriptContext ctx(Server::instance, this->task->order->gameObject);
+	period = this->blueprint->period->eval(&ctx);
 	referenceTime = Server::instance->timeManager.currentTime;
 }
 

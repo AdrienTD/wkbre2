@@ -183,11 +183,12 @@ void ClientInterface::iter()
 	Command *rightClickCommand = nullptr;
 	if (ClientGameObject *sel = selected.get()) {
 		if (true || nextSelectedObject) {
-			auto _ = CliScriptContext::target.change(nextSelectedObject);
+			CliScriptContext ctx(client, sel);
+			auto _ = ctx.target.change(nextSelectedObject);
 			for (Command *cmd : sel->blueprint->offeredCommands) {
 				Cursor *cmdCursor = nullptr;
 				for (auto &avcond : cmd->cursorAvailable) {
-					if (avcond.first->test->eval(sel)) {
+					if (avcond.first->test->eval(&ctx)) {
 						cmdCursor = avcond.second;
 						break;
 					}
@@ -195,7 +196,7 @@ void ClientInterface::iter()
 				if (!cmdCursor)
 					cmdCursor = cmd->cursor;
 				if (cmdCursor) {
-					if (std::all_of(cmd->cursorConditions.begin(), cmd->cursorConditions.end(), [&](int eq) {return client->gameSet->equations[eq]->eval(sel) > 0.0f; })) {
+					if (std::all_of(cmd->cursorConditions.begin(), cmd->cursorConditions.end(), [&](int eq) {return client->gameSet->equations[eq]->eval(&ctx) > 0.0f; })) {
 						nextCursor = cmdCursor;
 						rightClickCommand = cmd;
 						break;

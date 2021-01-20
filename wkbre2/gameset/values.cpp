@@ -11,6 +11,7 @@
 #include "../client.h"
 #include "CommonEval.h"
 #include "position.h"
+#include "ScriptContext.h"
 
 namespace {
 	float RandomFromZeroToOne() { return (float)(rand() & 0xFFFF) / 32768.0f; }
@@ -19,22 +20,22 @@ namespace {
 //namespace Script
 //{
 
-float ValueDeterminer::eval(ClientGameObject * self)
+float ValueDeterminer::eval(CliScriptContext* ctx)
 {
 	ferr("eval(ClientGameObject*) unimplemented for this Value Determiner!");
 	return 0.0f;
 }
 
 struct ValueUnknown : ValueDeterminer {
-	virtual float eval(ServerGameObject *self) override { ferr("Unknown value determiner called from the Server!"); return 0.0f; }
-	virtual float eval(ClientGameObject *self) override { ferr("Unknown value determiner called from the Client!"); return 0.0f; }
+	virtual float eval(SrvScriptContext* ctx) override { ferr("Unknown value determiner called from the Server!"); return 0.0f; }
+	virtual float eval(CliScriptContext* ctx) override { ferr("Unknown value determiner called from the Client!"); return 0.0f; }
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
 };
 
 struct ValueConstant : ValueDeterminer {
 	float value;
-	virtual float eval(ServerGameObject *self) override { return value; }
-	virtual float eval(ClientGameObject *self) override { return value; }
+	virtual float eval(SrvScriptContext* ctx) override { return value; }
+	virtual float eval(CliScriptContext* ctx) override { return value; }
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override { value = gsf.nextFloat(); }
 	ValueConstant() {}
 	ValueConstant(float value) : value(value) {}
@@ -43,8 +44,8 @@ struct ValueConstant : ValueDeterminer {
 struct ValueItemValue : CommonEval<ValueItemValue, ValueDeterminer> {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		if (AnyGameObject* obj = finder->getFirst(self))
+	template<typename CTX> float common_eval(CTX *ctx) {
+		if (CTX::AnyGO* obj = finder->getFirst(ctx))
 			return obj->getItem(item);
 		return 0.0f;
 	}
@@ -58,8 +59,8 @@ struct ValueItemValue : CommonEval<ValueItemValue, ValueDeterminer> {
 
 struct ValueObjectId_Battles : CommonEval<ValueObjectId_Battles, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		if (AnyGameObject *obj = finder->getFirst(self))
+	template<typename CTX> float common_eval(CTX *ctx) {
+		if (CTX::AnyGO *obj = finder->getFirst(ctx))
 			return obj->id;
 		return 0.0f;
 	}
@@ -73,9 +74,9 @@ struct ValueObjectId_Battles : CommonEval<ValueObjectId_Battles, ValueDeterminer
 struct ValueObjectClass : CommonEval<ValueObjectClass, ValueDeterminer> {
 	int objclass;
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		auto vec = finder->eval(self);
-		return !vec.empty() && std::all_of(vec.begin(), vec.end(), [this](AnyGameObject *obj) {return obj->blueprint->bpClass == objclass; });
+	template<typename CTX> float common_eval(CTX *ctx) {
+		auto vec = finder->eval(ctx);
+		return !vec.empty() && std::all_of(vec.begin(), vec.end(), [this](CTX::AnyGO *obj) {return obj->blueprint->bpClass == objclass; });
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		objclass = Tags::GAMEOBJCLASS_tagDict.getTagID(gsf.nextString().c_str());
@@ -88,10 +89,11 @@ struct ValueObjectClass : CommonEval<ValueObjectClass, ValueDeterminer> {
 struct ValueEquationResult : CommonEval<ValueEquationResult, ValueDeterminer> {
 	int equation;
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		AnyGameObject *obj = finder->getFirst(self);
+	template<typename CTX> float common_eval(CTX *ctx) {
+		CTX::AnyGO *obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
-		return AnyGameObject::Program::instance->gameSet->equations[equation]->eval(obj);
+		auto _ = ctx->self.change(obj);
+		return CTX::Program::instance->gameSet->equations[equation]->eval(ctx);
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		equation = gs.equations.readIndex(gsf);
@@ -103,9 +105,9 @@ struct ValueEquationResult : CommonEval<ValueEquationResult, ValueDeterminer> {
 
 struct ValueIsSubsetOf : CommonEval<ValueIsSubsetOf, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> fnd_sub, fnd_super;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		auto sub = fnd_sub->eval(self);
-		auto super = fnd_super->eval(self);
+	template<typename CTX> float common_eval(CTX *ctx) {
+		auto sub = fnd_sub->eval(ctx);
+		auto super = fnd_super->eval(ctx);
 		if (sub.empty() || super.empty())
 			return 0.0f;
 		for (auto *obj : sub)
@@ -121,8 +123,8 @@ struct ValueIsSubsetOf : CommonEval<ValueIsSubsetOf, ValueDeterminer> {
 
 struct ValueNumObjects : CommonEval<ValueNumObjects, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		return finder->eval(self).size();
+	template<typename CTX> float common_eval(CTX *ctx) {
+		return finder->eval(ctx).size();
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		finder.reset(ReadFinder(gsf, gs));
@@ -132,7 +134,7 @@ struct ValueNumObjects : CommonEval<ValueNumObjects, ValueDeterminer> {
 struct ValueCanReach : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<PositionDeterminer> source;
-	virtual float eval(ServerGameObject *self) override {
+	virtual float eval(SrvScriptContext* ctx) override {
 		// everything is reachable from anywhere for now
 		return 1.0f;
 	}
@@ -144,7 +146,7 @@ struct ValueCanReach : ValueDeterminer {
 
 struct ValueIsAccessible : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder1, finder2;
-	virtual float eval(ServerGameObject* self) override {
+	virtual float eval(SrvScriptContext* ctx) override {
 		// everything is reachable from anywhere for now
 		return 1.0f;
 	}
@@ -157,8 +159,8 @@ struct ValueIsAccessible : ValueDeterminer {
 struct ValueHasAppearance : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	int appear;
-	virtual float eval(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self))
+	virtual float eval(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx))
 			if (obj->appearance != appear)
 				return 0.0f;
 		return 1.0f;
@@ -171,13 +173,13 @@ struct ValueHasAppearance : ValueDeterminer {
 
 struct ValueSamePlayer : CommonEval<ValueSamePlayer, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> fnd1, fnd2;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		auto vec1 = fnd1->eval(self);
-		auto vec2 = fnd2->eval(self);
+	template<typename CTX> float common_eval(CTX *ctx) {
+		auto vec1 = fnd1->eval(ctx);
+		auto vec2 = fnd2->eval(ctx);
 		if (vec1.empty() || vec2.empty()) return 0.0f;
-		for (AnyGameObject *b : vec2) {
-			AnyGameObject *bp = b->getPlayer();
-			if (std::find_if(vec1.begin(), vec1.end(), [&bp](AnyGameObject * a) {return a->getPlayer() == bp;}) == vec1.end())
+		for (CTX::AnyGO *b : vec2) {
+			CTX::AnyGO *bp = b->getPlayer();
+			if (std::find_if(vec1.begin(), vec1.end(), [&bp](CTX::AnyGO * a) {return a->getPlayer() == bp;}) == vec1.end())
 				return 0.0f;
 		}
 		return 1.0f;
@@ -191,8 +193,8 @@ struct ValueSamePlayer : CommonEval<ValueSamePlayer, ValueDeterminer> {
 struct ValueObjectType : CommonEval<ValueObjectType, ValueDeterminer> {
 	GameObjBlueprint *type;
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		auto vec = finder->eval(self);
+	template<typename CTX> float common_eval(CTX *ctx) {
+		auto vec = finder->eval(ctx);
 		if (vec.empty()) return 0.0f;
 		for (auto *obj : vec)
 			if (obj->blueprint != type)
@@ -215,8 +217,8 @@ struct ValueDistanceBetween : ValueDeterminer {
 			sum += obj->position;
 		return sum / vec.size();
 	}
-	virtual float eval(ServerGameObject *self) override {
-		Vector3 v = centre(fnd1->eval(self)) - centre(fnd2->eval(self));
+	virtual float eval(SrvScriptContext* ctx) override {
+		Vector3 v = centre(fnd1->eval(ctx)) - centre(fnd2->eval(ctx));
 		float dist = 0.0f;
 		if (takeHorizontal) dist += v.x * v.x + v.z * v.z;
 		if (takeVertical) dist += v.y * v.y;
@@ -235,13 +237,14 @@ struct ValueDistanceBetween : ValueDeterminer {
 struct ValueValueTagInterpretation : ValueDeterminer {
 	int valueTag;
 	std::unique_ptr<ObjectFinder> fnd;
-	virtual float eval(ServerGameObject *self) override {
-		ServerGameObject *obj = fnd->getFirst(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		ServerGameObject *obj = fnd->getFirst(ctx);
 		if (!obj) return 0.0f;
 		// TODO: Type specific interpretations
 		ValueDeterminer *vd = Server::instance->gameSet->valueTags[valueTag].get();
 		if (!vd) return 0.0f;
-		return vd->eval(obj);
+		auto _ = ctx->self.change(obj);
+		return vd->eval(ctx);
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		valueTag = gs.valueTags.readIndex(gsf);
@@ -252,10 +255,10 @@ struct ValueValueTagInterpretation : ValueDeterminer {
 struct ValueDiplomaticStatusAtLeast : CommonEval<ValueDiplomaticStatusAtLeast, ValueDeterminer> {
 	int status;
 	std::unique_ptr<ObjectFinder> a, b;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		AnyGameObject *x = a->getFirst(self), *y = b->getFirst(self);
+	template<typename CTX> float common_eval(CTX *ctx) {
+		CTX::AnyGO *x = a->getFirst(ctx), *y = b->getFirst(ctx);
 		if (!(x && y)) return 0.0f;
-		return AnyGameObject::Program::instance->getDiplomaticStatus(x->getPlayer(), y->getPlayer()) <= status;
+		return CTX::Program::instance->getDiplomaticStatus(x->getPlayer(), y->getPlayer()) <= status;
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		status = gs.diplomaticStatuses.readIndex(gsf);
@@ -267,8 +270,8 @@ struct ValueDiplomaticStatusAtLeast : CommonEval<ValueDiplomaticStatusAtLeast, V
 struct ValueAreAssociated : ValueDeterminer {
 	int category;
 	std::unique_ptr<ObjectFinder> a, b;
-	virtual float eval(ServerGameObject *self) override {
-		ServerGameObject *x = a->getFirst(self), *y = b->getFirst(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		ServerGameObject *x = a->getFirst(ctx), *y = b->getFirst(ctx);
 		if (!(x && y)) return 0.0f;
 		return x->associates[category].count(y) ? 1.0f : 0.0f;
 	}
@@ -282,7 +285,7 @@ struct ValueAreAssociated : ValueDeterminer {
 struct ValueBlueprintItemValue : CommonEval<ValueBlueprintItemValue, ValueDeterminer> {
 	int item;
 	GameObjBlueprint *type;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
+	template<typename CTX> float common_eval(CTX *ctx) {
 		auto it = type->startItemValues.find(item);
 		if (it != type->startItemValues.end())
 			return it->second;
@@ -297,9 +300,9 @@ struct ValueBlueprintItemValue : CommonEval<ValueBlueprintItemValue, ValueDeterm
 struct ValueTotalItemValue : CommonEval<ValueTotalItemValue, ValueDeterminer> {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
+	template<typename CTX> float common_eval(CTX *ctx) {
 		float sum = 0.0f;
-		for (AnyGameObject* obj : finder->eval(self))
+		for (CTX::AnyGO* obj : finder->eval(ctx))
 			sum += obj->getItem(item);
 		return sum;
 	}
@@ -311,8 +314,8 @@ struct ValueTotalItemValue : CommonEval<ValueTotalItemValue, ValueDeterminer> {
 
 struct ValueIsIdle : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
-		auto vec = finder->eval(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
 		return std::all_of(vec.begin(), vec.end(), [](ServerGameObject* obj) {return obj->orderConfig.orders.empty(); });
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -323,10 +326,11 @@ struct ValueIsIdle : ValueDeterminer {
 struct ValueFinderResultsCount : ValueDeterminer {
 	int ofd;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
-		ServerGameObject* obj = finder->getFirst(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		ServerGameObject* obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
-		return Server::instance->gameSet->objectFinderDefinitions[ofd]->eval(obj).size();
+		auto _ = ctx->self.change(obj);
+		return Server::instance->gameSet->objectFinderDefinitions[ofd]->eval(ctx).size();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		ofd = gs.objectFinderDefinitions.readIndex(gsf);
@@ -338,7 +342,7 @@ struct ValueHasDirectLineOfSightTo : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder1;
 	std::unique_ptr<PositionDeterminer> pos;
 	std::unique_ptr<ObjectFinder> finder2;
-	virtual float eval(ServerGameObject* self) override {
+	virtual float eval(SrvScriptContext* ctx) override {
 		// TODO
 		return 1.0f;
 	}
@@ -351,7 +355,7 @@ struct ValueHasDirectLineOfSightTo : ValueDeterminer {
 
 struct ValueWaterBeneath : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
+	virtual float eval(SrvScriptContext* ctx) override {
 		// TODO
 		return 0.0f;
 	}
@@ -363,7 +367,7 @@ struct ValueWaterBeneath : ValueDeterminer {
 struct ValueAngleBetween : ValueDeterminer {
 	int mode;
 	std::unique_ptr<ObjectFinder> a, b;
-	virtual float eval(ServerGameObject* self) override {
+	virtual float eval(SrvScriptContext* ctx) override {
 		// TODO (apparently it always returns 0?)
 		return 0.0f;
 	}
@@ -376,7 +380,7 @@ struct ValueAngleBetween : ValueDeterminer {
 
 struct ValueIsMusicPlaying : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
+	virtual float eval(SrvScriptContext* ctx) override {
 		// TODO
 		// For now, let's make it return 1 so that the Maestro army won't try to constantly change the music
 		return 1.0f;
@@ -389,8 +393,8 @@ struct ValueIsMusicPlaying : ValueDeterminer {
 struct ValueCurrentlyDoingOrder : ValueDeterminer {
 	int category;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
-		auto vec = finder->eval(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
 		return std::all_of(vec.begin(), vec.end(), [this](ServerGameObject* obj) {
 			auto order = obj->orderConfig.getCurrentOrder();
 			return order && (order->blueprint->category == category);
@@ -405,8 +409,8 @@ struct ValueCurrentlyDoingOrder : ValueDeterminer {
 struct ValueCurrentlyDoingTask : ValueDeterminer {
 	int category;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
-		auto vec = finder->eval(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
 		return std::all_of(vec.begin(), vec.end(), [this](ServerGameObject* obj) {
 			auto order = obj->orderConfig.getCurrentOrder();
 			return order && (order->getCurrentTask()->blueprint->category == category);
@@ -421,7 +425,7 @@ struct ValueCurrentlyDoingTask : ValueDeterminer {
 struct ValueTileItem : CommonEval<ValueTileItem, ValueDeterminer> {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject* self) {
+	template<typename CTX> float common_eval(CTX* ctx) {
 		// TODO
 		return 0.0f;
 	}
@@ -434,8 +438,8 @@ struct ValueTileItem : CommonEval<ValueTileItem, ValueDeterminer> {
 struct ValueNumAssociates : ValueDeterminer {
 	int category;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
-		ServerGameObject* obj = finder->getFirst(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		ServerGameObject* obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
 		auto it = obj->associates.find(category);
 		if (it == obj->associates.end())
@@ -451,8 +455,8 @@ struct ValueNumAssociates : ValueDeterminer {
 struct ValueNumAssociators : ValueDeterminer {
 	int category;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
-		ServerGameObject* obj = finder->getFirst(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		ServerGameObject* obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
 		auto it = obj->associators.find(category);
 		if (it == obj->associators.end())
@@ -468,7 +472,7 @@ struct ValueNumAssociators : ValueDeterminer {
 struct ValueBuildingType : CommonEval<ValueBuildingType, ValueDeterminer> {
 	int type;
 	std::unique_ptr<ObjectFinder> finder;
-	template<typename AnyGameObject> float common_eval(AnyGameObject* self) {
+	template<typename CTX> float common_eval(CTX* ctx) {
 		// TODO
 		return 0.0f;
 	}
@@ -481,8 +485,8 @@ struct ValueBuildingType : CommonEval<ValueBuildingType, ValueDeterminer> {
 struct ValueNumReferencers : ValueDeterminer {
 	int taskCategory;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual float eval(ServerGameObject* self) override {
-		ServerGameObject* obj = finder->getFirst(self);
+	virtual float eval(SrvScriptContext* ctx) override {
+		ServerGameObject* obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
 		int count = 0;
 		// FIXME risk of duplicates!!!
@@ -557,31 +561,31 @@ struct UnaryEnode : ValueDeterminer {
 };
 
 struct EnodeNot : CommonEval<EnodeNot, UnaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) <= 0.0f; }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) <= 0.0f; }
 };
 
 struct EnodeIsZero : CommonEval<EnodeIsZero, UnaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) == 0.0f; }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) == 0.0f; }
 };
 
 struct EnodeIsPositive : CommonEval<EnodeIsPositive, UnaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) > 0.0f; }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) > 0.0f; }
 };
 
 struct EnodeIsNegative : CommonEval<EnodeIsNegative, UnaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) < 0.0f; }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) < 0.0f; }
 };
 
 struct EnodeAbsoluteValue : CommonEval<EnodeAbsoluteValue, UnaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return std::abs(a->eval(self)); }
+	template<typename CTX> float common_eval(CTX *ctx) { return std::abs(a->eval(ctx)); }
 };
 
 struct EnodeNegate : CommonEval<EnodeNegate, UnaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return -a->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return -a->eval(ctx); }
 };
 
 struct EnodeRandomUpTo : CommonEval<EnodeRandomUpTo, UnaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject* self) { return RandomFromZeroToOne() * a->eval(self); }
+	template<typename CTX> float common_eval(CTX* ctx) { return RandomFromZeroToOne() * a->eval(ctx); }
 };
 
 // Binary equation nodes
@@ -595,67 +599,67 @@ struct BinaryEnode : ValueDeterminer {
 };
 
 struct EnodeAddition : CommonEval<EnodeAddition, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) + b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) + b->eval(ctx); }
 };
 
 struct EnodeSubtraction : CommonEval<EnodeSubtraction, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) - b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) - b->eval(ctx); }
 };
 
 struct EnodeMultiplication : CommonEval<EnodeMultiplication, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) * b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) * b->eval(ctx); }
 };
 
 struct EnodeDivision : CommonEval<EnodeDivision, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) / b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) / b->eval(ctx); }
 };
 
 struct EnodeAnd : CommonEval<EnodeAnd, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return (a->eval(self) > 0.0f) && (b->eval(self) > 0.0f); }
+	template<typename CTX> float common_eval(CTX *ctx) { return (a->eval(ctx) > 0.0f) && (b->eval(ctx) > 0.0f); }
 };
 
 struct EnodeOr : CommonEval<EnodeOr, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return (a->eval(self) > 0.0f) || (b->eval(self) > 0.0f); }
+	template<typename CTX> float common_eval(CTX *ctx) { return (a->eval(ctx) > 0.0f) || (b->eval(ctx) > 0.0f); }
 };
 
 struct EnodeLessThan : CommonEval<EnodeLessThan, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) < b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) < b->eval(ctx); }
 };
 
 struct EnodeLessThanOrEqualTo : CommonEval<EnodeLessThanOrEqualTo, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) <= b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) <= b->eval(ctx); }
 };
 
 struct EnodeGreaterThan : CommonEval<EnodeGreaterThan, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) > b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) > b->eval(ctx); }
 };
 
 struct EnodeGreaterThanOrEqualTo : CommonEval<EnodeGreaterThanOrEqualTo, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) >= b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) >= b->eval(ctx); }
 };
 
 struct EnodeEquals : CommonEval<EnodeEquals, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return a->eval(self) == b->eval(self); }
+	template<typename CTX> float common_eval(CTX *ctx) { return a->eval(ctx) == b->eval(ctx); }
 };
 
 struct EnodeMax : CommonEval<EnodeMax, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return std::max(a->eval(self), b->eval(self)); }
+	template<typename CTX> float common_eval(CTX *ctx) { return std::max(a->eval(ctx), b->eval(ctx)); }
 };
 
 struct EnodeMin : CommonEval<EnodeMin, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) { return std::min(a->eval(self), b->eval(self)); }
+	template<typename CTX> float common_eval(CTX *ctx) { return std::min(a->eval(ctx), b->eval(ctx)); }
 };
 
 struct EnodeRandomInteger : CommonEval<EnodeRandomInteger, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		int x = (int)a->eval(self), y = (int)b->eval(self);
+	template<typename CTX> float common_eval(CTX *ctx) {
+		int x = (int)a->eval(ctx), y = (int)b->eval(ctx);
 		return (float)(rand() % (y - x + 1) + x);
 	}
 };
 
 struct EnodeRandomRange : CommonEval<EnodeRandomRange, BinaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject* self) {
-		float x = a->eval(self), y = b->eval(self);
+	template<typename CTX> float common_eval(CTX* ctx) {
+		float x = a->eval(ctx), y = b->eval(ctx);
 		return RandomFromZeroToOne() * (y - x) + x;
 	}
 };
@@ -672,11 +676,11 @@ struct TernaryEnode : ValueDeterminer {
 };
 
 struct EnodeIfThenElse : CommonEval<EnodeIfThenElse, TernaryEnode> {
-	template<typename AnyGameObject> float common_eval(AnyGameObject *self) {
-		if (a->eval(self) > 0.0f)
-			return b->eval(self);
+	template<typename CTX> float common_eval(CTX *ctx) {
+		if (a->eval(ctx) > 0.0f)
+			return b->eval(ctx);
 		else
-			return c->eval(self);
+			return c->eval(ctx);
 	}
 };
 

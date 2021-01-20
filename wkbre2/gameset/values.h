@@ -4,6 +4,8 @@ struct GSFileParser;
 struct GameSet;
 struct ServerGameObject;
 struct ClientGameObject;
+struct SrvScriptContext;
+struct CliScriptContext;
 
 //namespace Script {
 
@@ -11,8 +13,8 @@ struct ValueDeterminer {
 	using EvalRetSrv = float;
 	using EvalRetCli = float;
 	virtual ~ValueDeterminer() {}
-	virtual float eval(ServerGameObject *self) = 0;
-	virtual float eval(ClientGameObject *self);
+	virtual float eval(SrvScriptContext* ctx) = 0;
+	virtual float eval(CliScriptContext* ctx);
 	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../GameObjectRef.h"
+#include <type_traits>
 
 template<typename T> struct TemporaryValue {
 	T & var;
@@ -13,39 +14,37 @@ template<typename T> struct TemporaryValue {
 	explicit operator bool() const { return true; }
 };
 
-template<typename Program, typename AnyGO> struct ScriptContext {
+template<typename TProgram, typename TAnyGO> struct ScriptContext {
+	using Program = TProgram;
+	using AnyGO = TAnyGO;
+
 	struct CtxElement {
 	private:
-		GameObjectRef<Program, AnyGO> object;
+		AnyGO* object = nullptr;
 	public:
 		TemporaryValue<decltype(object)> change(AnyGO *go) {
 			return TemporaryValue<decltype(object)>(object, go); // copy elision required!!! (should be mandatory for C++17)
 		}
-		AnyGO *get() { return object.get(); }
+		AnyGO *get() { return object; }
+		CtxElement() {}
+		CtxElement(AnyGO* obj) : object(obj) {}
 	};
-	static CtxElement candidate, creator, packageSender, sequenceExecutor, target, orderGiver, chainOriginalSelf;
+
+	union {
+		typename std::conditional<std::is_same<Program, Server>::value, Server*, void*>::type server;
+		typename std::conditional<std::is_same<Program, Client>::value, Client*, void*>::type client;
+		Program* program;
+	};
+
+	CtxElement self;
+	CtxElement candidate, creator, packageSender, sequenceExecutor, target, orderGiver, chainOriginalSelf;
+
+	ScriptContext(Program* program, AnyGO* self = nullptr) : program(program), self(self) {}
 };
 
-//extern template struct ScriptContext<Server, ServerGameObject>;
-//extern template struct ScriptContext<Client, ClientGameObject>;
-
-using SrvScriptContext = ScriptContext<Server, ServerGameObject>;
-using CliScriptContext = ScriptContext<Client, ClientGameObject>;
-
-template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::candidate;
-template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::creator;
-template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::packageSender;
-template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::sequenceExecutor;
-template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::target;
-template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::orderGiver;
-template<typename Program, typename AnyGO> typename ScriptContext<Program, AnyGO>::CtxElement ScriptContext<Program, AnyGO>::chainOriginalSelf;
-
-
-//template<typename T> ScriptContext<T> g_scriptCtx;
-//
-//extern ScriptContext<ServerGameObject> g_srvScriptCtx;
-//extern ScriptContext<ClientGameObject> g_cliScriptCtx;
-//
-//template<typename T> ScriptContext<T> &getScriptCtx() { static_assert(false, "don't use this"); }
-//template<> ScriptContext<ServerGameObject> getScriptCtx<ServerGameObject>() { return g_srvScriptCtx; }
-//template<> ScriptContext<ClientGameObject> getScriptCtx<ClientGameObject>() { return g_cliScriptCtx; }
+struct SrvScriptContext : ScriptContext<Server, ServerGameObject> {
+	SrvScriptContext(Server* program, ServerGameObject* self = nullptr);
+};
+struct CliScriptContext : ScriptContext<Client, ClientGameObject> {
+	CliScriptContext(Client* program, ClientGameObject* self = nullptr);
+};

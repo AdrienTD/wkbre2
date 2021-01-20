@@ -8,7 +8,7 @@
 
 struct ActionUnknown : Action {
 	std::string name;
-	virtual void run(ServerGameObject *self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		ferr("Unknown action %s!", name.c_str());
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
@@ -17,7 +17,7 @@ struct ActionUnknown : Action {
 
 struct ActionTrace : Action {
 	std::string message;
-	virtual void run(ServerGameObject *self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		printf("Trace: %s\n", message.c_str());
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -30,8 +30,8 @@ struct ActionTrace : Action {
 struct ActionTraceValue : Action {
 	std::string message;
 	std::unique_ptr<ValueDeterminer> value;
-	virtual void run(ServerGameObject *self) override {
-		printf("Trace Value: %s %f\n", message.c_str(), value->eval(self));
+	virtual void run(SrvScriptContext* ctx) override {
+		printf("Trace Value: %s %f\n", message.c_str(), value->eval(ctx));
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		message = gsf.nextString(true);
@@ -44,8 +44,8 @@ struct ActionTraceValue : Action {
 struct ActionTraceFinderResults : Action {
 	std::string message;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		auto vec = finder->eval(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
 		printf("Trace Finder: %s\n %zi objects:\n", message.c_str(), vec.size());
 		for (ServerGameObject *obj : vec)
 			printf(" - %i %s\n", obj->id, obj->blueprint->getFullName().c_str());
@@ -59,11 +59,11 @@ struct ActionTraceFinderResults : Action {
 struct ActionUponCondition : Action {
 	std::unique_ptr<ValueDeterminer> value;
 	ActionSequence trueList, falseList;
-	virtual void run(ServerGameObject *self) override {
-		if (value->eval(self) > 0.0f)
-			trueList.run(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		if (value->eval(ctx) > 0.0f)
+			trueList.run(ctx);
 		else
-			falseList.run(self);
+			falseList.run(ctx);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		value.reset(ReadValueDeterminer(gsf, gs));
@@ -88,9 +88,9 @@ struct ActionSetItem : Action {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> value;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self)) {
-			obj->setItem(item, value->eval(self));
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx)) {
+			obj->setItem(item, value->eval(ctx));
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -106,9 +106,9 @@ struct ActionIncreaseItem : Action {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> value;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self)) {
-			obj->setItem(item, obj->getItem(item) + value->eval(self));
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx)) {
+			obj->setItem(item, obj->getItem(item) + value->eval(ctx));
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -124,9 +124,9 @@ struct ActionDecreaseItem : Action {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> value;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self)) {
-			obj->setItem(item, obj->getItem(item) - value->eval(self));
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx)) {
+			obj->setItem(item, obj->getItem(item) - value->eval(ctx));
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -141,10 +141,11 @@ struct ActionDecreaseItem : Action {
 struct ActionExecuteSequence : Action {
 	ActionSequence *sequence;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self)) {
-			auto _ = SrvScriptContext::sequenceExecutor.change(self);
-			sequence->run(obj);
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx)) {
+			auto _1 = ctx->sequenceExecutor.change(ctx->self.get());
+			auto _2 = ctx->self.change(obj);
+			sequence->run(ctx);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -159,14 +160,14 @@ struct ActionExecuteSequenceAfterDelay : Action {
 	ActionSequence *sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> delay;
-	virtual void run(ServerGameObject* self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		Server::DelayedSequence ds;
-		ds.executor = self;
+		ds.executor = ctx->self.get();
 		ds.actionSequence = sequence;
-		//ds.selfs = finder->eval(self);
-		for (ServerGameObject *obj : finder->eval(self))
+		//ds.selfs = finder->eval(ctx);
+		for (ServerGameObject *obj : finder->eval(ctx))
 			ds.selfs.emplace_back(obj);
-		game_time_t atTime = Server::instance->timeManager.currentTime + delay->eval(self);
+		game_time_t atTime = Server::instance->timeManager.currentTime + delay->eval(ctx);
 		Server::instance->delayedSequences.insert(std::make_pair(atTime, ds));
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -181,8 +182,8 @@ struct ActionExecuteSequenceAfterDelay : Action {
 struct ActionPlayAnimationIfIdle : Action {
 	int animationIndex;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		auto objs = finder->eval(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		auto objs = finder->eval(ctx);
 		for (ServerGameObject *obj : objs) {
 			obj->setAnimation(animationIndex);
 		}
@@ -197,10 +198,10 @@ struct ActionPlayAnimationIfIdle : Action {
 
 struct ActionExecuteOneAtRandom : Action {
 	ActionSequence actionseq;
-	virtual void run(ServerGameObject *self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		if (!actionseq.actionList.empty()) {
 			int x = rand() % actionseq.actionList.size();
-			actionseq.actionList[x]->run(self);
+			actionseq.actionList[x]->run(ctx);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -209,16 +210,16 @@ struct ActionExecuteOneAtRandom : Action {
 };
 
 struct ActionTerminateThisTask : Action {
-	virtual void run(ServerGameObject *self) override {
-		if (Order *order = self->orderConfig.getCurrentOrder())
+	virtual void run(SrvScriptContext* ctx) override {
+		if (Order *order = ctx->self.get()->orderConfig.getCurrentOrder())
 			order->getCurrentTask()->terminate();
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
 };
 
 struct ActionTerminateThisOrder : Action {
-	virtual void run(ServerGameObject *self) override {
-		if (Order *order = self->orderConfig.getCurrentOrder())
+	virtual void run(SrvScriptContext* ctx) override {
+		if (Order *order = ctx->self.get()->orderConfig.getCurrentOrder())
 			order->terminate();
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
@@ -226,8 +227,8 @@ struct ActionTerminateThisOrder : Action {
 
 struct ActionTerminateTask : Action {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
 			if (Order* order = obj->orderConfig.getCurrentOrder())
 				order->getCurrentTask()->terminate();
 	}
@@ -238,8 +239,8 @@ struct ActionTerminateTask : Action {
 
 struct ActionTerminateOrder : Action {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
 			if (Order* order = obj->orderConfig.getCurrentOrder())
 				order->terminate();
 	}
@@ -250,9 +251,9 @@ struct ActionTerminateOrder : Action {
 
 struct ActionTransferControl : Action {
 	std::unique_ptr<ObjectFinder> togiveFinder, recipientFinder;
-	virtual void run(ServerGameObject *self) override {
-		auto objs = togiveFinder->eval(self);
-		ServerGameObject *recipient = recipientFinder->getFirst(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		auto objs = togiveFinder->eval(ctx);
+		ServerGameObject *recipient = recipientFinder->getFirst(ctx);
 		for (ServerGameObject *obj : objs)
 			obj->setParent(recipient);
 	}
@@ -267,9 +268,9 @@ struct ActionTransferControl : Action {
 struct ActionAssignOrderVia : Action {
 	const OrderAssignmentBlueprint *oabp;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self)) {
-			oabp->assignTo(obj, self);
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx)) {
+			oabp->assignTo(obj, ctx->self.get());
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -282,8 +283,8 @@ struct ActionAssignOrderVia : Action {
 
 struct ActionRemove : Action {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self)) {
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx)) {
 			Server::instance->deleteObject(obj);
 		}
 	}
@@ -297,9 +298,9 @@ struct ActionRemove : Action {
 struct ActionAssignAlias : Action {
 	int aliasIndex;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		auto &alias = Server::instance->aliases[aliasIndex];
-		for (ServerGameObject *obj : finder->eval(self)) {
+		for (ServerGameObject *obj : finder->eval(ctx)) {
 			alias.insert(obj);
 		}
 	}
@@ -314,9 +315,9 @@ struct ActionAssignAlias : Action {
 struct ActionUnassignAlias : Action {
 	int aliasIndex;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		auto &alias = Server::instance->aliases[aliasIndex];
-		for (ServerGameObject *obj : finder->eval(self)) {
+		for (ServerGameObject *obj : finder->eval(ctx)) {
 			alias.erase(obj);
 		}
 	}
@@ -330,7 +331,7 @@ struct ActionUnassignAlias : Action {
 
 struct ActionClearAlias : Action {
 	int aliasIndex;
-	virtual void run(ServerGameObject *self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		auto &alias = Server::instance->aliases[aliasIndex];
 		alias.clear();
 	}
@@ -344,8 +345,8 @@ struct ActionClearAlias : Action {
 struct ActionAddReaction : Action {
 	Reaction *reaction;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for(ServerGameObject *obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for(ServerGameObject *obj : finder->eval(ctx))
 			obj->individualReactions.insert(reaction);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -357,8 +358,8 @@ struct ActionAddReaction : Action {
 struct ActionRemoveReaction : Action {
 	Reaction *reaction;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx))
 			obj->individualReactions.erase(reaction);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -370,10 +371,10 @@ struct ActionRemoveReaction : Action {
 struct ActionSendEvent : Action {
 	int event = -1;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		if (event == -1) return;
-		for (ServerGameObject *obj : finder->eval(self))
-			obj->sendEvent(event, self);
+		for (ServerGameObject *obj : finder->eval(ctx))
+			obj->sendEvent(event, ctx->self.get());
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		event = gs.events.readIndex(gsf);
@@ -384,8 +385,8 @@ struct ActionSendEvent : Action {
 struct ActionCreateObjectVia : Action {
 	ObjectCreation *info;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx))
 			info->run(obj);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -397,9 +398,9 @@ struct ActionCreateObjectVia : Action {
 struct ActionRegisterAssociates : Action {
 	std::unique_ptr<ObjectFinder> f_aors, f_ated;
 	int category;
-	virtual void run(ServerGameObject *self) override {
-		auto aors = f_aors->eval(self);
-		auto ated = f_ated->eval(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		auto aors = f_aors->eval(ctx);
+		auto ated = f_ated->eval(ctx);
 		for (ServerGameObject *aor : aors) {
 			for (ServerGameObject *obj : ated)
 				aor->associateObject(category, obj);
@@ -415,9 +416,9 @@ struct ActionRegisterAssociates : Action {
 struct ActionDeregisterAssociates : Action {
 	std::unique_ptr<ObjectFinder> f_aors, f_ated;
 	int category;
-	virtual void run(ServerGameObject *self) override {
-		auto aors = f_aors->eval(self);
-		auto ated = f_ated->eval(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		auto aors = f_aors->eval(ctx);
+		auto ated = f_ated->eval(ctx);
 		for (ServerGameObject *aor : aors) {
 			for (ServerGameObject *obj : ated)
 				aor->dissociateObject(category, obj);
@@ -433,8 +434,8 @@ struct ActionDeregisterAssociates : Action {
 struct ActionClearAssociates : Action {
 	int category;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx))
 			obj->clearAssociates(category);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -446,8 +447,8 @@ struct ActionClearAssociates : Action {
 struct ActionConvertTo : Action {
 	GameObjBlueprint *postbp;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx))
 			obj->convertTo(postbp);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -457,15 +458,15 @@ struct ActionConvertTo : Action {
 };
 
 struct ActionNop : Action {
-	virtual void run(ServerGameObject *self) override {}
+	virtual void run(SrvScriptContext* ctx) override {}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
 };
 
 struct ActionSwitchAppearance : Action {
 	int appear;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx))
 			obj->setSubtypeAndAppearance(obj->subtype, appear);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -477,8 +478,8 @@ struct ActionSwitchAppearance : Action {
 struct ActionConvertAccordingToTag : Action {
 	int typeTag;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject *self) override {
-		for (ServerGameObject *obj : finder->eval(self)) {
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject *obj : finder->eval(ctx)) {
 			auto it = obj->blueprint->mappedTypeTags.find(typeTag);
 			if(it != obj->blueprint->mappedTypeTags.end())
 				obj->convertTo(it->second);
@@ -494,12 +495,13 @@ struct ActionRepeatSequence : Action {
 	ActionSequence *sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> vdcount;
-	virtual void run(ServerGameObject* self) override {
-		int count = (int)vdcount->eval(self);
-		for (ServerGameObject* obj : finder->eval(self)) {
-			auto _ = SrvScriptContext::sequenceExecutor.change(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		int count = (int)vdcount->eval(ctx);
+		for (ServerGameObject* obj : finder->eval(ctx)) {
+			auto _1 = ctx->sequenceExecutor.change(ctx->self.get());
+			auto _2 = ctx->self.change(obj);
 			for (int i = 0; i < count; i++)
-				sequence->run(obj);
+				sequence->run(ctx);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -515,11 +517,11 @@ struct ActionIdentifyAndMarkClusters : Action {
 	std::unique_ptr<ValueDeterminer> vcr;
 	std::unique_ptr<ValueDeterminer> vir;
 	std::unique_ptr<ValueDeterminer> vmr;
-	virtual void run(ServerGameObject* self) override {
-		ServerGameObject* player = self->getPlayer();
-		auto gl = finder->eval(self);
-		float rad = vcr->eval(self);
-		float fmr = vmr->eval(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		ServerGameObject* player = ctx->self.get()->getPlayer();
+		auto gl = finder->eval(ctx);
+		float rad = vcr->eval(ctx);
+		float fmr = vmr->eval(ctx);
 		float sqrad = rad * rad;
 		DynArray<bool> taken(gl.size());
 		for (bool& b : taken) b = false;
@@ -532,7 +534,8 @@ struct ActionIdentifyAndMarkClusters : Action {
 				if (taken[j]) continue;
 				ServerGameObject* p = gl[j];
 				if ((p->position - o->position).sqlen2xz() < sqrad) {
-					clrat += vir->eval(p);
+					auto _ = ctx->self.change(p);
+					clrat += vir->eval(ctx);
 				}
 			}
 
@@ -563,13 +566,13 @@ struct ActionExecuteSequenceOverPeriod : Action {
 	ActionSequence* sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> vdperiod;
-	virtual void run(ServerGameObject* self) override {
-		auto vec = finder->eval(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
 		Server::OverPeriodSequence ops;
 		ops.actionSequence = sequence;
-		ops.executor = self;
+		ops.executor = ctx->self.get();
 		ops.startTime = Server::instance->timeManager.currentTime;
-		ops.period = vdperiod->eval(self);
+		ops.period = vdperiod->eval(ctx);
 		ops.remainingObjects = std::vector<SrvGORef>(vec.begin(), vec.end());
 		ops.numExecutionsDone = 0;
 		ops.numTotalExecutions = ops.remainingObjects.size();
@@ -587,16 +590,16 @@ struct ActionRepeatSequenceOverPeriod : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> vdcount;
 	std::unique_ptr<ValueDeterminer> vdperiod;
-	virtual void run(ServerGameObject* self) override {
-		auto vec = finder->eval(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
 		Server::OverPeriodSequence ops;
 		ops.actionSequence = sequence;
-		ops.executor = self;
+		ops.executor = ctx->self.get();
 		ops.startTime = Server::instance->timeManager.currentTime;
-		ops.period = vdperiod->eval(self);
+		ops.period = vdperiod->eval(ctx);
 		ops.remainingObjects = std::vector<SrvGORef>(vec.begin(), vec.end());
 		ops.numExecutionsDone = 0;
-		ops.numTotalExecutions = (int)vdcount->eval(self);
+		ops.numTotalExecutions = (int)vdcount->eval(ctx);
 		Server::instance->repeatOverPeriodSequences.push_back(std::move(ops));
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -610,8 +613,8 @@ struct ActionRepeatSequenceOverPeriod : Action {
 struct ActionDisplayGameTextWindow : Action {
 	int gtwIndex;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* player : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* player : finder->eval(ctx))
 			Server::instance->showGameTextWindow(player, gtwIndex);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -625,9 +628,9 @@ struct ActionSetScale : Action {
 	std::unique_ptr<ValueDeterminer> vdx;
 	std::unique_ptr<ValueDeterminer> vdy;
 	std::unique_ptr<ValueDeterminer> vdz;
-	virtual void run(ServerGameObject* self) override {
-		Vector3 scale = Vector3(vdx->eval(self), vdy->eval(self), vdz->eval(self));
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		Vector3 scale = Vector3(vdx->eval(ctx), vdy->eval(ctx), vdz->eval(ctx));
+		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->setScale(scale);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -640,8 +643,8 @@ struct ActionSetScale : Action {
 
 struct ActionTerminate : Action {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->terminate();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -652,8 +655,8 @@ struct ActionTerminate : Action {
 struct ActionHideGameTextWindow : Action {
 	int gtwIndex;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* player : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* player : finder->eval(ctx))
 			Server::instance->hideGameTextWindow(player, gtwIndex);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -664,8 +667,8 @@ struct ActionHideGameTextWindow : Action {
 
 struct ActionHideCurrentGameTextWindow : Action {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* player : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* player : finder->eval(ctx))
 			Server::instance->hideCurrentGameTextWindow(player);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -675,8 +678,8 @@ struct ActionHideCurrentGameTextWindow : Action {
 
 struct ActionDisable : Action {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->disable();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -686,8 +689,8 @@ struct ActionDisable : Action {
 
 struct ActionEnable : Action {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->enable();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -698,8 +701,8 @@ struct ActionEnable : Action {
 struct ActionSetSelectable : Action {
 	bool value;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->updateFlags((obj->flags & ~ServerGameObject::fSelectable) | (value ? ServerGameObject::fSelectable : 0));
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -711,8 +714,8 @@ struct ActionSetSelectable : Action {
 struct ActionSetTargetable : Action {
 	bool value;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->updateFlags((obj->flags & ~ServerGameObject::fTargetable) | (value ? ServerGameObject::fTargetable : 0));
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -724,8 +727,8 @@ struct ActionSetTargetable : Action {
 struct ActionSetRenderable : Action {
 	bool value;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->updateFlags((obj->flags & ~ServerGameObject::fRenderable) | (value ? ServerGameObject::fRenderable : 0));
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -737,9 +740,9 @@ struct ActionSetRenderable : Action {
 struct ActionSendPackage : Action {
 	GSPackage* package;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		for (ServerGameObject* obj : finder->eval(self))
-			package->send(obj, self);
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			package->send(obj, ctx->self.get());
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		package = gs.packages.readPtr(gsf);
@@ -751,12 +754,12 @@ struct ActionChangeReactionProfile : Action {
 	int mode;
 	Reaction* reaction;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		if (mode == 0)
-			for (ServerGameObject* obj : finder->eval(self))
+			for (ServerGameObject* obj : finder->eval(ctx))
 				obj->individualReactions.insert(reaction);
 		else if (mode == 1)
-			for (ServerGameObject* obj : finder->eval(self))
+			for (ServerGameObject* obj : finder->eval(ctx))
 				obj->individualReactions.erase(reaction);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -794,11 +797,11 @@ struct ActionSwitchCommon : Action {
 
 struct ActionSwitchCondition : ActionSwitchCommon {
 	std::unique_ptr<ValueDeterminer> valuedet;
-	virtual void run(ServerGameObject* self) override {
-		float value = valuedet->eval(self);
+	virtual void run(SrvScriptContext* ctx) override {
+		float value = valuedet->eval(ctx);
 		for (auto& scase : cases)
-			if (scase.value->eval(self) == value)
-				scase.actions.run(self);
+			if (scase.value->eval(ctx) == value)
+				scase.actions.run(ctx);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		valuedet.reset(ReadValueDeterminer(gsf, gs));
@@ -807,17 +810,17 @@ struct ActionSwitchCondition : ActionSwitchCommon {
 };
 
 struct ActionSwitchHighest : ActionSwitchCommon {
-	virtual void run(ServerGameObject* self) override {
+	virtual void run(SrvScriptContext* ctx) override {
 		float maxvalue = -INFINITY;
 		SwitchCase* maxcase = nullptr;
 		for (auto& scase : cases) {
-			float value = scase.value->eval(self);
+			float value = scase.value->eval(ctx);
 			if (value > maxvalue) {
 				maxvalue = value;
 				maxcase = &scase;
 			}
 		}
-		maxcase->actions.run(self);
+		maxcase->actions.run(ctx);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		parseCases(gsf, gs, "END_SWITCH_HIGHEST");
@@ -827,8 +830,9 @@ struct ActionSwitchHighest : ActionSwitchCommon {
 struct ActionPlayClip : Action {
 	int clip;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual void run(ServerGameObject* self) override {
-		Server::instance->gameSet->clips[clip].postClipSequence.run(self->getPlayer());
+	virtual void run(SrvScriptContext* ctx) override {
+		auto _ = ctx->self.change(ctx->self.get()->getPlayer());
+		Server::instance->gameSet->clips[clip].postClipSequence.run(ctx);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		clip = gs.clips.readIndex(gsf);
@@ -958,4 +962,9 @@ void ActionSequence::init(GSFileParser &gsf, const GameSet &gs, const char *endt
 		gsf.advanceLine();
 	}
 	ferr("Action sequence reached end of file without END_ACTION_SEQUENCE!");
+}
+
+void ActionSequence::run(ServerGameObject* self) {
+	SrvScriptContext ctx(Server::instance, self);
+	run(&ctx);
 }

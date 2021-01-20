@@ -6,20 +6,22 @@
 struct ServerGameObject;
 struct GSFileParser;
 struct GameSet;
+struct SrvScriptContext;
 
 struct Action {
 	virtual ~Action() {}
-	virtual void run(ServerGameObject *self) = 0;
+	virtual void run(SrvScriptContext* ctx) = 0;
 	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
 };
 
 struct ActionSequence {
 	std::vector<std::unique_ptr<Action>> actionList;
-	void run(ServerGameObject *self) {
+	void init(GSFileParser& gsf, const GameSet& gs, const char* endtag);
+	void run(SrvScriptContext* ctx) {
 		for (auto &action : actionList)
-			action->run(self);
+			action->run(ctx);
 	}
-	void init(GSFileParser &gsf, const GameSet &gs, const char *endtag);
+	void run(ServerGameObject* self);
 };
 
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs);

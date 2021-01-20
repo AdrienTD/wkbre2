@@ -449,14 +449,15 @@ void ServerGameObject::stopMovement()
 void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 {
 	// Problem: reaction can be executed twice if it is in both intrinsics and individuals, but is it worth checking that?
-	auto _ = SrvScriptContext::packageSender.change(sender);
+	SrvScriptContext ctx(Server::instance, this);
+	auto _ = ctx.packageSender.change(sender);
 	for (Reaction *r : blueprint->intrinsicReactions)
 		if (r->canBeTriggeredBy(evt, this))
-			r->actions.run(this);
+			r->actions.run(&ctx);
 	const auto ircopy = individualReactions;
 	for (Reaction *r : ircopy)
 		if (r->canBeTriggeredBy(evt, this))
-			r->actions.run(this);
+			r->actions.run(&ctx);
 }
 
 void ServerGameObject::associateObject(int category, ServerGameObject * associated)
@@ -619,8 +620,10 @@ void Server::tick()
 		}
 		DelayedSequence &ds = it->second;
 		for (SrvGORef &obj : ds.selfs) {
-			if (obj)
-				ds.actionSequence->run(obj);
+			if (obj) {
+				SrvScriptContext ctx(this, obj);
+				ds.actionSequence->run(&ctx);
+			}
 		}
 	}
 	delayedSequences.erase(delayedSequences.begin(), it);
@@ -629,10 +632,13 @@ void Server::tick()
 		OverPeriodSequence& ops = overPeriodSequences[i];
 		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
 		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
-		auto _ = SrvScriptContext::sequenceExecutor.change(ops.executor);
+		SrvScriptContext ctx(this);
+		auto _ = ctx.sequenceExecutor.change(ops.executor);
 		for (; ops.numExecutionsDone < predictedExec; ops.numExecutionsDone++) {
-			if (ServerGameObject* obj = ops.remainingObjects.back().get())
-				ops.actionSequence->run(obj);
+			if (ServerGameObject* obj = ops.remainingObjects.back().get()) {
+				auto _2 = ctx.self.change(obj);
+				ops.actionSequence->run(&ctx);
+			}
 			ops.remainingObjects.pop_back();
 		}
 		if (ops.numExecutionsDone >= ops.numTotalExecutions) {
@@ -645,11 +651,15 @@ void Server::tick()
 		OverPeriodSequence& ops = repeatOverPeriodSequences[i];
 		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
 		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
-		auto _ = SrvScriptContext::sequenceExecutor.change(ops.executor);
+		SrvScriptContext ctx(this);
+		auto _ = ctx.sequenceExecutor.change(ops.executor);
 		for (; ops.numExecutionsDone < predictedExec; ops.numExecutionsDone++) {
-			for (auto& ref : ops.remainingObjects)
-				if (ServerGameObject* obj = ref.get())
-					ops.actionSequence->run(obj);
+			for (auto& ref : ops.remainingObjects) {
+				if (ServerGameObject* obj = ref.get()) {
+					auto _2 = ctx.self.change(obj);
+					ops.actionSequence->run(&ctx);
+				}
+			}
 		}
 		if (ops.numExecutionsDone >= ops.numTotalExecutions) {
 			std::swap(ops, repeatOverPeriodSequences.back());
@@ -705,7 +715,8 @@ void Server::tick()
 				if (msg.size() >= 2 && msg[0] == '!') {
 					GSFileParser gsf = GSFileParser(msg.c_str() + 1);
 					Action* act = ReadAction(gsf, *gameSet);
-					act->run(findObject(1027));
+					SrvScriptContext ctx(this, findObject(1027));
+					act->run(&ctx);
 					delete act;
 				}
 
@@ -758,7 +769,8 @@ void Server::tick()
 			case NETSRVMSG_GAME_TEXT_WINDOW_BUTTON_CLICKED: {
 				int gtwid = br.readUint32();
 				int button = br.readUint32();
-				gameSet->gameTextWindows[gtwid].buttons[button].onClickSequence.run(findObject(1027)); // TODO: Correct player object
+				SrvScriptContext ctx(this, findObject(1027));
+				gameSet->gameTextWindows[gtwid].buttons[button].onClickSequence.run(&ctx); // TODO: Correct player object
 				break;
 			}
 			}

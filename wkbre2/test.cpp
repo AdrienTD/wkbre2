@@ -103,7 +103,7 @@ void Test_Actions()
 	printf("Savegame loaded!\n");
 
 	int actseq = server.gameSet->actionSequences.names.getIndex("My act seq");
-	server.gameSet->actionSequences[actseq].run(server.level);
+	//server.gameSet->actionSequences[actseq].run(server.level);
 
 	getchar();
 }
