@@ -941,6 +941,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_STOP_CAMERA_PATH_PLAYBACK:
 	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK:
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION:
+	case Tags::ACTION_LOCK_TIME:
+	case Tags::ACTION_UNLOCK_TIME:
 		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown(name); break;

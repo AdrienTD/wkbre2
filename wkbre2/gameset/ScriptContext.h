@@ -25,7 +25,7 @@ template<typename TProgram, typename TAnyGO> struct ScriptContext {
 		TemporaryValue<decltype(object)> change(AnyGO *go) {
 			return TemporaryValue<decltype(object)>(object, go); // copy elision required!!! (should be mandatory for C++17)
 		}
-		AnyGO *get() { return object; }
+		AnyGO *get() const { return object; }
 		CtxElement() {}
 		CtxElement(AnyGO* obj) : object(obj) {}
 	};

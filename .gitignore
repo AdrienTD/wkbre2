@@ -40,3 +40,4 @@ build*/
 imgui.ini
 .vs/
 CMakeSettings.json
+wkconfig.json
