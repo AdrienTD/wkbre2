@@ -173,6 +173,7 @@ void ClientInterface::iter()
 		arrowCursor = WndCreateCursor("Interface\\C_DEFAULT.TGA");
 		WndSetCursor(arrowCursor);
 		currentCursor = arrowCursor;
+		lang.load("Languages\\Language.txt");
 	}
 
 	static CliGORef selected;
@@ -289,10 +290,24 @@ void ClientInterface::iter()
 		std::string title = "[GTW] " + client->gameSet->gameTextWindows.names[activeGtw.first];
 		ImGui::SetNextWindowPosCenter();
 		ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoSavedSettings);
-		ImGui::Text(page.textBody.c_str());
+		auto loctext = lang.getText(page.textBody);
+		std::string ptext;
+		for (size_t i = 0; i < loctext.size(); i++) {
+			if (loctext[i] == '\\') {
+				char c = loctext[i + 1];
+				if (c == 'n')
+					ptext.push_back('\n');
+				else if (c == 0)
+					break;
+				i++;
+			}
+			else
+				ptext.push_back(loctext[i]);
+		}
+		ImGui::TextUnformatted(ptext.c_str());
 		for (size_t i = 0; i < gtw.buttons.size(); i++) {
 			auto& button = gtw.buttons[i];
-			if (ImGui::Button(button.text.c_str())) {
+			if (ImGui::Button(lang.getText(button.text).c_str())) {
 				switch (button.onClickWindowAction) {
 				case Tags::GTW_BUTTON_WINDOW_ACTION_CLOSE_WINDOW:
 					activeGtw.second = -1; break;

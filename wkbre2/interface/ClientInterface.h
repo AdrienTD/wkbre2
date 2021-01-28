@@ -4,6 +4,7 @@
 #include "../scene.h"
 #include <ctime>
 #include "../GameObjectRef.h"
+#include "../Language.h"
 
 struct Client;
 struct TerrainRenderer;
@@ -42,4 +43,5 @@ private:
 	time_t lastfpscheck = 0;
 	Vector3 rayDirection;
 	ClientGameObject *nextSelectedObject = nullptr;
+	Language lang;
 };

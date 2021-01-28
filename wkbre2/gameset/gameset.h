@@ -20,6 +20,7 @@
 #include "GameTextWindow.h"
 #include "Package.h"
 #include "3DClip.h"
+#include "cameraPath.h"
 
 struct GameObjBlueprint;
 
@@ -72,6 +73,7 @@ struct GameSet
 	GSBlueprintList<void> orderCategories;
 	GSBlueprintList<GSPackage> packages;
 	GSBlueprintList<GS3DClip> clips;
+	GSBlueprintList<CameraPath> cameraPaths;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

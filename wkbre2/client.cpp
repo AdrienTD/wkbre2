@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include "client.h"
 #include "server.h"
 #include "network.h"
@@ -5,6 +6,9 @@
 #include <cassert>
 #include "terrain.h"
 #include "interface/ClientInterface.h"
+#include <SDL_timer.h>
+#include "gameset/ScriptContext.h"
+#include <cmath>
 
 Client * Client::instance = nullptr;
 
@@ -29,6 +33,50 @@ void Client::tick()
 	};
 	if(level)
 		walkObj(level, walkObj);
+
+	// Camera paths
+	if (cameraMode == 1) {
+		float camTime = (float)(SDL_GetTicks() - cameraStartTime) / 1000.0f;
+		float prevTime = 0.0f, nextTime = 0.0f;
+		int nextNode;
+		for (nextNode = 1; nextNode < cameraPathPos.size(); nextNode++) {
+			prevTime = nextTime;
+			nextTime += cameraPathDur[nextNode];
+			if (camTime < nextTime)
+				break;
+		}
+		if (nextNode == cameraPathPos.size()) {
+			cameraMode = 0;
+			cameraCurrentPath = nullptr;
+			sendCameraPathEnded(cameraPathIndex);
+		}
+		else {
+			auto p0 = cameraPathPos[nextNode - 1];
+			auto p1 = cameraPathPos[nextNode];
+			// Limit angles to [0;2pi)
+			for (auto& p : { &p0, &p1 }) {
+				for (float& c : p->second) {
+					c = fmodf(c, 2*M_PI);
+					if (c < 0.0f) c += 2*M_PI;
+				}
+			}
+			// Try to make distances between angles as small as possible (< pi radians)
+			for (int i = 0; i < 3; i++) {
+				float d = p1.second.coord[i] - p0.second.coord[i];
+				if (fabs(d) > M_PI) {
+					if (d > 0)
+						p1.second.coord[i] -= 2 * M_PI;
+					else
+						p1.second.coord[i] += 2 * M_PI;
+				}
+			}
+			float dt = (camTime - prevTime) / (nextTime - prevTime);
+			Vector3 pos = (p1.first - p0.first)*dt + p0.first;
+			Vector3 ori = (p1.second - p0.second)*dt + p0.second;
+			camera.position = pos;
+			camera.orientation = ori;
+		}
+	}
 
 	if (serverLink) {
 		int pcnt = 1000000; //100;
@@ -237,6 +285,44 @@ void Client::tick()
 				}
 				break;
 			}
+			case NETCLIMSG_STORE_CAMERA_POSITION: {
+				storedCameraPosition = camera.position;
+				storedCameraOrientation = camera.orientation;
+				break;
+			}
+			case NETCLIMSG_RESTORE_CAMERA_POSITION: {
+				camera.position = storedCameraPosition;
+				camera.orientation = storedCameraOrientation;
+				cameraMode = 0;
+				cameraCurrentPath = nullptr;
+				break;
+			}
+			case NETCLIMSG_PLAY_CAMERA_PATH: {
+				int camPathIndex = br.readUint32();
+				const CameraPath& gspath = gameSet->cameraPaths[camPathIndex]; // TODO: boundary check
+				cameraMode = 1;
+				cameraCurrentPath = &gspath;
+				cameraPathIndex = camPathIndex;
+				cameraStartTime = SDL_GetTicks();
+				cameraPathPos.clear();
+				cameraPathDur.clear();
+				if (gspath.startAtCurrentCameraPosition) {
+					cameraPathPos.push_back({ camera.position, camera.orientation });
+					cameraPathDur.push_back(1.0f);
+				}
+				for (auto& node : gspath.pathNodes) {
+					CliScriptContext ctx(this);
+					OrientedPosition op = node.position->eval(&ctx);
+					cameraPathPos.push_back({ op.position, op.rotation });
+					cameraPathDur.push_back(node.duration->eval(&ctx));
+				}
+				break;
+			}
+			case NETCLIMSG_STOP_CAMERA_PATH: {
+				cameraMode = 0;
+				cameraCurrentPath = nullptr;
+				break;
+			}
 			}
 		}
 	}
@@ -286,6 +372,13 @@ void Client::sendGameTextWindowButtonClicked(int gtwIndex, int buttonIndex)
 	NetPacketWriter msg(NETSRVMSG_GAME_TEXT_WINDOW_BUTTON_CLICKED);
 	msg.writeUint32(gtwIndex);
 	msg.writeUint32(buttonIndex);
+	serverLink->send(msg);
+}
+
+void Client::sendCameraPathEnded(int camPathIndex)
+{
+	NetPacketWriter msg{ NETSRVMSG_CAMERA_PATH_ENDED };
+	msg.writeUint32(camPathIndex);
 	serverLink->send(msg);
 }
 

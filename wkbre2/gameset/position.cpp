@@ -50,6 +50,10 @@ struct PDAbsolutePosition : PositionDeterminer {
 	{
 		return opos;
 	}
+	virtual OrientedPosition eval(CliScriptContext* ctx) override
+	{
+		return opos;
+	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override
 	{
 		float x = gsf.nextFloat();

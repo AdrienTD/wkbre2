@@ -16,7 +16,8 @@ struct GSFileParser
 	};
 	int linenum = 1;
 
-	bool isnewline(char c) const { return (c == '\n') || (c == '\r'); }
+	static bool isnewline(char c) { return (c == '\n') || (c == '\r'); }
+	static bool iswhitespace(char c) { return isspace((unsigned char)c); }
 
 	// Move the cursor to the beginning of the next line.
 	void advanceLine();

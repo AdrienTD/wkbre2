@@ -840,6 +840,67 @@ struct ActionPlayClip : Action {
 	}
 };
 
+struct ActionStoreCameraPosition : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			ctx->server->storeCameraPosition(obj);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionSnapCameraToStoredPosition : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			ctx->server->restoreCameraPosition(obj);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionPlayCameraPath : Action {
+	int camPathIndex;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			ctx->server->playCameraPath(obj, camPathIndex);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		camPathIndex = gs.cameraPaths.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionStopCameraPathPlayback : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			ctx->server->stopCameraPath(obj);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionCreateFormation : Action {
+	GameObjBlueprint* formationType;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		ServerGameObject* formation = ctx->server->createObject(formationType);
+		formation->setParent(ctx->self.get());
+		for (ServerGameObject* obj : finder->eval(ctx))
+			obj->setParent(formation);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		formationType = gs.objBlueprints[Tags::GAMEOBJCLASS_FORMATION].readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -895,6 +956,12 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_SWITCH_CONDITION: action = new ActionSwitchCondition; break;
 	case Tags::ACTION_SWITCH_HIGHEST: action = new ActionSwitchHighest; break;
 	case Tags::ACTION_PLAY_CLIP: action = new ActionPlayClip; break;
+	case Tags::ACTION_STORE_CAMERA_POSITION: action = new ActionStoreCameraPosition; break;
+	case Tags::ACTION_SNAP_CAMERA_TO_STORED_POSITION: action = new ActionSnapCameraToStoredPosition; break;
+	case Tags::ACTION_PLAY_CAMERA_PATH: action = new ActionPlayCameraPath; break;
+	case Tags::ACTION_STOP_CAMERA_PATH_PLAYBACK: action = new ActionStopCameraPathPlayback; break;
+	case Tags::ACTION_CREATE_FORMATION: action = new ActionCreateFormation; break;
+	case Tags::ACTION_CREATE_FORMATION_REFERENCE: action = new ActionCreateFormation; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:
@@ -934,11 +1001,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_DISPLAY_LOAD_GAME_MENU:
 	case Tags::ACTION_PLAY_MUSIC:
 	case Tags::ACTION_SNAP_CAMERA_TO_POSITION:
-	case Tags::ACTION_STORE_CAMERA_POSITION:
-	case Tags::ACTION_SNAP_CAMERA_TO_STORED_POSITION:
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION:
-	case Tags::ACTION_PLAY_CAMERA_PATH:
-	case Tags::ACTION_STOP_CAMERA_PATH_PLAYBACK:
 	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK:
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION:
 	case Tags::ACTION_LOCK_TIME:

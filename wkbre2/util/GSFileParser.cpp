@@ -17,7 +17,7 @@ std::string GSFileParser::nextString(bool quoted) {
 	const char *c = cursor;
 
 	// Find beginning of next word
-	while (*c && !isnewline(*c) && isspace(*c)) c++; // 0 is not a space
+	while (*c && !isnewline(*c) && iswhitespace(*c)) c++; // 0 is not a space
 	if (quoted) {
 		if (*c == '\"')
 			c++;
@@ -34,12 +34,12 @@ std::string GSFileParser::nextString(bool quoted) {
 		if (*c == '\"') c++;
 	}
 	else {
-		while (*c && !isspace(*c)) c++;
+		while (*c && !iswhitespace(*c)) c++;
 		end = c;
 	}
 
 	// Skip the spaces after the word, to check if it is the last word in the line.
-	while (*c && !isnewline(*c) && isspace(*c)) c++; // 0 is not a space
+	while (*c && !isnewline(*c) && iswhitespace(*c)) c++; // 0 is not a space
 
 	eof = *c == 0;
 	eol = isnewline(*c) || eof;

@@ -186,6 +186,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_CAMERA_PATH: {
+				cameraPaths.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -337,6 +342,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				clip.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_CAMERA_PATH: {
+				CameraPath& cp = cameraPaths.readRef(gsf);
+				cp.parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -396,6 +406,7 @@ void GameSet::load(const char * fn)
 	orderCategories.pass();
 	packages.pass();
 	clips.pass();
+	cameraPaths.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

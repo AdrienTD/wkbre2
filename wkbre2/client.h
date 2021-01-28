@@ -20,6 +20,7 @@ struct Command;
 struct Terrain;
 struct ClientInterface;
 struct Client;
+struct CameraPath;
 
 struct ClientGameObject : CommonGameObject<ClientGameObject> {
 	using Program = Client;
@@ -45,6 +46,13 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	NetLink *serverLink;
 
 	Camera camera;
+	Vector3 storedCameraPosition, storedCameraOrientation;
+	int cameraMode = 0;
+	const CameraPath* cameraCurrentPath = nullptr;
+	int cameraPathIndex = -1;
+	std::vector<std::pair<Vector3, Vector3>> cameraPathPos;
+	std::vector<float> cameraPathDur;
+	uint32_t cameraStartTime;
 
 	ClientInterface *cliInterface;
 
@@ -70,6 +78,7 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	void sendStampdown(GameObjBlueprint *blueprint, ClientGameObject *player, const Vector3 &position, bool sendEvent = false);
 	void sendStartLevelRequest();
 	void sendGameTextWindowButtonClicked(int gtwIndex, int buttonIndex);
+	void sendCameraPathEnded(int camPathIndex);
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }
 

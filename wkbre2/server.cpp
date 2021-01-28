@@ -609,6 +609,31 @@ void Server::hideCurrentGameTextWindow(ServerGameObject* player)
 	sendToAll(msg); // TODO: Only send to one player's client, not all clients
 }
 
+void Server::storeCameraPosition(ServerGameObject* player)
+{
+	NetPacketWriter msg{ NETCLIMSG_STORE_CAMERA_POSITION };
+	sendToAll(msg);
+}
+
+void Server::restoreCameraPosition(ServerGameObject* player)
+{
+	NetPacketWriter msg{ NETCLIMSG_RESTORE_CAMERA_POSITION };
+	sendToAll(msg);
+}
+
+void Server::playCameraPath(ServerGameObject* player, int camPathIndex)
+{
+	NetPacketWriter msg{ NETCLIMSG_PLAY_CAMERA_PATH };
+	msg.writeUint32(camPathIndex);
+	sendToAll(msg);
+}
+
+void Server::stopCameraPath(ServerGameObject* player)
+{
+	NetPacketWriter msg{ NETCLIMSG_STOP_CAMERA_PATH };
+	sendToAll(msg);
+}
+
 void Server::tick()
 {
 	timeManager.tick();
@@ -771,6 +796,12 @@ void Server::tick()
 				int button = br.readUint32();
 				SrvScriptContext ctx(this, findObject(1027));
 				gameSet->gameTextWindows[gtwid].buttons[button].onClickSequence.run(&ctx); // TODO: Correct player object
+				break;
+			}
+			case NETSRVMSG_CAMERA_PATH_ENDED: {
+				int camPathIndex = br.readUint32();
+				SrvScriptContext ctx(this, findObject(1027));
+				gameSet->cameraPaths[camPathIndex].postPlaySequence.run(&ctx);
 				break;
 			}
 			}
