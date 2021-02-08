@@ -121,6 +121,11 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			representAs = gameSet->modelCache.getModel("Warrior Kings Game Set\\" + gsf.nextString(true));
 			break;
 		}
+		case Tags::CBLUEPRINT_INTERPRET_VALUE_TAG_AS: {
+			int vt = gameSet->valueTags.readIndex(gsf);
+			mappedValueTags[vt] = ReadValueDeterminer(gsf, *gameSet);
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

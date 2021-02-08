@@ -62,7 +62,7 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			this->cancellationSequence.init(gsf, gs, "END_CANCELLATION_SEQUENCE");
 		else if (tag == "TRIGGER") {
 			this->triggers.emplace_back(Tags::TASKTRIGGER_tagDict.getTagID(gsf.nextString().c_str()));
-			TriggerBlueprint &trig = this->triggers.back();
+			TriggerBlueprint& trig = this->triggers.back();
 			if (trig.type == Tags::TASKTRIGGER_TIMER)
 				trig.period = ReadValueDeterminer(gsf, gs);
 			trig.actions.init(gsf, gs, "END_TRIGGER");
@@ -75,6 +75,12 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			if (gsf.nextString() == "TAG")
 				this->defaultAnim = gs.animations.readIndex(gsf);
 		}
+		else if (tag == "USE_PREVIOUS_TASK_TARGET")
+			usePreviousTaskTarget = true;
+		else if (tag == "TERMINATE_ENTIRE_ORDER_IF_NO_TARGET")
+			terminateEntireOrderIfNoTarget = true;
+		else if (tag == "REJECT_TARGET_IF_IT_IS_TERMINATED")
+			rejectTargetIfItIsTerminated = true;
 		gsf.advanceLine();
 	}
 }
@@ -96,10 +102,10 @@ void OrderAssignmentBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 	}
 }
 
-void OrderAssignmentBlueprint::assignTo(ServerGameObject * gameobj, ServerGameObject* giver) const
+void OrderAssignmentBlueprint::assignTo(ServerGameObject* gameobj, SrvScriptContext* ctx, ServerGameObject* giver) const
 {
-	SrvScriptContext ctx(Server::instance, gameobj);
-	auto _ = ctx.orderGiver.change(giver);
-	ServerGameObject *target = this->orderTarget ? this->orderTarget->getFirst(&ctx) : nullptr;
+	auto _1 = ctx->self.change(gameobj);
+	auto _2 = ctx->orderGiver.change(giver);
+	ServerGameObject *target = this->orderTarget ? this->orderTarget->getFirst(ctx) : nullptr;
 	gameobj->orderConfig.addOrder(this->orderToAssign, this->orderAssignmentMode, target);
 }

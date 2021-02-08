@@ -47,6 +47,10 @@ void ServerDebugger::draw() {
 		ServerGameObject *sel = selectedObject;
 		ImGui::Text("Object ID %i at %p", sel->id, sel);
 
+		if (ImGui::Button("Debug")) {
+			__debugbreak();
+		}
+
 		Vector3 newpos = sel->position, newori = sel->orientation;
 		if(ImGui::DragFloat3("Position", &newpos.x))
 			sel->setPosition(newpos);

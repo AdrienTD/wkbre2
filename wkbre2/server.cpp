@@ -288,6 +288,10 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			setDiplomaticStatus(findObject(id1), findObject(id2), status);
 			break;
 		}
+		case Tags::GAMEOBJ_NEXT_UNIQUE_ID: {
+			this->nextUniqueId = gsf.nextInt();
+			break;
+		}
 		case Tags::GAMEOBJ_PLAYER:
 		case Tags::GAMEOBJ_CHARACTER:
 		case Tags::GAMEOBJ_BUILDING:
@@ -508,7 +512,12 @@ void ServerGameObject::setScale(const Vector3& scale)
 void ServerGameObject::terminate()
 {
 	// Termination depends on the object class
-	Server::instance->deleteObject(this);
+	if (blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+		//flags |= fTerminated;
+		sendEvent(Tags::PDEVENT_ON_TERMINATION);
+	}
+	else
+		Server::instance->deleteObject(this);
 }
 
 void ServerGameObject::updateFlags(int value)
@@ -529,6 +538,12 @@ void ServerGameObject::enable()
 {
 	if (disableCount > 0)
 		disableCount--;
+}
+
+void ServerGameObject::setIndexedItem(int item, int index, float value)
+{
+	indexedItems[{item, index}] = value;
+	// I don't think there is use by the client for indexed items, so no need to send a packet for now
 }
 
 void ServerGameObject::updatePosition(const Vector3 & newposition)
@@ -707,8 +722,9 @@ void Server::tick()
 		processObjOrders(level, processObjOrders);
 	for (const SrvGORef& ref : toprocess) {
 		ServerGameObject* obj = ref.get();
+		if (!obj) continue;
 		obj->orderConfig.process();
-		if (!ref) return;
+		if (!ref) continue;
 		if (obj->movement.isMoving()) {
 			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
 			newpos.y = terrain->getHeight(obj->position.x, obj->position.z);

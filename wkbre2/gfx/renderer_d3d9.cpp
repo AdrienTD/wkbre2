@@ -320,7 +320,7 @@ struct D3D9Renderer : public IRenderer
 		if (r == D3DERR_DEVICELOST) {
 			//printf("Device lost\n");
 			if (ddev->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
-				ddev->Reset(&dpp);
+				Reset();
 			else
 				Sleep(50);
 		}

@@ -89,8 +89,9 @@ struct ActionSetItem : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> value;
 	virtual void run(SrvScriptContext* ctx) override {
+		float val = value->eval(ctx);
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			obj->setItem(item, value->eval(ctx));
+			obj->setItem(item, val);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -107,8 +108,9 @@ struct ActionIncreaseItem : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> value;
 	virtual void run(SrvScriptContext* ctx) override {
+		float val = value->eval(ctx);
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			obj->setItem(item, obj->getItem(item) + value->eval(ctx));
+			obj->setItem(item, obj->getItem(item) + val);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -125,8 +127,9 @@ struct ActionDecreaseItem : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> value;
 	virtual void run(SrvScriptContext* ctx) override {
+		float val = value->eval(ctx);
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			obj->setItem(item, obj->getItem(item) - value->eval(ctx));
+			obj->setItem(item, obj->getItem(item) - val);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -254,8 +257,11 @@ struct ActionTransferControl : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		auto objs = togiveFinder->eval(ctx);
 		ServerGameObject *recipient = recipientFinder->getFirst(ctx);
-		for (ServerGameObject *obj : objs)
+		for (ServerGameObject* obj : objs) {
 			obj->setParent(recipient);
+			obj->sendEvent(Tags::PDEVENT_ON_CONTROL_TRANSFERRED);
+			recipient->sendEvent(Tags::PDEVENT_ON_SUBORDINATE_RECEIVED, obj);
+		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		togiveFinder.reset(ReadFinder(gsf, gs));
@@ -270,7 +276,7 @@ struct ActionAssignOrderVia : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			oabp->assignTo(obj, ctx->self.get());
+			oabp->assignTo(obj, ctx, ctx->self.get());
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -387,7 +393,7 @@ struct ActionCreateObjectVia : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject *obj : finder->eval(ctx))
-			info->run(obj);
+			info->run(obj, ctx);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		info = gs.objectCreations.readPtr(gsf);
@@ -448,8 +454,10 @@ struct ActionConvertTo : Action {
 	GameObjBlueprint *postbp;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
-		for (ServerGameObject *obj : finder->eval(ctx))
+		for (ServerGameObject* obj : finder->eval(ctx)) {
 			obj->convertTo(postbp);
+			obj->sendEvent(Tags::PDEVENT_ON_CONVERSION_END);
+		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		postbp = gs.readObjBlueprintPtr(gsf);
@@ -481,8 +489,10 @@ struct ActionConvertAccordingToTag : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject *obj : finder->eval(ctx)) {
 			auto it = obj->blueprint->mappedTypeTags.find(typeTag);
-			if(it != obj->blueprint->mappedTypeTags.end())
+			if (it != obj->blueprint->mappedTypeTags.end()) {
 				obj->convertTo(it->second);
+				obj->sendEvent(Tags::PDEVENT_ON_CONVERSION_END);
+			}
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -901,6 +911,66 @@ struct ActionCreateFormation : Action {
 	}
 };
 
+struct ActionSetIndexedItem : Action {
+	int item;
+	std::unique_ptr<ValueDeterminer> index;
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<ValueDeterminer> value;
+	virtual void run(SrvScriptContext* ctx) override {
+		int x = (int)index->eval(ctx);
+		float val = value->eval(ctx);
+		for (ServerGameObject* obj : finder->eval(ctx)) {
+			obj->setIndexedItem(item, x, val);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		item = gs.items.readIndex(gsf);
+		index.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinder(gsf, gs));
+		value.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
+struct ActionIncreaseIndexedItem : Action {
+	int item;
+	std::unique_ptr<ValueDeterminer> index;
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<ValueDeterminer> value;
+	virtual void run(SrvScriptContext* ctx) override {
+		int x = (int)index->eval(ctx);
+		float val = value->eval(ctx);
+		for (ServerGameObject* obj : finder->eval(ctx)) {
+			obj->setIndexedItem(item, x, obj->getIndexedItem(item, x) + val);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		item = gs.items.readIndex(gsf);
+		index.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinder(gsf, gs));
+		value.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
+struct ActionDecreaseIndexedItem : Action {
+	int item;
+	std::unique_ptr<ValueDeterminer> index;
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<ValueDeterminer> value;
+	virtual void run(SrvScriptContext* ctx) override {
+		int x = (int)index->eval(ctx);
+		float val = value->eval(ctx);
+		for (ServerGameObject* obj : finder->eval(ctx)) {
+			obj->setIndexedItem(item, x, obj->getIndexedItem(item, x) - val);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		item = gs.items.readIndex(gsf);
+		index.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinder(gsf, gs));
+		value.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -962,6 +1032,9 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_STOP_CAMERA_PATH_PLAYBACK: action = new ActionStopCameraPathPlayback; break;
 	case Tags::ACTION_CREATE_FORMATION: action = new ActionCreateFormation; break;
 	case Tags::ACTION_CREATE_FORMATION_REFERENCE: action = new ActionCreateFormation; break;
+	case Tags::ACTION_SET_INDEXED_ITEM: action = new ActionSetIndexedItem; break;
+	case Tags::ACTION_INCREASE_INDEXED_ITEM: action = new ActionIncreaseIndexedItem; break;
+	case Tags::ACTION_DECREASE_INDEXED_ITEM: action = new ActionDecreaseIndexedItem; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:

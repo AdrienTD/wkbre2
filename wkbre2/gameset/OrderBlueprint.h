@@ -9,6 +9,7 @@ struct ValueDeterminer;
 struct GSFileParser;
 struct GameSet;
 struct ServerGameObject;
+struct SrvScriptContext;
 
 struct TriggerBlueprint {
 	int type;
@@ -33,6 +34,7 @@ struct TaskBlueprint {
 	int classType;
 	int category = -1;
 	ObjectFinder *taskTarget = nullptr;
+	bool usePreviousTaskTarget = false, terminateEntireOrderIfNoTarget = false, rejectTargetIfItIsTerminated = false;
 	ActionSequence initSequence, startSequence, resumptionSequence, terminationSequence, cancellationSequence;
 	std::vector<TriggerBlueprint> triggers;
 
@@ -49,5 +51,5 @@ struct OrderAssignmentBlueprint {
 	int orderAssignmentMode = 0;
 	ObjectFinder *orderTarget = nullptr;
 	void parse(GSFileParser &gsf, GameSet &gs);
-	void assignTo(ServerGameObject *gameobj, ServerGameObject *giver = nullptr) const;
+	void assignTo(ServerGameObject* gameobj, SrvScriptContext* ctx, ServerGameObject* giver = nullptr) const;
 };

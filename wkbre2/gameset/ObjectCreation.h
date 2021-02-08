@@ -7,6 +7,7 @@ struct ObjectFinder;
 struct PositionDeterminer;
 struct GSFileParser;
 struct GameSet;
+struct SrvScriptContext;
 
 struct ObjectCreation {
 	GameObjBlueprint *typeToCreate;
@@ -15,5 +16,5 @@ struct ObjectCreation {
 	ActionSequence postCreationSequence;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
-	void run(ServerGameObject *creator);
+	void run(ServerGameObject* creator, SrvScriptContext* ctx);
 };

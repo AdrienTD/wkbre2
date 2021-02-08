@@ -53,6 +53,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void updateFlags(int value);
 	void disable();
 	void enable();
+	void setIndexedItem(int item, int index, float value);
 
 	void updatePosition(const Vector3 &newposition);
 };

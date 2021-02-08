@@ -88,6 +88,8 @@ Task::Task(int id, TaskBlueprint * blueprint, Order * order) : id(id), blueprint
 			trigger = new TimerTrigger(this, &trigbp);
 		else if (trigbp.type == Tags::TASKTRIGGER_ANIMATION_LOOP)
 			trigger = new AnimationLoopTrigger(this, &trigbp);
+		else if (trigbp.type == Tags::TASKTRIGGER_ATTACHMENT_POINT)
+			trigger = new AnimationLoopTrigger(this, &trigbp); // TODO: Related class
 		else
 			trigger = new Trigger(this, &trigbp);
 		this->triggers[i] = trigger;
@@ -108,7 +110,9 @@ void Task::start()
 {
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
-	if (!this->target && blueprint->taskTarget) {
+	if (this->blueprint->usePreviousTaskTarget)
+		this->setTarget(this->order->tasks[this->id - 1]->target.get());
+	else if (!this->target && blueprint->taskTarget) {
 		SrvScriptContext ctx(Server::instance, this->order->gameObject);
 		this->setTarget(blueprint->taskTarget->getFirst(&ctx)); // FIXME: that would override the order's target!!!
 	}

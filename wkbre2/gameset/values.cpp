@@ -241,7 +241,12 @@ struct ValueValueTagInterpretation : ValueDeterminer {
 		ServerGameObject *obj = fnd->getFirst(ctx);
 		if (!obj) return 0.0f;
 		// TODO: Type specific interpretations
-		ValueDeterminer *vd = Server::instance->gameSet->valueTags[valueTag].get();
+		ValueDeterminer* vd = nullptr;
+		auto it = obj->blueprint->mappedValueTags.find(valueTag);
+		if (it != obj->blueprint->mappedValueTags.end())
+			vd = it->second;
+		else
+			vd = ctx->server->gameSet->valueTags[valueTag].get();
 		if (!vd) return 0.0f;
 		auto _ = ctx->self.change(obj);
 		return vd->eval(ctx);
@@ -508,6 +513,22 @@ struct ValueNumReferencers : ValueDeterminer {
 	}
 };
 
+struct ValueIndexedItemValue : CommonEval<ValueIndexedItemValue, ValueDeterminer> {
+	int item;
+	std::unique_ptr<ValueDeterminer> index;
+	std::unique_ptr<ObjectFinder> finder;
+	template<typename CTX> float common_eval(CTX* ctx) {
+		if (CTX::AnyGO* obj = finder->getFirst(ctx))
+			return obj->getIndexedItem(item, (int)index->eval(ctx));
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		item = gs.items.readIndex(gsf);
+		index.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -545,6 +566,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_BUILDING_TYPE: vd = new ValueBuildingType; break;
 	case Tags::VALUE_BUILDING_TYPE_OPERAND: vd = new ValueBuildingType; break;
 	case Tags::VALUE_NUM_REFERENCERS: vd = new ValueNumReferencers; break;
+	case Tags::VALUE_INDEXED_ITEM_VALUE: vd = new ValueIndexedItemValue; break;
 	default: vd = new ValueUnknown; break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));
@@ -684,6 +706,46 @@ struct EnodeIfThenElse : CommonEval<EnodeIfThenElse, TernaryEnode> {
 	}
 };
 
+// Quaternary equation nodes
+
+struct QuaternaryEnode : ValueDeterminer {
+	std::unique_ptr<ValueDeterminer> a, b, c, d;
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		a.reset(ReadEquationNode(gsf, gs));
+		b.reset(ReadEquationNode(gsf, gs));
+		c.reset(ReadEquationNode(gsf, gs));
+		d.reset(ReadEquationNode(gsf, gs));
+	}
+};
+
+struct EnodeFrontBackLeftRight : CommonEval<EnodeFrontBackLeftRight, QuaternaryEnode> {
+	std::unique_ptr<ObjectFinder> f_unit, f_target;
+	template<typename CTX> float common_eval(CTX* ctx) {
+		CTX::AnyGO* unit = f_unit->getFirst(ctx);
+		CTX::AnyGO* target = f_unit->getFirst(ctx);
+		if (!(unit && target))
+			return 0.0f;
+		Vector3 vec = unit->position - target->position;
+		if (std::abs(vec.z) > std::abs(vec.x)) {
+			// Front/back
+			if (vec.z >= 0.0f) return a->eval(ctx);
+			else return b->eval(ctx);
+		}
+		else {
+			// Left/right
+			if (vec.x < 0.0f) return c->eval(ctx);
+			else return d->eval(ctx);
+		}
+
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		f_unit.reset(ReadFinder(gsf, gs));
+		f_target.reset(ReadFinder(gsf, gs));
+		QuaternaryEnode::parse(gsf, gs);
+	}
+};
+
+
 ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	gsf.advanceLine();
@@ -718,6 +780,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_RANDOM_INTEGER: vd = new EnodeRandomInteger; break;
 			case Tags::ENODE_RANDOM_RANGE: vd = new EnodeRandomRange; break;
 			case Tags::ENODE_IF_THEN_ELSE: vd = new EnodeIfThenElse; break;
+			case Tags::ENODE_FRONT_BACK_LEFT_RIGHT: vd = new EnodeFrontBackLeftRight; break;
 			default: 
 				gsf.cursor = oldcur;
 				return ReadValueDeterminer(gsf, gs);

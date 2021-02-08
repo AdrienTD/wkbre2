@@ -29,15 +29,16 @@ void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
 	}
 }
 
-void ObjectCreation::run(ServerGameObject * creator)
+void ObjectCreation::run(ServerGameObject * creator, SrvScriptContext* ctx)
 {
 	ServerGameObject *created = Server::instance->createObject(typeToCreate);
-	SrvScriptContext ctx(Server::instance, creator);
-	auto _ = ctx.creator.change(creator);
-	created->setParent(controller->getFirst(&ctx));
-	OrientedPosition opos = createAt ? createAt->eval(&ctx) : OrientedPosition({ creator->position, creator->orientation });
+	//SrvScriptContext ctx(Server::instance, creator);
+	auto _0 = ctx->self.change(creator);
+	auto _1 = ctx->creator.change(creator);
+	created->setParent(controller->getFirst(ctx));
+	OrientedPosition opos = createAt ? createAt->eval(ctx) : OrientedPosition({ creator->position, creator->orientation });
 	created->setPosition(opos.position);
 	created->setOrientation(opos.rotation);
-	auto _2 = ctx.self.change(created);
-	postCreationSequence.run(&ctx);
+	auto _2 = ctx->self.change(created);
+	postCreationSequence.run(ctx);
 }

@@ -96,6 +96,8 @@ struct FinderController : CommonEval<FinderController, ObjectFinder> {
 
 struct FinderTarget : ObjectFinder {
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+		if (auto obj = ctx->target.get())
+			return { obj };
 		if (Order *order = ctx->self.get()->orderConfig.getCurrentOrder())
 			if (ServerGameObject *target = order->getCurrentTask()->target.get())
 				return { target };

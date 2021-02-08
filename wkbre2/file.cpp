@@ -19,6 +19,7 @@
 #include <io.h>
 #include <Windows.h>
 #include "util/util.h"
+#include <mutex>
 
 extern "C" {
 
@@ -147,6 +148,9 @@ void BCPReader::ExtractFile(int id, char **out, int *outsize, int extraBytes)
 {
 	uint i, s;
 	char *min, *mout, *ws; uint os, sws;
+
+	static std::mutex bcpmutex;
+	const std::lock_guard<std::mutex> bml(bcpmutex);
 
 	fseek(bcpfile, fent[id].offset, SEEK_SET);
 	s = fent[id].endos - fent[id].offset;
@@ -318,7 +322,7 @@ void BCPReader::listDirectories(const char *dn, std::vector<std::string> *gsl)
 	BCPDirectory *ad = getDirectory(dn);
 	if(!ad) return;
 	for(int i = 0; i < ad->ndirs; i++)
-		if (std::find_if(gsl->begin(), gsl->end(), [&](const std::string& s) { return !_stricmp(s.c_str(), ad->files[i].name.c_str()); }) == gsl->end())
+		if (std::find_if(gsl->begin(), gsl->end(), [&](const std::string& s) { return !_stricmp(s.c_str(), ad->dirs[i].name.c_str()); }) == gsl->end())
 			gsl->push_back(ad->dirs[i].name);
 }
 

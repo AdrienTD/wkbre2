@@ -11,6 +11,7 @@ struct GameSet;
 struct Command;
 struct Model;
 struct Reaction;
+struct ValueDeterminer;
 
 struct GameObjBlueprint {
 	struct BPAppearance {
@@ -38,6 +39,7 @@ struct GameObjBlueprint {
 	std::vector<Reaction*> intrinsicReactions;
 
 	std::map<int, GameObjBlueprint*> mappedTypeTags;
+	std::map<int, ValueDeterminer*> mappedValueTags;
 
 	Model* representAs = nullptr;
 
