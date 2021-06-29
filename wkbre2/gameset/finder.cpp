@@ -30,10 +30,14 @@ struct FinderUnknown : ObjectFinder {
 
 struct FinderSelf : ObjectFinder {
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
-		return { ctx->self.get() };
+		auto obj = ctx->self.get();
+		if (obj) return { obj };
+		else return {};
 	}
 	virtual std::vector<ClientGameObject*> eval(CliScriptContext* ctx) override {
-		return { ctx->self.get() };
+		auto obj = ctx->self.get();
+		if (obj) return { obj };
+		else return {};
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 	}
@@ -42,10 +46,14 @@ struct FinderSelf : ObjectFinder {
 struct FinderSpecificId : ObjectFinder {
 	uint32_t objid;
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
-		return { Server::instance->findObject(objid) };
+		auto obj = ctx->server->findObject(objid);
+		if (obj) return { obj };
+		else return {};
 	}
 	virtual std::vector<ClientGameObject*> eval(CliScriptContext* ctx) override {
-		return { Client::instance->findObject(objid) };
+		auto obj = ctx->client->findObject(objid);
+		if (obj) return { obj };
+		else return {};
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		objid = gsf.nextInt();
@@ -56,10 +64,14 @@ struct FinderSpecificId : ObjectFinder {
 
 struct FinderPlayer : ObjectFinder {
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
-		return { ctx->self.get()->getPlayer() };
+		auto obj = ctx->self.get()->getPlayer();
+		if (obj) return { obj };
+		else return {};
 	}
 	virtual std::vector<ClientGameObject*> eval(CliScriptContext* ctx) override {
-		return { ctx->self.get()->getPlayer() };
+		auto obj = ctx->self.get()->getPlayer();
+		if (obj) return { obj };
+		else return {};
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 	}

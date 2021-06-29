@@ -242,6 +242,14 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 								else if (tsktag == "START_SEQUENCE_EXECUTED") {
 									task.startSequenceExecuted = gsf.nextInt();
 								}
+								else if (tsktag == "DESTINATION") {
+									float x = gsf.nextFloat();
+									float z = gsf.nextFloat();
+									task.destination = Vector3(x, 0.0f, z);
+								}
+								else if (tsktag == "LAST_DESTINATION_VALID") {
+									task.lastDestinationValid = gsf.nextInt();
+								}
 								else if (tsktag == "END_TASK") {
 									break;
 								}
