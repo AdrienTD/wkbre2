@@ -207,17 +207,17 @@ struct ValueObjectType : CommonEval<ValueObjectType, ValueDeterminer> {
 	}
 };
 
-struct ValueDistanceBetween : ValueDeterminer {
+struct ValueDistanceBetween : CommonEval<ValueDistanceBetween, ValueDeterminer> {
 	bool takeHorizontal, takeVertical;
 	std::unique_ptr<ObjectFinder> fnd1, fnd2;
-	Vector3 centre(const std::vector<ServerGameObject*> &vec) {
+	template<typename T> Vector3 centre(const std::vector<T*> &vec) {
 		if (vec.empty()) return {};
 		Vector3 sum;
-		for (ServerGameObject *obj : vec)
+		for (T *obj : vec)
 			sum += obj->position;
 		return sum / vec.size();
 	}
-	virtual float eval(SrvScriptContext* ctx) override {
+	template<typename CTX> float common_eval(CTX* ctx) {
 		Vector3 v = centre(fnd1->eval(ctx)) - centre(fnd2->eval(ctx));
 		float dist = 0.0f;
 		if (takeHorizontal) dist += v.x * v.x + v.z * v.z;

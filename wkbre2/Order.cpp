@@ -6,6 +6,7 @@
 #include "util/GSFileParser.h"
 #include "gameset/finder.h"
 #include "gameset/ScriptContext.h"
+#include "gameset/gameset.h"
 
 void Order::init()
 {
@@ -205,8 +206,19 @@ void Task::process()
 				if (!proximitySatisfied) {
 					proximitySatisfied = true;
 					blueprint->proximitySatisfiedSequence.run(order->gameObject);
-					if(blueprint->defaultAnim != -1)
-						go->setAnimation(blueprint->defaultAnim);
+					//
+					int animtoplay = -1;
+					for (const auto& ea : blueprint->equAnims) {
+						SrvScriptContext ctx(Server::instance, this->order->gameObject);
+						if (Server::instance->gameSet->equations[ea.first]->booleval(&ctx)) {
+							animtoplay = ea.second;
+							break;
+						}
+					}
+					if (animtoplay == -1)
+						animtoplay = blueprint->defaultAnim;
+					if (animtoplay != -1)
+						go->setAnimation(animtoplay);
 				}
 			}
 			else {

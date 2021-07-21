@@ -72,8 +72,25 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 		else if (tag == "PROXIMITY_SATISFIED_SEQUENCE")
 			this->proximitySatisfiedSequence.init(gsf, gs, "END_PROXIMITY_SATISFIED_SEQUENCE");
 		else if (tag == "PLAY_ANIMATION") {
-			if (gsf.nextString() == "TAG")
+			auto animtype = gsf.nextString();
+			if (animtype == "TAG")
 				this->defaultAnim = gs.animations.readIndex(gsf);
+			else if(animtype == "FROM_SELECTION") {
+				gsf.advanceLine();
+				while (!gsf.eof) {
+					auto tag = gsf.nextTag();
+					if (tag == "ON_EQUATION_SUCCESS") {
+						int equ = gs.equations.readIndex(gsf);
+						int anim = gs.animations.readIndex(gsf);
+						this->equAnims.emplace_back(equ, anim);
+					}
+					else if (tag == "DEFAULT_ANIMATION")
+						this->defaultAnim = gs.animations.readIndex(gsf);
+					else if (tag == "END_PLAY_ANIMATION")
+						break;
+					gsf.advanceLine();
+				}
+			}
 		}
 		else if (tag == "USE_PREVIOUS_TASK_TARGET")
 			usePreviousTaskTarget = true;

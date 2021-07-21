@@ -188,7 +188,8 @@ struct ActionPlayAnimationIfIdle : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		auto objs = finder->eval(ctx);
 		for (ServerGameObject *obj : objs) {
-			obj->setAnimation(animationIndex);
+			if (!obj->orderConfig.getCurrentOrder())
+				obj->setAnimation(animationIndex);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {

@@ -403,6 +403,12 @@ void ServerGameObject::setOrientation(const Vector3 & orientation)
 
 void ServerGameObject::setSubtypeAndAppearance(int new_subtype, int new_appearance)
 {
+	if (this->blueprint->subtypes[new_subtype].appearances.count(new_appearance) == 0)
+		new_appearance = this->appearance;
+
+	if (new_subtype == this->subtype && new_appearance == this->appearance)
+		return;
+
 	this->subtype = new_subtype;
 	this->appearance = new_appearance;
 

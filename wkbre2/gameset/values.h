@@ -16,6 +16,7 @@ struct ValueDeterminer {
 	virtual float eval(SrvScriptContext* ctx) = 0;
 	virtual float eval(CliScriptContext* ctx);
 	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
+	template<typename CTX> bool booleval(CTX* ctx) { return eval(ctx) > 0.0f; }
 };
 
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs);

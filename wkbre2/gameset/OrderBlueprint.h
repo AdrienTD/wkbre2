@@ -41,6 +41,7 @@ struct TaskBlueprint {
 	ValueDeterminer *proximityRequirement = nullptr;
 	ActionSequence proximitySatisfiedSequence;
 
+	std::vector<std::pair<int, int>> equAnims;
 	int defaultAnim = -1;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
