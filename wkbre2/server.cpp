@@ -560,7 +560,7 @@ void ServerGameObject::setIndexedItem(int item, int index, float value)
 	// I don't think there is use by the client for indexed items, so no need to send a packet for now
 }
 
-void ServerGameObject::updatePosition(const Vector3 & newposition)
+void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;
 	position = newposition;
@@ -578,8 +578,15 @@ void ServerGameObject::updatePosition(const Vector3 & newposition)
 				auto &vec = server->tileObjList[tileIndex];
 				vec.erase(std::find(vec.begin(), vec.end(), this));
 			}
-			if (newtileIndex != -1)
+			if (newtileIndex != -1) {
+				if (events) {
+					for (auto& no : server->tileObjList[newtileIndex]) {
+						if (no)
+							no->sendEvent(Tags::PDEVENT_ON_SHARE_TILE, this);
+					}
+				}
 				server->tileObjList[newtileIndex].push_back(this);
+			}
 			tileIndex = newtileIndex;
 		}
 	}
@@ -742,7 +749,7 @@ void Server::tick()
 		if (obj->movement.isMoving()) {
 			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
 			newpos.y = terrain->getHeight(obj->position.x, obj->position.z);
-			obj->updatePosition(newpos);
+			obj->updatePosition(newpos, true);
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
 		}

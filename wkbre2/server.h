@@ -55,7 +55,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void enable();
 	void setIndexedItem(int item, int index, float value);
 
-	void updatePosition(const Vector3 &newposition);
+	void updatePosition(const Vector3 &newposition, bool events = false);
 };
 
 struct Server : CommonGameState<Server, ServerGameObject>
