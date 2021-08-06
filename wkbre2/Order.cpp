@@ -112,12 +112,37 @@ void Task::start()
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
 	if (this->blueprint->usePreviousTaskTarget)
-		this->setTarget(this->order->tasks[this->id - 1]->target.get());
+		if (this->id > 0)
+			this->setTarget(this->order->tasks[this->id - 1]->target.get());
 	else if (!this->target && blueprint->taskTarget) {
 		SrvScriptContext ctx(Server::instance, this->order->gameObject);
 		this->setTarget(blueprint->taskTarget->getFirst(&ctx)); // FIXME: that would override the order's target!!!
 	}
 	this->startSequenceExecuted = false; // is this correct?
+
+	if (blueprint->classType == Tags::ORDTSKTYPE_MISSILE) {
+		SrvScriptContext ssc{ Server::instance, this->order->gameObject };
+		float speed = this->order->gameObject->blueprint->missileSpeed->eval(&ssc);
+
+		// compute initial velocity such that the missile hits the target in its trajectory
+		//Vector3 hvec = (this->target->position - this->order->gameObject->position);
+		//hvec.y = 0.0f;
+		//const Vector3 &pos_i = this->order->gameObject->position;
+		//float y_i = pos_i.y, y_b = this->target->position.y;
+		//float b = hvec.len2xz();
+		//float vy = (y_b - y_i - 0.5f * (-9.81f) * b * b) / b;
+		////float vh = std::sqrt(speed * speed - vy * vy);
+
+		//this->msInitialVelocity = hvec.normal2xz() * speed + Vector3(0, vy, 0);
+		//this->msInitialPosition = pos_i;
+		//this->msStartTime = Server::instance->timeManager.currentTime;
+		//this->order->gameObject->startTrajectory(msInitialPosition, msInitialVelocity, msStartTime);
+
+		this->msInitialVelocity = (this->target->position - this->order->gameObject->position).normal() * speed;
+		this->msInitialPosition = this->order->gameObject->position;
+		this->msStartTime = Server::instance->timeManager.currentTime;
+		this->order->gameObject->startTrajectory(msInitialPosition, msInitialVelocity, msStartTime);
+	}
 }
 
 void Task::suspend()

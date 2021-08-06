@@ -54,6 +54,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void disable();
 	void enable();
 	void setIndexedItem(int item, int index, float value);
+	void startTrajectory(const Vector3& initPos, const Vector3& initVel, float startTime);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 };

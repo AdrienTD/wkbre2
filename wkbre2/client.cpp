@@ -27,6 +27,9 @@ void Client::tick()
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
 		}
+		if (obj->trajectory.isMoving()) {
+			obj->position = obj->trajectory.getPosition(timeManager.currentTime);
+		}
 		for (auto &it : obj->children)
 			for (ClientGameObject *obj : it.second)
 				rec(obj, rec);
@@ -321,6 +324,13 @@ void Client::tick()
 			case NETCLIMSG_STOP_CAMERA_PATH: {
 				cameraMode = 0;
 				cameraCurrentPath = nullptr;
+				break;
+			}
+			case NETCLIMSG_OBJECT_TRAJECTORY_STARTED: {
+				uint32_t objid; Vector3 initPos, initVel; float startTime;
+				br.readTo(objid, initPos, initVel, startTime);
+				ClientGameObject* obj = findObject(objid);
+				obj->trajectory.start(initPos, initVel, startTime);
 				break;
 			}
 			}

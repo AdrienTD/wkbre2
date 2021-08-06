@@ -11,6 +11,7 @@
 #include <tuple>
 #include "values.h"
 #include <cmath>
+#include "ScriptContext.h"
 
 namespace {
 	OrientedPosition PosFromObjVec(const std::vector<ServerGameObject*> &vec) {
@@ -261,6 +262,14 @@ struct PDMatchingOffset : PositionDeterminer {
 	}
 };
 
+struct PDFiringAttachmentPoint : PositionDeterminer {
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		return ctx->self.get()->position + Vector3(0, 1, 0);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	}
+};
+
 PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet & gs)
 {
 	PositionDeterminer *pos;
@@ -280,6 +289,7 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet 
 	case Tags::POSITION_NEAREST_ATTACHMENT_POINT: pos = new PDNearestAttachmentPoint; break;
 	case Tags::POSITION_SPAWN_TILE_POSITION: pos = new PDSpawnTilePosition; break;
 	case Tags::POSITION_MATCHING_OFFSET: pos = new PDMatchingOffset; break;
+	case Tags::POSITION_FIRING_ATTACHMENT_POINT: pos = new PDFiringAttachmentPoint; break;
 	default: pos = new PDUnknown; break;
 	}
 	pos->parse(gsf, gs);

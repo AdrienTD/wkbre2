@@ -126,6 +126,10 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			mappedValueTags[vt] = ReadValueDeterminer(gsf, *gameSet);
 			break;
 		}
+		case Tags::CBLUEPRINT_MISSILE_SPEED: {
+			missileSpeed = ReadValueDeterminer(gsf, *gameSet);
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

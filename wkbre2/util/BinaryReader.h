@@ -31,4 +31,18 @@ struct BinaryReader
 	inline void seek(int offset) { pnt += offset; }
 	BinaryReader(void* ptr) : pnt((const char*)ptr) {}
 	BinaryReader(const char* ptr) : pnt(ptr) {}
+
+	inline void readTo(uint8_t& val) { val = readUint8(); }
+	inline void readTo(uint16_t& val) { val = readUint16(); }
+	inline void readTo(uint32_t& val) { val = readUint32(); }
+	inline void readTo(float& val) { val = readFloat(); }
+	inline void readTo(std::string& val) { val = readStringZ(); }
+	inline void readTo(Vector3& val) { val = readVector3(); }
+	template<typename T, typename ... Args> void readTo(T& val, Args& ... rest) { readTo(val); readTo(rest...); }
+	template<typename T> std::tuple<T> readValues() { T val; readTo(val); return { val }; }
+	template<typename T, typename ... Args> std::tuple<T, Args...> readValues() {
+		T val;
+		readTo(val);
+		return std::tuple_cat(std::tie(val), readValues<Args...>());
+	}
 };

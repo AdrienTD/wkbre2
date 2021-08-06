@@ -8,6 +8,7 @@
 #include "util/vecmat.h"
 #include "Movement.h"
 #include "GameObjectRef.h"
+#include "Trajectory.h"
 
 struct GameObjBlueprint;
 
@@ -32,6 +33,7 @@ template<class AnyGameObject> struct CommonGameObject {
 	int animationIndex = 0, animationVariant = 0;
 
 	Movement movement;
+	Trajectory trajectory;
 
 	enum Flags {
 		fSelectable = 1,

@@ -38,6 +38,7 @@ enum NetClientMessages {
 	NETCLIMSG_RESTORE_CAMERA_POSITION,
 	NETCLIMSG_PLAY_CAMERA_PATH,
 	NETCLIMSG_STOP_CAMERA_PATH,
+	NETCLIMSG_OBJECT_TRAJECTORY_STARTED,
 };
 
 enum NetServerMessages {
@@ -71,10 +72,10 @@ struct NetPacketWriter {
 	void writeValues(uint8_t a) { writeUint8(a); }
 	void writeValues(uint16_t a) { writeUint16(a); }
 	void writeValues(uint32_t a) { writeUint32(a); }
-	void writeValues(float a) { writeUint8(a); }
+	void writeValues(float a) { writeFloat(a); }
 	void writeValues(const std::string & str) { writeStringZ(str); }
 	void writeValues(const Vector3 &vec) { writeVector3(vec); }
-	template<typename T, typename ... Args> void writeValues(T val, Args ... rest) { writeValues(val); writeValues(rest); }
+	template<typename T, typename ... Args> void writeValues(T val, Args ... rest) { writeValues(val); writeValues(rest...); }
 
 	std::string getString() const { return std::string((char*)data, size()); }
 

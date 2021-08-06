@@ -972,6 +972,20 @@ struct ActionDecreaseIndexedItem : Action {
 	}
 };
 
+struct ActionCopyFacingOf : Action {
+	std::unique_ptr<ObjectFinder> objTo, objFrom;
+	virtual void run(SrvScriptContext* ctx) override {
+		if (auto* from = objFrom->getFirst(ctx)) {
+			for (auto* to : objTo->eval(ctx))
+				to->setOrientation(from->orientation);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		objTo.reset(ReadFinder(gsf, gs));
+		objFrom.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1036,6 +1050,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_SET_INDEXED_ITEM: action = new ActionSetIndexedItem; break;
 	case Tags::ACTION_INCREASE_INDEXED_ITEM: action = new ActionIncreaseIndexedItem; break;
 	case Tags::ACTION_DECREASE_INDEXED_ITEM: action = new ActionDecreaseIndexedItem; break;
+	case Tags::ACTION_COPY_FACING_OF: action = new ActionCopyFacingOf; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND:

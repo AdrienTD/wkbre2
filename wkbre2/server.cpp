@@ -560,6 +560,14 @@ void ServerGameObject::setIndexedItem(int item, int index, float value)
 	// I don't think there is use by the client for indexed items, so no need to send a packet for now
 }
 
+void ServerGameObject::startTrajectory(const Vector3& initPos, const Vector3& initVel, float startTime)
+{
+	trajectory.start(initPos, initVel, startTime);
+	NetPacketWriter npw{ NETCLIMSG_OBJECT_TRAJECTORY_STARTED };
+	npw.writeValues(this->id, initPos, initVel, startTime);
+	Server::instance->sendToAll(npw);
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;
@@ -752,6 +760,9 @@ void Server::tick()
 			obj->updatePosition(newpos, true);
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
+		}
+		if (obj->trajectory.isMoving()) {
+			obj->updatePosition(obj->trajectory.getPosition(timeManager.currentTime));
 		}
 	}
 

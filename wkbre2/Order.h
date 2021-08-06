@@ -63,6 +63,7 @@ struct Task {
 	SrvGORef target;
 	Vector3 destination;
 	float proximity = -1.0f; bool proximitySatisfied = false, lastDestinationValid = false;
+	float msStartTime; Vector3 msInitialPosition, msInitialVelocity;
 
 	Task(int id, TaskBlueprint *blueprint, Order *order);
 	~Task();
