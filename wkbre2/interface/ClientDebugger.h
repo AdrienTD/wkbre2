@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../GameObjectRef.h"
+#include "GameSetDebugger.h"
 
 struct Client;
 struct ClientGameObject;
@@ -16,4 +17,5 @@ public:
 	void selectObject(ClientGameObject *obj) { selectedObject = obj; }
 private:
 	CliGORef selectedObject;
+	GameSetDebugger gsDebugger;
 };

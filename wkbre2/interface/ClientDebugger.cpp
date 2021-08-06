@@ -150,4 +150,9 @@ void ClientDebugger::draw()
 	}
 
 	client->timeManager.imgui();
+
+	if (client->gameSet) {
+		gsDebugger.setGameSet(client->gameSet);
+		gsDebugger.draw();
+	}
 }

@@ -127,6 +127,7 @@ struct FinderTarget : ObjectFinder {
 struct FinderResults : CommonEval<FinderResults, ObjectFinder> {
 	int ofd;
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
+		if (ofd == -1) return {}; // TODO: Remove this after implementing exception handling
 		return CTX::Program::instance->gameSet->objectFinderDefinitions[ofd]->eval(ctx);
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {

@@ -31,7 +31,13 @@ template<typename T> struct GSBlueprintList {
 	const T & operator[](size_t index) const { return blueprints[index]; }
 	size_t size() const { return names.size(); }
 	void pass() { blueprints.resize(names.size()); }
-	int readIndex(GSFileParser &gsf) const { return names.getIndex(gsf.nextString(true)); }
+	int readIndex(GSFileParser& gsf) const {
+		auto str = gsf.nextString(true);
+		auto x = names.getIndex(str);
+		if (x == -1)
+			printf("WARNING: Name \"%s\" not found at line %i!\n", str.c_str(), gsf.linenum);
+		return x;
+	}
 	T & readRef(GSFileParser &gsf) { return blueprints[readIndex(gsf)]; }
 	const T & readRef(GSFileParser &gsf) const { return blueprints[readIndex(gsf)]; }
 	T* readPtr(GSFileParser& gsf) { int x = readIndex(gsf); return (x != -1) ? &blueprints[x] : nullptr; }
