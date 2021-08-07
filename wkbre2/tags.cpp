@@ -1,5 +1,5 @@
 #include "tags.h" 
-TagDict<70> Tags::GAMESET_tagDict({
+TagDict<71> Tags::GAMESET_tagDict({
     "3D_CLIP",
     "ACTION_SEQUENCE",
     "ANIMATION_TAG",
@@ -59,6 +59,7 @@ TagDict<70> Tags::GAMESET_tagDict({
     "PROP",
     "PROP_EXTENSION",
     "REACTION",
+    "SOUND",
     "SOUND_TAG",
     "TASK",
     "TASK_CATEGORY",
@@ -80,7 +81,7 @@ TagDict<5> Tags::CCOMMAND_tagDict({
     "START_SEQUENCE",
 });
 
-TagDict<23> Tags::CBLUEPRINT_tagDict({
+TagDict<24> Tags::CBLUEPRINT_tagDict({
     "BLUEPRINT_TOOLTIP",
     "BUILDING_TYPE",
     "CAN_SPAWN",
@@ -93,6 +94,7 @@ TagDict<23> Tags::CBLUEPRINT_tagDict({
     "INTRINSIC_REACTION",
     "ITEM",
     "MAP_SOUND_TAG",
+    "MAP_SOUND_TAG_TO",
     "MAP_TYPE_TAG",
     "MISSILE_SPEED",
     "MOVEMENT_BAND",

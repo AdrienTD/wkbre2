@@ -191,6 +191,15 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_SOUND_TAG: {
+				soundTags.names.insertString(gsf.nextString(true));
+				break;
+			}
+			case Tags::GAMESET_SOUND: {
+				sounds.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -347,6 +356,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				cp.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_SOUND: {
+				GSSound& snd = sounds.readRef(gsf);
+				snd.parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -407,6 +421,8 @@ void GameSet::load(const char * fn)
 	packages.pass();
 	clips.pass();
 	cameraPaths.pass();
+	soundTags.pass();
+	sounds.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

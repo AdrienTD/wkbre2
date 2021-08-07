@@ -32,6 +32,7 @@
 #include "interface/ClientInterface.h"
 #include "scene.h"
 #include "SDL_timer.h"
+#include "SoundPlayer.h"
 
 void Test_GameSet()
 {
@@ -726,6 +727,20 @@ void Test_Scene()
 	}
 }
 
+void Test_SoundPlayer() {
+	LoadBCP("data.bcp");
+
+	SoundPlayer* player = SoundPlayer::getSoundPlayer();
+	player->init();
+	player->playSound(R"(Warrior Kings Game Set\Sounds\Gongs\gong_3.wav)");
+	Sleep(500);
+	player->playSound(R"(Warrior Kings Game Set\Sounds\Cog\cog_1.wav)");
+	player->playSound(R"(Warrior Kings Game Set\Sounds\Death\death_1_1.wav)");
+	printf("Press enter to stop\n");
+	getchar();
+	player->deinit();
+}
+
 const std::vector<std::pair<void(*)(), const char*> > testList = {
 {Test_GameSet, "Game set loading"},
 {Test_GSFileParser, "GSF Parser"},
@@ -741,7 +756,8 @@ const std::vector<std::pair<void(*)(), const char*> > testList = {
 {Test_EnetServer, "Enet Server"},
 {Test_EnetClient, "Enet Client"},
 {Test_Anim, "Anim"},
-{Test_Scene, "Scene"}
+{Test_Scene, "Scene"},
+{Test_SoundPlayer, "Sound Player"}
 };
 
 void LaunchTest()

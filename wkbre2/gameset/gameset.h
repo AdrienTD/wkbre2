@@ -21,6 +21,7 @@
 #include "Package.h"
 #include "3DClip.h"
 #include "cameraPath.h"
+#include "Sound.h"
 
 struct GameObjBlueprint;
 
@@ -80,6 +81,8 @@ struct GameSet
 	GSBlueprintList<GSPackage> packages;
 	GSBlueprintList<GS3DClip> clips;
 	GSBlueprintList<CameraPath> cameraPaths;
+	GSBlueprintList<void> soundTags;
+	GSBlueprintList<GSSound> sounds;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

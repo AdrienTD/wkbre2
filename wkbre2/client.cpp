@@ -9,6 +9,7 @@
 #include <SDL_timer.h>
 #include "gameset/ScriptContext.h"
 #include <cmath>
+#include "SoundPlayer.h"
 
 Client * Client::instance = nullptr;
 
@@ -80,6 +81,9 @@ void Client::tick()
 			camera.orientation = ori;
 		}
 	}
+
+	// TEMPORARY
+	SoundPlayer::getSoundPlayer()->setListenerPosition(camera.position, camera.direction.normal());
 
 	if (serverLink) {
 		int pcnt = 1000000; //100;

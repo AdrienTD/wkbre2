@@ -6,6 +6,8 @@
 #include "../server.h"
 #include "ScriptContext.h"
 
+#include "../SoundPlayer.h"
+
 struct ActionUnknown : Action {
 	std::string name;
 	virtual void run(SrvScriptContext* ctx) override {
@@ -986,6 +988,57 @@ struct ActionCopyFacingOf : Action {
 	}
 };
 
+struct ActionPlaySound : Action {
+	int soundTag;
+	std::unique_ptr<ObjectFinder> objFrom, objTo;
+	virtual void run(SrvScriptContext* ctx) override {
+		// TODO: Check for multiple objects
+		if (auto* from = objFrom->getFirst(ctx)) {
+			if (auto* to = objTo->getFirst(ctx)) {
+				const std::vector<GameObjBlueprint::SoundRef>* sndVars = nullptr;
+				auto it = from->blueprint->soundMap.find(soundTag);
+				if (it != from->blueprint->soundMap.end()) {
+					sndVars = &it->second;
+				}
+				else {
+					printf("from->subtype: %i\n", from->subtype);
+					auto& pssm = from->blueprint->subtypes.at(from->subtype).soundMap;
+					it = pssm.find(soundTag);
+					if (it != pssm.end())
+						sndVars = &it->second;
+				}
+				if (sndVars) {
+					const std::string* path = nullptr;
+					float refDist = 1.0f; float maxDist = 100.0f;
+					const GameObjBlueprint::SoundRef& sndref = sndVars->at(rand() % sndVars->size());
+					if (sndref.soundBlueprint != -1) {
+						GSSound& snd = Server::instance->gameSet->sounds[sndref.soundBlueprint];
+						refDist = snd.gradientStartDist;
+						maxDist = snd.muteDist;
+						if (snd.files.size() > 0)
+							path = &snd.files[rand() % snd.files.size()];
+					}
+					else {
+						path = &sndref.filePath;
+					}
+					if (path) {
+						std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + *path;
+						if (to->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
+							SoundPlayer::getSoundPlayer()->playSound(gfspath);
+						else
+							SoundPlayer::getSoundPlayer()->playSound3D(gfspath, to->position, refDist, maxDist);
+					}
+				}
+			}
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		soundTag = gs.soundTags.readIndex(gsf);
+		objFrom.reset(ReadFinder(gsf, gs));
+		objTo.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1051,9 +1104,9 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_INCREASE_INDEXED_ITEM: action = new ActionIncreaseIndexedItem; break;
 	case Tags::ACTION_DECREASE_INDEXED_ITEM: action = new ActionDecreaseIndexedItem; break;
 	case Tags::ACTION_COPY_FACING_OF: action = new ActionCopyFacingOf; break;
+	case Tags::ACTION_PLAY_SOUND: action = new ActionPlaySound; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
-	case Tags::ACTION_PLAY_SOUND:
 	case Tags::ACTION_PLAY_SOUND_AT_POSITION:
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT:
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT_BETWEEN:
@@ -1095,6 +1148,10 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION:
 	case Tags::ACTION_LOCK_TIME:
 	case Tags::ACTION_UNLOCK_TIME:
+	case Tags::ACTION_ENABLE_DIPLOMATIC_REPORT_WINDOW:
+	case Tags::ACTION_DISABLE_DIPLOMATIC_REPORT_WINDOW:
+	case Tags::ACTION_ENABLE_TRIBUTES_WINDOW:
+	case Tags::ACTION_DISABLE_TRIBUTES_WINDOW:
 		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown(name); break;

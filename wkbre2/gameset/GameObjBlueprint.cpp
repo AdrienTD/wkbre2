@@ -93,6 +93,18 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 						gsf.advanceLine();
 					}
 				}
+				else if (apphead == "MAP_SOUND_TAG") {
+					int st = gameSet->soundTags.readIndex(gsf);
+					int unk1 = gsf.nextInt();
+					auto unk2 = gsf.nextString();
+					ps.soundMap[st].push_back(gsf.nextString(true));
+				}
+				else if (apphead == "MAP_SOUND_TAG_TO") {
+					int st = gameSet->soundTags.readIndex(gsf);
+					int unk1 = gsf.nextInt();
+					auto unk2 = gsf.nextString();
+					ps.soundMap[st].push_back(gameSet->sounds.readIndex(gsf));
+				}
 				gsf.advanceLine();
 			}
 			// If there is no Default appearance, make one
@@ -128,6 +140,22 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 		}
 		case Tags::CBLUEPRINT_MISSILE_SPEED: {
 			missileSpeed = ReadValueDeterminer(gsf, *gameSet);
+			break;
+		}
+		case Tags::CBLUEPRINT_MAP_SOUND_TAG: {
+			int st = gameSet->soundTags.readIndex(gsf);
+			int unk1 = gsf.nextInt();
+			//assert(unk1 == 1);
+			auto unk2 = gsf.nextString();
+			//assert(unk2 == "NEAR");
+			soundMap[st].push_back(gsf.nextString(true));
+			break;
+		}
+		case Tags::CBLUEPRINT_MAP_SOUND_TAG_TO: {
+			int st = gameSet->soundTags.readIndex(gsf);
+			int unk1 = gsf.nextInt();
+			auto unk2 = gsf.nextString();
+			soundMap[st].push_back(gameSet->sounds.readIndex(gsf));
 			break;
 		}
 		}

@@ -19,9 +19,17 @@ struct GameObjBlueprint {
 		std::map<int, std::vector<Model*>> animations;
 	};
 
+	struct SoundRef {
+		std::string filePath;
+		int soundBlueprint = -1;
+		SoundRef(std::string&& name) : filePath(name) {}
+		SoundRef(int sndBp) : soundBlueprint(sndBp) {}
+	};
+
 	struct PhysicalSubtype {
 		std::string dir;
 		std::map<int, BPAppearance> appearances;
+		std::map<int, std::vector<SoundRef>> soundMap;
 	};
 
 	int bpClass, bpId;
@@ -44,6 +52,8 @@ struct GameObjBlueprint {
 	Model* representAs = nullptr;
 
 	ValueDeterminer* missileSpeed = nullptr;
+
+	std::map<int, std::vector<SoundRef>> soundMap;
 
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {
