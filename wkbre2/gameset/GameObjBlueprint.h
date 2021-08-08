@@ -54,6 +54,7 @@ struct GameObjBlueprint {
 	ValueDeterminer* missileSpeed = nullptr;
 
 	std::map<int, std::vector<SoundRef>> soundMap;
+	std::map<int, std::vector<std::string>> musicMap;
 
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {

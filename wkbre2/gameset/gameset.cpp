@@ -200,6 +200,10 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_MUSIC_TAG: {
+				musicTags.names.insertString(gsf.nextString(true));
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -423,6 +427,7 @@ void GameSet::load(const char * fn)
 	cameraPaths.pass();
 	soundTags.pass();
 	sounds.pass();
+	musicTags.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

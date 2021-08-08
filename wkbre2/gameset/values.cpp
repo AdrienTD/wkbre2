@@ -12,6 +12,7 @@
 #include "CommonEval.h"
 #include "position.h"
 #include "ScriptContext.h"
+#include "../SoundPlayer.h"
 
 namespace {
 	float RandomFromZeroToOne() { return (float)(rand() & 0xFFFF) / 32768.0f; }
@@ -386,9 +387,13 @@ struct ValueAngleBetween : ValueDeterminer {
 struct ValueIsMusicPlaying : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual float eval(SrvScriptContext* ctx) override {
-		// TODO
-		// For now, let's make it return 1 so that the Maestro army won't try to constantly change the music
-		return 1.0f;
+		ServerGameObject* obj = finder->getFirst(ctx);
+		if (!obj) return 0.0f;
+		ServerGameObject* player = obj->getPlayer();
+		if (player->id == 1027)
+			if (SoundPlayer::getSoundPlayer()->isMusicPlaying())
+				return 1.0f;
+		return 0.0f;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));

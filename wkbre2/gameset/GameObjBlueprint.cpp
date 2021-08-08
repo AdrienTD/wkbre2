@@ -158,6 +158,11 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			soundMap[st].push_back(gameSet->sounds.readIndex(gsf));
 			break;
 		}
+		case Tags::CBLUEPRINT_MAP_MUSIC_TAG: {
+			int mt = gameSet->musicTags.readIndex(gsf);
+			musicMap[mt].push_back(gsf.nextString(true));
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

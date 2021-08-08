@@ -731,14 +731,18 @@ void Test_SoundPlayer() {
 	LoadBCP("data.bcp");
 
 	SoundPlayer* player = SoundPlayer::getSoundPlayer();
-	player->init();
+	std::string music = R"(Warrior Kings Game Set\Sounds\Map Briefing\Map Music 1.mp2)";
+	for (int i = 1; i <= 4; i++) {
+		music[53] = '0' + i;
+		player->playMusic(music);
+		Sleep(4000);
+	}
 	player->playSound(R"(Warrior Kings Game Set\Sounds\Gongs\gong_3.wav)");
 	Sleep(500);
 	player->playSound(R"(Warrior Kings Game Set\Sounds\Cog\cog_1.wav)");
 	player->playSound(R"(Warrior Kings Game Set\Sounds\Death\death_1_1.wav)");
 	printf("Press enter to stop\n");
 	getchar();
-	player->deinit();
 }
 
 const std::vector<std::pair<void(*)(), const char*> > testList = {

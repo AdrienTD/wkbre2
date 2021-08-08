@@ -83,6 +83,7 @@ struct GameSet
 	GSBlueprintList<CameraPath> cameraPaths;
 	GSBlueprintList<void> soundTags;
 	GSBlueprintList<GSSound> sounds;
+	GSBlueprintList<void> musicTags;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

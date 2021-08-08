@@ -1009,24 +1009,26 @@ struct ActionPlaySound : Action {
 				}
 				if (sndVars) {
 					const std::string* path = nullptr;
-					float refDist = 1.0f; float maxDist = 100.0f;
+					float refDist = 30.0f; float maxDist = 300.0f;
 					const GameObjBlueprint::SoundRef& sndref = sndVars->at(rand() % sndVars->size());
 					if (sndref.soundBlueprint != -1) {
 						GSSound& snd = Server::instance->gameSet->sounds[sndref.soundBlueprint];
 						refDist = snd.gradientStartDist;
-						maxDist = snd.muteDist;
+						//maxDist = snd.muteDist;
 						if (snd.files.size() > 0)
 							path = &snd.files[rand() % snd.files.size()];
 					}
-					else {
+					else if(!sndref.filePath.empty()) {
 						path = &sndref.filePath;
 					}
 					if (path) {
 						std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + *path;
 						if (to->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
 							SoundPlayer::getSoundPlayer()->playSound(gfspath);
-						else
+						else {
+							//float rolloff = (refDist / 0.1f - refDist) / (maxDist - refDist);
 							SoundPlayer::getSoundPlayer()->playSound3D(gfspath, to->position, refDist, maxDist);
+						}
 					}
 				}
 			}
@@ -1036,6 +1038,27 @@ struct ActionPlaySound : Action {
 		soundTag = gs.soundTags.readIndex(gsf);
 		objFrom.reset(ReadFinder(gsf, gs));
 		objTo.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionPlayMusic : Action {
+	int musicTag;
+	std::unique_ptr<ObjectFinder> fPlayer;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (auto* obj : fPlayer->eval(ctx)) {
+			auto* player = obj->getPlayer();
+			if (player->id == 1027) {
+				auto it = player->blueprint->musicMap.find(musicTag);
+				if (it != player->blueprint->musicMap.end()) {
+					size_t var = (size_t)rand() % it->second.size();
+					SoundPlayer::getSoundPlayer()->playMusic("Warrior Kings Game Set\\Sounds\\" + it->second[var]);
+				}
+			}
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		musicTag = gs.musicTags.readIndex(gsf);
+		fPlayer.reset(ReadFinder(gsf, gs));
 	}
 };
 
@@ -1105,6 +1128,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_DECREASE_INDEXED_ITEM: action = new ActionDecreaseIndexedItem; break;
 	case Tags::ACTION_COPY_FACING_OF: action = new ActionCopyFacingOf; break;
 	case Tags::ACTION_PLAY_SOUND: action = new ActionPlaySound; break;
+	case Tags::ACTION_PLAY_MUSIC: action = new ActionPlayMusic; break;
+	case Tags::ACTION_FORCE_PLAY_MUSIC: action = new ActionPlayMusic; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND_AT_POSITION:
@@ -1124,7 +1149,6 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_HIDE_MISSION_OBJECTIVES_ENTRY:
 	case Tags::ACTION_TRACK_OBJECT_POSITION_FROM_MISSION_OBJECTIVES_ENTRY:
 	case Tags::ACTION_STOP_INDICATING_POSITION_OF_MISSION_OBJECTIVES_ENTRY:
-	case Tags::ACTION_FORCE_PLAY_MUSIC:
 	case Tags::ACTION_ADOPT_APPEARANCE_FOR:
 	case Tags::ACTION_ADOPT_DEFAULT_APPEARANCE_FOR:
 	case Tags::ACTION_ACTIVATE_COMMISSION:
@@ -1141,7 +1165,6 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_EXIT_TO_MAIN_MENU:
 	case Tags::ACTION_CONQUER_LEVEL:
 	case Tags::ACTION_DISPLAY_LOAD_GAME_MENU:
-	case Tags::ACTION_PLAY_MUSIC:
 	case Tags::ACTION_SNAP_CAMERA_TO_POSITION:
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION:
 	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK:
