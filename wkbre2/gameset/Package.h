@@ -8,6 +8,7 @@ struct ObjectFinder;
 struct GSFileParser;
 struct GameSet;
 struct ServerGameObject;
+struct SrvScriptContext;
 
 struct GSPackage {
 	struct ItemModification {
@@ -20,5 +21,5 @@ struct GSPackage {
 	ObjectFinder* relatedParty = nullptr;
 
 	void parse(GSFileParser& gsf, GameSet& gs);
-	void send(ServerGameObject* obj, ServerGameObject* sender = nullptr);
+	void send(ServerGameObject* obj, SrvScriptContext* ctx);
 };

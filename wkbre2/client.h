@@ -79,6 +79,7 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	void sendStartLevelRequest();
 	void sendGameTextWindowButtonClicked(int gtwIndex, int buttonIndex);
 	void sendCameraPathEnded(int camPathIndex);
+	void sendGameSpeedChange(float nextSpeed);
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }
 

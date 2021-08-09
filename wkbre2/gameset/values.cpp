@@ -28,9 +28,11 @@ float ValueDeterminer::eval(CliScriptContext* ctx)
 }
 
 struct ValueUnknown : ValueDeterminer {
-	virtual float eval(SrvScriptContext* ctx) override { ferr("Unknown value determiner called from the Server!"); return 0.0f; }
-	virtual float eval(CliScriptContext* ctx) override { ferr("Unknown value determiner called from the Client!"); return 0.0f; }
+	std::string name;
+	virtual float eval(SrvScriptContext* ctx) override { ferr("Unknown value determiner %s called from the Server!", name.c_str()); return 0.0f; }
+	virtual float eval(CliScriptContext* ctx) override { ferr("Unknown value determiner %s called from the Client!", name.c_str()); return 0.0f; }
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+	ValueUnknown(const std::string& name) : name(name) {}
 };
 
 struct ValueConstant : ValueDeterminer {
@@ -534,10 +536,39 @@ struct ValueIndexedItemValue : CommonEval<ValueIndexedItemValue, ValueDeterminer
 	}
 };
 
+struct ValueWithinForwardArc : CommonEval<ValueWithinForwardArc, ValueDeterminer> {
+	std::unique_ptr<ObjectFinder> fCenter;
+	std::unique_ptr<ObjectFinder> fTarget;
+	std::unique_ptr<ValueDeterminer> vArcAngle;
+	std::unique_ptr<ValueDeterminer> vArcRadius;
+	template<typename CTX> float common_eval(CTX* ctx) {
+		auto* oCenter = fCenter->getFirst(ctx);
+		auto* oTarget = fTarget->getFirst(ctx);
+		float arcAngle = vArcAngle->eval(ctx);
+		float arcRadius = vArcRadius->eval(ctx);
+		Vector3 centerDir{ sinf(oCenter->orientation.y), 0.0f, -cosf(oCenter->orientation.y) };
+		Vector3 centerToTarget = oTarget->position - oCenter->position;
+		float dist = centerToTarget.len2xz();
+		if (dist > arcRadius)
+			return 0.0f;
+		if (dist <= 0.0f)
+			return 1.0f; // :thinking:
+		float alpha = std::acos(centerDir.dot(centerToTarget/dist));
+		return std::abs(alpha) < arcAngle;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		fCenter.reset(ReadFinder(gsf, gs));
+		fTarget.reset(ReadFinder(gsf, gs));
+		vArcAngle.reset(ReadValueDeterminer(gsf, gs));
+		vArcRadius.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
-	switch (Tags::VALUE_tagDict.getTagID(gsf.nextTag().c_str())) {
+	auto strtag = gsf.nextTag();
+	switch (Tags::VALUE_tagDict.getTagID(strtag.c_str())) {
 	case Tags::VALUE_CONSTANT: vd = new ValueConstant(gsf.nextFloat()); return vd;
 	case Tags::VALUE_DEFINED_VALUE: vd = new ValueConstant(gs.definedValues.at(gsf.nextString(true))); return vd;
 	case Tags::VALUE_ITEM_VALUE: vd = new ValueItemValue; break;
@@ -572,7 +603,8 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_BUILDING_TYPE_OPERAND: vd = new ValueBuildingType; break;
 	case Tags::VALUE_NUM_REFERENCERS: vd = new ValueNumReferencers; break;
 	case Tags::VALUE_INDEXED_ITEM_VALUE: vd = new ValueIndexedItemValue; break;
-	default: vd = new ValueUnknown; break;
+	case Tags::VALUE_WITHIN_FORWARD_ARC: vd = new ValueWithinForwardArc; break;
+	default: vd = new ValueUnknown(strtag); break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));
 	return vd;
@@ -711,6 +743,13 @@ struct EnodeIfThenElse : CommonEval<EnodeIfThenElse, TernaryEnode> {
 	}
 };
 
+struct EnodeIsBetween : CommonEval<EnodeIsBetween, TernaryEnode> {
+	template<typename CTX> float common_eval(CTX* ctx) {
+		float x = a->eval(ctx), y = b->eval(ctx), z = c->eval(ctx);
+		return (x > y && x < z) ? 1.0f : 0.0f;
+	}
+};
+
 // Quaternary equation nodes
 
 struct QuaternaryEnode : ValueDeterminer {
@@ -757,7 +796,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 	while (!gsf.eof) {
 		std::string strtag = gsf.nextTag();
 		if (strtag == "END_EQUATION")
-			return new ValueUnknown();
+			return new ValueUnknown("<empty EQUATION>");
 		else if (strtag == "ENODE") {
 			const char *oldcur = gsf.cursor;
 			ValueDeterminer *vd;
@@ -785,6 +824,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_RANDOM_INTEGER: vd = new EnodeRandomInteger; break;
 			case Tags::ENODE_RANDOM_RANGE: vd = new EnodeRandomRange; break;
 			case Tags::ENODE_IF_THEN_ELSE: vd = new EnodeIfThenElse; break;
+			case Tags::ENODE_IS_BETWEEN: vd = new EnodeIsBetween; break;
 			case Tags::ENODE_FRONT_BACK_LEFT_RIGHT: vd = new EnodeFrontBackLeftRight; break;
 			default: 
 				gsf.cursor = oldcur;

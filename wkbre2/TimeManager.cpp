@@ -41,7 +41,7 @@ void TimeManager::tick() {
 	if (elapsedSDLTime >= 1000)
 		elapsedSDLTime = 34;
 	previousTime = currentTime;
-	psCurrentTime += elapsedSDLTime;
+	psCurrentTime += (uint32_t)roundf(elapsedSDLTime * timeSpeed);
 	currentTime = (float)psCurrentTime / 1000.0f;
 	elapsedTime = currentTime - previousTime;
 }

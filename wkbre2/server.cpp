@@ -678,6 +678,15 @@ void Server::stopCameraPath(ServerGameObject* player)
 	sendToAll(msg);
 }
 
+void Server::setGameSpeed(float nextSpeed)
+{
+	timeManager.setSpeed(nextSpeed);
+	NetPacketWriter msg{ NETCLIMSG_GAME_SPEED_CHANGED };
+	msg.writeFloat(nextSpeed);
+	sendToAll(msg);
+	syncTime();
+}
+
 void Server::tick()
 {
 	timeManager.tick();
@@ -850,6 +859,10 @@ void Server::tick()
 				int camPathIndex = br.readUint32();
 				SrvScriptContext ctx(this, findObject(1027));
 				gameSet->cameraPaths[camPathIndex].postPlaySequence.run(&ctx);
+				break;
+			}
+			case NETSRVMSG_CHANGE_GAME_SPEED: {
+				setGameSpeed(br.readFloat());
 				break;
 			}
 			}

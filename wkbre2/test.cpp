@@ -467,7 +467,7 @@ void Test_Network()
 			srvMutex.lock();
 			server.tick();
 			srvMutex.unlock();
-			//_sleep(1000);
+			//_sleep(100);
 		}
 	});
 

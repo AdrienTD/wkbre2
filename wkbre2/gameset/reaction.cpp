@@ -47,7 +47,11 @@ void PackageReceiptTrigger::parse(GSFileParser & gsf, GameSet & gs)
 	while (!gsf.eof) {
 		auto tag = gsf.nextTag();
 		if (tag == "ASSESSMENT") {
-			assessments.push_back(gs.equations.readIndex(gsf));
+			int ass = gs.equations.readIndex(gsf);
+			if (ass != -1)
+				assessments.push_back(ass);
+			else
+				printf("ASSESSMENT equation not found\n");
 		}
 		else if (tag == "TRIGGERED_BY") {
 			int evt = gs.events.readIndex(gsf);

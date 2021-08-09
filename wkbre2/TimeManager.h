@@ -25,6 +25,8 @@ struct TimeManager {
 	void pause() { paused = true; }
 	void unpause() { paused = false; }
 
+	void setSpeed(float nextSpeed) { timeSpeed = nextSpeed; }
+
 	void tick();
 
 	void imgui();

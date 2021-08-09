@@ -16,16 +16,18 @@ std::vector<ClientGameObject*> ObjectFinder::eval(CliScriptContext* ctx)
 }
 
 struct FinderUnknown : ObjectFinder {
+	std::string name;
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
-		ferr("Unknown object finder called from the Server!");
+		ferr("Unknown object finder %s called from the Server!", name.c_str());
 		return {};
 	}
 	virtual std::vector<ClientGameObject*> eval(CliScriptContext* ctx) override {
-		ferr("Unknown object finder called from the Client!");
+		ferr("Unknown object finder %s called from the Client!", name.c_str());
 		return {};
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 	}
+	FinderUnknown(const std::string& name) : name(name) {}
 };
 
 struct FinderSelf : ObjectFinder {
@@ -296,7 +298,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
 	if (strtag.substr(0, 7) != "FINDER_")
-		return new FinderUnknown; // no need to call parse for unknown finders
+		return new FinderUnknown(strtag); // no need to call parse for unknown finders
 	std::string findername = strtag.substr(7);
 	ObjectFinder *finder;
 	switch (Tags::FINDER_tagDict.getTagID(findername.c_str())) {
@@ -320,7 +322,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_REFERENCERS: finder = new FinderReferencers; break;
 	case Tags::FINDER_ORDER_GIVER: finder = new FinderOrderGiver; break;
 	case Tags::FINDER_BEING_TRANSFERRED_TO_ME: finder = new FinderBeingTransferredToMe; break;
-	default: finder = new FinderUnknown; break;
+	default: finder = new FinderUnknown(strtag); break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));
 	return finder;
@@ -613,7 +615,7 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 		const char *oldcur = gsf.cursor;
 		std::string strtag = gsf.nextTag();
 		if (strtag == "END_OBJECT_FINDER_DEFINITION")
-			return new FinderUnknown;
+			return new FinderUnknown("<empty OBJECT_FINDER_DEFINITION>");
 		else if(strtag.substr(0, 7) == "FINDER_") {
 			//if (strtag.substr(0, 7) != "FINDER_")
 			//	return new FinderUnknown; // no need to call parse for unknown finders

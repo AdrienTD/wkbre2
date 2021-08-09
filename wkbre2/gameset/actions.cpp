@@ -755,7 +755,7 @@ struct ActionSendPackage : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject* obj : finder->eval(ctx))
-			package->send(obj, ctx->self.get());
+			package->send(obj, ctx);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		package = gs.packages.readPtr(gsf);
@@ -1062,6 +1062,41 @@ struct ActionPlayMusic : Action {
 	}
 };
 
+struct ActionTeleport : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	std::unique_ptr<PositionDeterminer> pos;
+	virtual void run(SrvScriptContext* ctx) override {
+		auto op = pos->eval(ctx);
+		for (ServerGameObject* obj : finder->eval(ctx)) {
+			obj->orderConfig.cancelAllOrders();
+			obj->setPosition(op.position);
+			obj->setOrientation(op.rotation);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+		pos.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
+struct ActionChangeDiplomaticStatus : Action {
+	std::unique_ptr<ObjectFinder> fPlayer1;
+	std::unique_ptr<ObjectFinder> fPlayer2;
+	int nextStatus;
+	virtual void run(SrvScriptContext* ctx) override {
+		ServerGameObject* player1 = fPlayer1->getFirst(ctx);
+		ServerGameObject* player2 = fPlayer2->getFirst(ctx);
+		if (player1 && player2) {
+			Server::instance->setDiplomaticStatus(player1, player2, nextStatus);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		fPlayer1.reset(ReadFinder(gsf, gs));
+		fPlayer2.reset(ReadFinder(gsf, gs));
+		nextStatus = gs.diplomaticStatuses.readIndex(gsf);
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1130,6 +1165,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_PLAY_SOUND: action = new ActionPlaySound; break;
 	case Tags::ACTION_PLAY_MUSIC: action = new ActionPlayMusic; break;
 	case Tags::ACTION_FORCE_PLAY_MUSIC: action = new ActionPlayMusic; break;
+	case Tags::ACTION_TELEPORT: action = new ActionTeleport; break;
+	case Tags::ACTION_CHANGE_DIPLOMATIC_STATUS: action = new ActionChangeDiplomaticStatus; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND_AT_POSITION:

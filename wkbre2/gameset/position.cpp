@@ -17,7 +17,7 @@ namespace {
 	OrientedPosition PosFromObjVec(const std::vector<ServerGameObject*> &vec) {
 		OrientedPosition sum;
 		for (ServerGameObject *obj : vec)
-			sum += {obj->position};
+			sum += {obj->position, obj->orientation};
 		return sum / vec.size();
 	}
 }

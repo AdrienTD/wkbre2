@@ -270,6 +270,12 @@ void ClientInterface::iter()
 		pauseState = !pauseState;
 		client->sendPauseRequest(pauseState);
 	}
+	if (g_keyPressed[SDL_SCANCODE_KP_PLUS]) {
+		client->sendGameSpeedChange(client->timeManager.timeSpeed * 2.0f);
+	}
+	if (g_keyPressed[SDL_SCANCODE_KP_MINUS]) {
+		client->sendGameSpeedChange(client->timeManager.timeSpeed / 2.0f);
+	}
 
 	//----- ImGui -----//
 

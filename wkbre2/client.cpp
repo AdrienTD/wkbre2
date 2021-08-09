@@ -337,6 +337,10 @@ void Client::tick()
 				obj->trajectory.start(initPos, initVel, startTime);
 				break;
 			}
+			case NETCLIMSG_GAME_SPEED_CHANGED: {
+				timeManager.setSpeed(br.readFloat());
+				break;
+			}
 			}
 		}
 	}
@@ -393,6 +397,13 @@ void Client::sendCameraPathEnded(int camPathIndex)
 {
 	NetPacketWriter msg{ NETSRVMSG_CAMERA_PATH_ENDED };
 	msg.writeUint32(camPathIndex);
+	serverLink->send(msg);
+}
+
+void Client::sendGameSpeedChange(float nextSpeed)
+{
+	NetPacketWriter msg{ NETSRVMSG_CHANGE_GAME_SPEED };
+	msg.writeFloat(nextSpeed);
 	serverLink->send(msg);
 }
 

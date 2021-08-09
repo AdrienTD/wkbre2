@@ -119,6 +119,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	void restoreCameraPosition(ServerGameObject* player);
 	void playCameraPath(ServerGameObject* player, int camPathIndex);
 	void stopCameraPath(ServerGameObject* player);
+	void setGameSpeed(float nextSpeed);
 
 	void tick();
 

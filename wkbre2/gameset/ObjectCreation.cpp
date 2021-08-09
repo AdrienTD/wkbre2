@@ -5,6 +5,7 @@
 #include "position.h"
 #include "../server.h"
 #include "ScriptContext.h"
+#include "../util/util.h"
 
 void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
 {
@@ -13,6 +14,10 @@ void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
 		auto tag = gsf.nextTag();
 		if (tag == "TYPE_TO_CREATE") {
 			typeToCreate = gs.readObjBlueprintPtr(gsf);
+		}
+		else if (tag == "MAPPED_TYPE_TO_CREATE") {
+			mappedTypeToCreate = gs.typeTags.readIndex(gsf);
+			mappedTypeFrom = ReadFinder(gsf, gs);
 		}
 		else if (tag == "CONTROLLER") {
 			controller = ReadFinder(gsf, gs);
@@ -31,10 +36,22 @@ void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
 
 void ObjectCreation::run(ServerGameObject * creator, SrvScriptContext* ctx)
 {
-	ServerGameObject *created = Server::instance->createObject(typeToCreate);
-	//SrvScriptContext ctx(Server::instance, creator);
 	auto _0 = ctx->self.change(creator);
 	auto _1 = ctx->creator.change(creator);
+	GameObjBlueprint* type = nullptr;
+	if (typeToCreate)
+		type = typeToCreate;
+	else if (mappedTypeFrom) {
+		auto* obj = mappedTypeFrom->getFirst(ctx);
+		auto it = obj->blueprint->mappedTypeTags.find(mappedTypeToCreate);
+		if (it != obj->blueprint->mappedTypeTags.end())
+			type = it->second;
+	}
+	else
+		ferr("OBJECT_CREATION has no object type defined!");
+	if (!type)
+		return;
+	ServerGameObject *created = Server::instance->createObject(type);
 	created->setParent(controller->getFirst(ctx));
 	OrientedPosition opos = createAt ? createAt->eval(ctx) : OrientedPosition({ creator->position, creator->orientation });
 	created->setPosition(opos.position);

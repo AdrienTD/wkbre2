@@ -32,12 +32,10 @@ void GSPackage::parse(GSFileParser& gsf, GameSet& gs)
 	}
 }
 
-void GSPackage::send(ServerGameObject* obj, ServerGameObject* sender)
+void GSPackage::send(ServerGameObject* obj, SrvScriptContext* ctx)
 {
-	SrvScriptContext ctx(Server::instance, obj);
-	auto _ = ctx.packageSender.change(sender);
 	for (auto& mod : itemModifications) {
-		float val = mod.value->eval(&ctx);
+		float val = mod.value->eval(ctx);
 		if (mod.mode == 0) {
 			obj->setItem(mod.item, val);
 		}
@@ -49,5 +47,5 @@ void GSPackage::send(ServerGameObject* obj, ServerGameObject* sender)
 		}
 	}
 	for (int evt : gameEvents)
-		obj->sendEvent(evt, sender);
+		obj->sendEvent(evt, ctx->self.get());
 }
