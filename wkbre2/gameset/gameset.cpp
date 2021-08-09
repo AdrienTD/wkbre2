@@ -393,6 +393,11 @@ void GameSet::load(const char * fn)
 		for (char &c : s) if (c == '_') c = ' ';
 		events.names.insertString(s);
 	}
+	for (auto& pdi : Tags::PDITEM_tagDict.tags) {
+		std::string s = pdi;
+		for (char& c : s) if (c == '_') c = ' ';
+		items.names.insertString(s);
+	}
 
 	printf("Gameset pass 1...\n");
 	parseFile(fn, 0);

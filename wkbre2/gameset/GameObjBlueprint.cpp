@@ -163,6 +163,18 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			musicMap[mt].push_back(gsf.nextString(true));
 			break;
 		}
+		case Tags::CBLUEPRINT_GENERATE_SIGHT_RANGE_EVENTS: {
+			generateSightRangeEvents = true; break;
+		}
+		case Tags::CBLUEPRINT_RECEIVE_SIGHT_RANGE_EVENTS: {
+			receiveSightRangeEvents = true; break;
+		}
+		case Tags::CBLUEPRINT_SHOULD_PROCESS_SIGHT_RANGE: {
+			shouldProcessSightRange = ReadValueDeterminer(gsf, *gameSet); break;
+		}
+		case Tags::CBLUEPRINT_SIGHT_RANGE_EQUATION: {
+			sightRangeEquation = gameSet->equations.readIndex(gsf); break;
+		}
 		}
 		gsf.advanceLine();
 	}

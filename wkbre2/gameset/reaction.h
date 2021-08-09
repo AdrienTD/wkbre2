@@ -13,7 +13,7 @@ struct Reaction {
 	ActionSequence actions;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
-	bool canBeTriggeredBy(int evt, ServerGameObject *obj);
+	bool canBeTriggeredBy(int evt, ServerGameObject* obj, ServerGameObject* sender);
 };
 
 struct PackageReceiptTrigger {
@@ -21,5 +21,5 @@ struct PackageReceiptTrigger {
 	std::vector<int> assessments;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
-	bool canBeTriggeredBy(int evt, ServerGameObject *obj);
+	bool canBeTriggeredBy(int evt, ServerGameObject* obj, ServerGameObject* sender);
 };

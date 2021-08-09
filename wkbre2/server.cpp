@@ -6,6 +6,7 @@
 #include "network.h"
 #include "terrain.h"
 #include "gameset/ScriptContext.h"
+#include "NNSearch.h"
 
 Server *Server::instance = nullptr;
 
@@ -71,6 +72,11 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 	msg.writeUint32(blueprint->getFullId());
 	msg.writeUint32(obj->subtype);
 	sendToAll(msg);
+
+	if (blueprint->sightRangeEquation != -1) {
+		SrvScriptContext ctx{ this, obj };
+		obj->setItem(Tags::PDITEM_ACTUAL_SIGHT_RANGE, gameSet->equations[blueprint->sightRangeEquation]->eval(&ctx));
+	}
 
 	return obj;
 }
@@ -470,11 +476,11 @@ void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 	SrvScriptContext ctx(Server::instance, this);
 	auto _ = ctx.packageSender.change(sender);
 	for (Reaction *r : blueprint->intrinsicReactions)
-		if (r->canBeTriggeredBy(evt, this))
+		if (r->canBeTriggeredBy(evt, this, sender))
 			r->actions.run(&ctx);
 	const auto ircopy = individualReactions;
 	for (Reaction *r : ircopy)
-		if (r->canBeTriggeredBy(evt, this))
+		if (r->canBeTriggeredBy(evt, this, sender))
 			r->actions.run(&ctx);
 }
 
@@ -598,6 +604,38 @@ void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 			tileIndex = newtileIndex;
 		}
 	}
+}
+
+void ServerGameObject::lookForSightRangeEvents()
+{
+	if (!blueprint->receiveSightRangeEvents)
+		return;
+	if (blueprint->sightRangeEquation == -1) {
+		printf("receiveSightRangeEvents==true but sightRangeEquation not defined\n%s\n", blueprint->getFullName().c_str());
+		return;
+	}
+	SrvScriptContext ctx{ Server::instance, this };
+	if (blueprint->shouldProcessSightRange && !blueprint->shouldProcessSightRange->booleval(&ctx))
+		return;
+	float dist = Server::instance->gameSet->equations[blueprint->sightRangeEquation]->eval(&ctx);
+	if (dist <= 0.0f)
+		return;
+	std::unordered_set<SrvGORef> objfound;
+	NNSearch search;
+	search.start(Server::instance, this->position, dist * 5.0f);
+	while (ServerGameObject* nobj = search.next()) {
+		if (!nobj->blueprint->generateSightRangeEvents)
+			continue;
+		objfound.insert(nobj);
+		if (seenObjects.count(nobj) == 0) {
+			this->sendEvent(Tags::PDEVENT_ON_SEEING_OBJECT, nobj);
+		}
+	}
+	for (auto& prevSeenObj : seenObjects)
+		if (prevSeenObj)
+			if (objfound.count(prevSeenObj) == 0)
+				this->sendEvent(Tags::PDEVENT_ON_STOP_SEEING_OBJECT, prevSeenObj);
+	seenObjects = std::move(objfound);
 }
 
 void Server::sendToAll(const NetPacket & packet)
@@ -749,7 +787,7 @@ void Server::tick()
 	static std::vector<SrvGORef> toprocess;
 	toprocess.clear();
 	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
-		if (!obj->orderConfig.orders.empty())
+		if (!obj->orderConfig.orders.empty() || obj->blueprint->receiveSightRangeEvents)
 			toprocess.emplace_back(obj);
 		for (auto &childtype : obj->children) {
 			for (ServerGameObject *child : childtype.second)
@@ -767,11 +805,16 @@ void Server::tick()
 			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
 			newpos.y = terrain->getHeight(obj->position.x, obj->position.z);
 			obj->updatePosition(newpos, true);
+			if (!ref) continue;
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
 		}
-		if (obj->trajectory.isMoving()) {
+		else if (obj->trajectory.isMoving()) {
 			obj->updatePosition(obj->trajectory.getPosition(timeManager.currentTime));
+		}
+		if (obj->blueprint->receiveSightRangeEvents) {
+			obj->lookForSightRangeEvents();
+			if (!ref) continue;
 		}
 	}
 

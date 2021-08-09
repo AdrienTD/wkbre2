@@ -1097,6 +1097,18 @@ struct ActionChangeDiplomaticStatus : Action {
 	}
 };
 
+struct ActionSinkAndRemove : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx)) {
+			Server::instance->deleteObject(obj);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1167,6 +1179,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_FORCE_PLAY_MUSIC: action = new ActionPlayMusic; break;
 	case Tags::ACTION_TELEPORT: action = new ActionTeleport; break;
 	case Tags::ACTION_CHANGE_DIPLOMATIC_STATUS: action = new ActionChangeDiplomaticStatus; break;
+	case Tags::ACTION_SINK_AND_REMOVE: action = new ActionSinkAndRemove; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SOUND_AT_POSITION:

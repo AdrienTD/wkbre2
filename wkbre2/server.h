@@ -31,6 +31,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	std::unordered_map<int, std::unordered_set<SrvGORef>> associates, associators;
 	int tileIndex = -1;
 	std::vector<SrvGORef> referencers;
+	std::unordered_set<SrvGORef> seenObjects;
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 
@@ -57,6 +58,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void startTrajectory(const Vector3& initPos, const Vector3& initVel, float startTime);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
+	void lookForSightRangeEvents();
 };
 
 struct Server : CommonGameState<Server, ServerGameObject>

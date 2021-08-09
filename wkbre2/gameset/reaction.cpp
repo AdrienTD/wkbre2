@@ -31,12 +31,12 @@ void Reaction::parse(GSFileParser & gsf, GameSet & gs)
 	}
 }
 
-bool Reaction::canBeTriggeredBy(int evt, ServerGameObject *obj)
+bool Reaction::canBeTriggeredBy(int evt, ServerGameObject *obj, ServerGameObject* sender)
 {
 	if (std::find(events.begin(), events.end(), evt) != events.end())
 		return true;
 	for (PackageReceiptTrigger *prt : prTriggers)
-		if (prt->canBeTriggeredBy(evt, obj))
+		if (prt->canBeTriggeredBy(evt, obj, sender))
 			return true;
 	return false;
 }
@@ -64,11 +64,12 @@ void PackageReceiptTrigger::parse(GSFileParser & gsf, GameSet & gs)
 	}
 }
 
-bool PackageReceiptTrigger::canBeTriggeredBy(int evt, ServerGameObject *obj)
+bool PackageReceiptTrigger::canBeTriggeredBy(int evt, ServerGameObject *obj, ServerGameObject* sender)
 {
 	if(std::find(events.begin(), events.end(), evt) == events.end())
 		return false;
 	SrvScriptContext ctx(Server::instance, obj);
+	auto senderChange = ctx.packageSender.change(sender);
 	for (int ass : assessments)
 		if (Server::instance->gameSet->equations[ass]->eval(&ctx) <= 0.0f)
 			return false;

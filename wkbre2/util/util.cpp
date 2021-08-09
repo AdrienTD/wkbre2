@@ -14,7 +14,7 @@ void fc_ferr(char *f, int l, char *s, ...)
 	_vsnprintf(t, 511, s, v); t[511] = 0;
 	char msg[600];
 	sprintf_s(msg, "Error: %s\nLook at: %s, Line %i\n", t, f, l);
-	//puts(msg);
+	puts(msg);
 	MessageBoxA(NULL, msg, "Fatal Error", 16);
 	fflush(stdout); abort(); exit(-2);
 }
