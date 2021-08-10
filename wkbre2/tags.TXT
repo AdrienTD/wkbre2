@@ -494,6 +494,7 @@ PDEVENT_ | char* {
 	ON_IDLE "On Idle"
 	ON_BUSY "On Busy"
 	ON_OBJECT_ENTERS "On Object Enters"
+	ON_OBJECT_EXITS "On Object Exits"
 	ON_SUBORDINATE_RECEIVED "On Subordinate Received"
 	ON_SEEING_OBJECT "On Seeing Object"
 	ON_STOP_SEEING_OBJECT "On Stop Seeing Object"

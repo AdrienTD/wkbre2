@@ -168,7 +168,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			packet.writeStringZ(mapfp);
 			sendToAll(packet);
 			auto area = this->terrain->getNumPlayableTiles();
-			this->tileObjList = new std::vector<SrvGORef>[area.first * area.second];
+			this->tiles = std::make_unique<Tile[]>(area.first * area.second);
 			break;
 		}
 		case Tags::GAMEOBJ_COLOUR_INDEX: {
@@ -306,6 +306,15 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			this->nextUniqueId = gsf.nextInt();
 			break;
 		}
+		case Tags::GAMEOBJ_TILES: {
+			int len = gsf.nextInt();
+			for (int i = 0; i < len; i++) {
+				int x = gsf.nextInt();
+				int z = gsf.nextInt();
+				obj->addZoneTile(x, z);
+			}
+			break;
+		}
 		case Tags::GAMEOBJ_PLAYER:
 		case Tags::GAMEOBJ_CHARACTER:
 		case Tags::GAMEOBJ_BUILDING:
@@ -316,7 +325,9 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		case Tags::GAMEOBJ_TOWN:
 		case Tags::GAMEOBJ_FORMATION:
 		case Tags::GAMEOBJ_ARMY:
-		case Tags::GAMESET_MISSILE:
+		case Tags::GAMEOBJ_MISSILE:
+		case Tags::GAMEOBJ_TERRAIN_ZONE:
+		//case Tags::GAMEOBJ_USER:
 		{
 			ServerGameObject *child = loadObject(gsf, strtag);
 			child->setParent(obj);
@@ -578,7 +589,7 @@ void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;
 	position = newposition;
-	if (server->tileObjList) {
+	if (server->tiles) {
 		int trnNumX, trnNumZ;
 		std::tie(trnNumX, trnNumZ) = server->terrain->getNumPlayableTiles();
 		int tx = static_cast<int>(position.x / 5.0f), tz = static_cast<int>(position.z / 5.0f);
@@ -589,17 +600,25 @@ void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 			newtileIndex = -1;
 		if (newtileIndex != tileIndex) {
 			if (tileIndex != -1) {
-				auto &vec = server->tileObjList[tileIndex];
+				auto &vec = server->tiles[tileIndex].objList;
 				vec.erase(std::find(vec.begin(), vec.end(), this));
 			}
 			if (newtileIndex != -1) {
 				if (events) {
-					for (auto& no : server->tileObjList[newtileIndex]) {
+					for (auto& no : server->tiles[newtileIndex].objList) {
 						if (no)
 							no->sendEvent(Tags::PDEVENT_ON_SHARE_TILE, this);
 					}
 				}
-				server->tileObjList[newtileIndex].push_back(this);
+				server->tiles[newtileIndex].objList.push_back(this);
+			}
+			if (events && tileIndex != -1 && newtileIndex != -1 && blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+				if (server->tiles[tileIndex].zone != server->tiles[newtileIndex].zone) {
+					if (ServerGameObject* leavingZone = server->tiles[tileIndex].zone.get())
+						leavingZone->sendEvent(Tags::PDEVENT_ON_OBJECT_EXITS, this);
+					if (ServerGameObject* enteringZone = server->tiles[newtileIndex].zone.get())
+						enteringZone->sendEvent(Tags::PDEVENT_ON_OBJECT_ENTERS, this);
+				}
 			}
 			tileIndex = newtileIndex;
 		}
@@ -636,6 +655,18 @@ void ServerGameObject::lookForSightRangeEvents()
 			if (objfound.count(prevSeenObj) == 0)
 				this->sendEvent(Tags::PDEVENT_ON_STOP_SEEING_OBJECT, prevSeenObj);
 	seenObjects = std::move(objfound);
+}
+
+void ServerGameObject::addZoneTile(int tx, int tz)
+{
+	this->zoneTiles.emplace(tx, tz);
+	Server* server = Server::instance;
+	auto areaSize = server->terrain->getNumPlayableTiles();
+	int tileIndex = tz * areaSize.first + tx;
+	server->tiles[tileIndex].zone = this;
+	//auto& zl = server->tiles[tileIndex].zoneList;
+	//if (std::find(zl.begin(), zl.end(), this) == zl.end())
+	//	zl.emplace_back(this);
 }
 
 void Server::sendToAll(const NetPacket & packet)

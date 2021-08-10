@@ -9,6 +9,7 @@
 #include "GameObjectRef.h"
 #include <unordered_set>
 #include <unordered_map>
+#include <set>
 
 struct GameSet;
 struct GSFileParser;
@@ -32,6 +33,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	int tileIndex = -1;
 	std::vector<SrvGORef> referencers;
 	std::unordered_set<SrvGORef> seenObjects;
+	std::set<std::pair<int, int>> zoneTiles;
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 
@@ -59,6 +61,8 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();
+	void addZoneTile(int tx, int tz);
+	//void removeZoneTile(int tx, int tz);
 };
 
 struct Server : CommonGameState<Server, ServerGameObject>
@@ -75,7 +79,12 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	ServerGameObject *level;
 	std::map<uint32_t, ServerGameObject*> idmap;
 	Terrain *terrain;
-	std::vector<SrvGORef> *tileObjList = nullptr;
+	struct Tile {
+		std::vector<SrvGORef> objList;
+		//std::vector<SrvGORef> zoneList;
+		SrvGORef zone;
+	};
+	std::unique_ptr<Tile[]> tiles;
 
 	struct DelayedSequence {
 		ActionSequence* actionSequence;

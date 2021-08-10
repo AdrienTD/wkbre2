@@ -17,7 +17,7 @@ void NNSearch::start(Server *server, const Vector3 &center, float radius)
 
 ServerGameObject * NNSearch::next()
 {
-	const std::vector<SrvGORef> &vec = server->tileObjList[tz * server->terrain->getNumPlayableTiles().first + tx];
+	const std::vector<SrvGORef> &vec = server->tiles[tz * server->terrain->getNumPlayableTiles().first + tx].objList;
 	if(it < vec.size())
 		return vec[it++];
 

@@ -528,7 +528,7 @@ TagDict<6> Tags::SORDER_tagDict({
     "UNIQUE_TASK_ID",
 });
 
-TagDict<14> Tags::PDEVENT_tagDict({
+TagDict<15> Tags::PDEVENT_tagDict({
     "ON_BUSY",
     "ON_CONTROL_TRANSFERRED",
     "ON_CONVERSION_END",
@@ -536,6 +536,7 @@ TagDict<14> Tags::PDEVENT_tagDict({
     "ON_IDLE",
     "ON_LEVEL_START",
     "ON_OBJECT_ENTERS",
+    "ON_OBJECT_EXITS",
     "ON_SEEING_OBJECT",
     "ON_SHARE_TILE",
     "ON_SPAWN",

@@ -61,6 +61,21 @@ struct ValueItemValue : CommonEval<ValueItemValue, ValueDeterminer> {
 	ValueItemValue(int item, ObjectFinder *finder) : item(item), finder(finder) {}
 };
 
+struct ValueObjectId_WKO : CommonEval<ValueObjectId_WKO, ValueDeterminer> {
+	std::unique_ptr<ObjectFinder> finder1, finder2;
+	template<typename CTX> float common_eval(CTX* ctx) {
+		CTX::AnyGO* obj1 = finder1->getFirst(ctx);
+		CTX::AnyGO* obj2 = finder2->getFirst(ctx);
+		if (obj1 && obj2)
+			return (obj1 == obj2) ? 1.0f : 0.0f;
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder1.reset(ReadFinder(gsf, gs));
+		finder2.reset(ReadFinder(gsf, gs));
+	}
+};
+
 struct ValueObjectId_Battles : CommonEval<ValueObjectId_Battles, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX *ctx) {
@@ -587,7 +602,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_CONSTANT: vd = new ValueConstant(gsf.nextFloat()); return vd;
 	case Tags::VALUE_DEFINED_VALUE: vd = new ValueConstant(gs.definedValues.at(gsf.nextString(true))); return vd;
 	case Tags::VALUE_ITEM_VALUE: vd = new ValueItemValue; break;
-	case Tags::VALUE_OBJECT_ID: vd = new ValueObjectId_Battles; break;
+	case Tags::VALUE_OBJECT_ID: vd = new ValueObjectId_WKO; break;
 	case Tags::VALUE_OBJECT_CLASS: vd = new ValueObjectClass; break;
 	case Tags::VALUE_EQUATION_RESULT: vd = new ValueEquationResult; break;
 	case Tags::VALUE_IS_SUBSET_OF: vd = new ValueIsSubsetOf; break;
