@@ -995,40 +995,15 @@ struct ActionPlaySound : Action {
 		// TODO: Check for multiple objects
 		if (auto* from = objFrom->getFirst(ctx)) {
 			if (auto* to = objTo->getFirst(ctx)) {
-				const std::vector<GameObjBlueprint::SoundRef>* sndVars = nullptr;
-				auto it = from->blueprint->soundMap.find(soundTag);
-				if (it != from->blueprint->soundMap.end()) {
-					sndVars = &it->second;
-				}
-				else {
-					printf("from->subtype: %i\n", from->subtype);
-					auto& pssm = from->blueprint->subtypes.at(from->subtype).soundMap;
-					it = pssm.find(soundTag);
-					if (it != pssm.end())
-						sndVars = &it->second;
-				}
-				if (sndVars) {
-					const std::string* path = nullptr;
-					float refDist = 30.0f; float maxDist = 300.0f;
-					const GameObjBlueprint::SoundRef& sndref = sndVars->at(rand() % sndVars->size());
-					if (sndref.soundBlueprint != -1) {
-						GSSound& snd = Server::instance->gameSet->sounds[sndref.soundBlueprint];
-						refDist = snd.gradientStartDist;
-						//maxDist = snd.muteDist;
-						if (snd.files.size() > 0)
-							path = &snd.files[rand() % snd.files.size()];
-					}
-					else if(!sndref.filePath.empty()) {
-						path = &sndref.filePath;
-					}
-					if (path) {
-						std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + *path;
-						if (to->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
-							SoundPlayer::getSoundPlayer()->playSound(gfspath);
-						else {
-							//float rolloff = (refDist / 0.1f - refDist) / (maxDist - refDist);
-							SoundPlayer::getSoundPlayer()->playSound3D(gfspath, to->position, refDist, maxDist);
-						}
+				std::string path; float refDist, maxDist;
+				std::tie(path, refDist, maxDist) = from->blueprint->getSound(soundTag, from->subtype);
+				if (!path.empty()) {
+					std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + path;
+					if (to->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
+						SoundPlayer::getSoundPlayer()->playSound(gfspath);
+					else {
+						//float rolloff = (refDist / 0.1f - refDist) / (maxDist - refDist);
+						SoundPlayer::getSoundPlayer()->playSound3D(gfspath, to->position, refDist, maxDist);
 					}
 				}
 			}
@@ -1109,6 +1084,42 @@ struct ActionSinkAndRemove : Action {
 	}
 };
 
+struct ActionPlaySoundAtPositionWKO : Action {
+	int soundTag;
+	std::unique_ptr<ObjectFinder> objPlayers;
+	virtual void run(SrvScriptContext* ctx) override {
+		auto* from = ctx->self.get();
+		std::string path; float refDist, maxDist;
+		std::tie(path, refDist, maxDist) = from->blueprint->getSound(soundTag, from->subtype);
+		if (!path.empty()) {
+			std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + path;
+			SoundPlayer::getSoundPlayer()->playSound3D(gfspath, from->position, refDist, maxDist);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		soundTag = gs.soundTags.readIndex(gsf);
+		objPlayers.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionPlaySoundAtPositionWKB : Action {
+	int soundTag;
+	std::unique_ptr<PositionDeterminer> pPosition;
+	virtual void run(SrvScriptContext* ctx) override {
+		auto* from = ctx->self.get();
+		std::string path; float refDist, maxDist;
+		std::tie(path, refDist, maxDist) = from->blueprint->getSound(soundTag, from->subtype);
+		if (!path.empty()) {
+			std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + path;
+			SoundPlayer::getSoundPlayer()->playSound3D(gfspath, pPosition->eval(ctx).position, refDist, maxDist);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		soundTag = gs.soundTags.readIndex(gsf);
+		pPosition.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1180,9 +1191,9 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_TELEPORT: action = new ActionTeleport; break;
 	case Tags::ACTION_CHANGE_DIPLOMATIC_STATUS: action = new ActionChangeDiplomaticStatus; break;
 	case Tags::ACTION_SINK_AND_REMOVE: action = new ActionSinkAndRemove; break;
+	case Tags::ACTION_PLAY_SOUND_AT_POSITION: action = new ActionPlaySoundAtPositionWKO; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
-	case Tags::ACTION_PLAY_SOUND_AT_POSITION:
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT:
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT_BETWEEN:
 	case Tags::ACTION_ATTACH_SPECIAL_EFFECT:

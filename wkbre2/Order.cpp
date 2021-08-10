@@ -7,6 +7,8 @@
 #include "gameset/finder.h"
 #include "gameset/ScriptContext.h"
 #include "gameset/gameset.h"
+#include "terrain.h"
+#include "SoundPlayer.h" // temp
 
 void Order::init()
 {
@@ -89,6 +91,8 @@ Task::Task(int id, TaskBlueprint * blueprint, Order * order) : id(id), blueprint
 			trigger = new TimerTrigger(this, &trigbp);
 		else if (trigbp.type == Tags::TASKTRIGGER_ANIMATION_LOOP)
 			trigger = new AnimationLoopTrigger(this, &trigbp);
+		else if (trigbp.type == Tags::TASKTRIGGER_UNINTERRUPTIBLE_ANIMATION_LOOP)
+			trigger = new AnimationLoopTrigger(this, &trigbp);
 		else if (trigbp.type == Tags::TASKTRIGGER_ATTACHMENT_POINT)
 			trigger = new AnimationLoopTrigger(this, &trigbp); // TODO: Related class
 		else
@@ -124,22 +128,16 @@ void Task::start()
 		SrvScriptContext ssc{ Server::instance, this->order->gameObject };
 		float speed = this->order->gameObject->blueprint->missileSpeed->eval(&ssc);
 
-		// compute initial velocity such that the missile hits the target in its trajectory
-		//Vector3 hvec = (this->target->position - this->order->gameObject->position);
-		//hvec.y = 0.0f;
-		//const Vector3 &pos_i = this->order->gameObject->position;
-		//float y_i = pos_i.y, y_b = this->target->position.y;
-		//float b = hvec.len2xz();
-		//float vy = (y_b - y_i - 0.5f * (-9.81f) * b * b) / b;
-		////float vh = std::sqrt(speed * speed - vy * vy);
+		// compute initial vertical velocity such that the missile hits the target in its trajectory
+		Vector3 hvec = (this->target->position - this->order->gameObject->position);
+		hvec.y = 0.0f;
+		const Vector3 &pos_i = this->order->gameObject->position;
+		float y_i = pos_i.y, y_b = this->target->position.y;
+		float b = hvec.len2xz() / speed; // time when missile hits target on XZ coordinates
+		float vy = (y_b - y_i - 0.5f * (-9.81f) * b * b) / b;
 
-		//this->msInitialVelocity = hvec.normal2xz() * speed + Vector3(0, vy, 0);
-		//this->msInitialPosition = pos_i;
-		//this->msStartTime = Server::instance->timeManager.currentTime;
-		//this->order->gameObject->startTrajectory(msInitialPosition, msInitialVelocity, msStartTime);
-
-		this->msInitialVelocity = (this->target->position - this->order->gameObject->position).normal() * speed;
-		this->msInitialPosition = this->order->gameObject->position;
+		this->msInitialVelocity = hvec.normal2xz() * speed + Vector3(0, vy, 0);
+		this->msInitialPosition = pos_i;
 		this->msStartTime = Server::instance->timeManager.currentTime;
 		this->order->gameObject->startTrajectory(msInitialPosition, msInitialVelocity, msStartTime);
 	}
@@ -193,6 +191,21 @@ void Task::process()
 		this->start();
 	if (this->state == OTS_PROCESSING) {
 		// TODO: Make derived classes of Task to avoid future if elses
+		// Missile tasks
+		if (this->blueprint->classType == Tags::ORDTSKTYPE_MISSILE) {
+			ServerGameObject* go = this->order->gameObject;
+			float theight = Server::instance->terrain->getHeight(go->position.x, go->position.z);
+			if (go->position.y < theight) {
+				this->blueprint->struckFloorTrigger.run(go);
+				// TODO: we could play sound on client (which is probably why strikeFloorSound was made for WKB in the first place)
+				if (go->blueprint->strikeFloorSound != -1) {
+					std::string path; float refDist, maxDist;
+					std::tie(path, refDist, maxDist) = go->blueprint->getSound(go->blueprint->strikeFloorSound, go->subtype);
+					SoundPlayer::getSoundPlayer()->playSound3D("Warrior Kings Game Set\\Sounds\\" + path, go->position, refDist, maxDist);
+				}
+			}
+			return;
+		}
 		// Move tasks
 		if (this->blueprint->classType == Tags::ORDTSKTYPE_MOVE) {
 			ServerGameObject *go = this->order->gameObject;

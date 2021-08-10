@@ -61,11 +61,18 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 		else if (tag == "CANCELLATION_SEQUENCE")
 			this->cancellationSequence.init(gsf, gs, "END_CANCELLATION_SEQUENCE");
 		else if (tag == "TRIGGER") {
-			this->triggers.emplace_back(Tags::TASKTRIGGER_tagDict.getTagID(gsf.nextString().c_str()));
-			TriggerBlueprint& trig = this->triggers.back();
-			if (trig.type == Tags::TASKTRIGGER_TIMER)
-				trig.period = ReadValueDeterminer(gsf, gs);
-			trig.actions.init(gsf, gs, "END_TRIGGER");
+			auto trigname = gsf.nextString();
+			if (trigname == "COLLISION")
+				collisionTrigger.init(gsf, gs, "END_TRIGGER");
+			else if (trigname == "STRUCK_FLOOR")
+				struckFloorTrigger.init(gsf, gs, "END_TRIGGER");
+			else {
+				this->triggers.emplace_back(Tags::TASKTRIGGER_tagDict.getTagID(trigname.c_str()));
+				TriggerBlueprint& trig = this->triggers.back();
+				if (trig.type == Tags::TASKTRIGGER_TIMER)
+					trig.period = ReadValueDeterminer(gsf, gs);
+				trig.actions.init(gsf, gs, "END_TRIGGER");
+			}
 		}
 		else if (tag == "PROXIMITY_REQUIREMENT")
 			this->proximityRequirement = ReadValueDeterminer(gsf, gs);

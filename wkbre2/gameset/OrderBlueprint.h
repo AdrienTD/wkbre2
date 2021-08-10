@@ -37,6 +37,7 @@ struct TaskBlueprint {
 	bool usePreviousTaskTarget = false, terminateEntireOrderIfNoTarget = false, rejectTargetIfItIsTerminated = false;
 	ActionSequence initSequence, startSequence, resumptionSequence, terminationSequence, cancellationSequence;
 	std::vector<TriggerBlueprint> triggers;
+	ActionSequence collisionTrigger, struckFloorTrigger;
 
 	ValueDeterminer *proximityRequirement = nullptr;
 	ActionSequence proximitySatisfiedSequence;

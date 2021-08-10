@@ -13,6 +13,7 @@
 #include "position.h"
 #include "ScriptContext.h"
 #include "../SoundPlayer.h"
+#include "../terrain.h"
 
 namespace {
 	float RandomFromZeroToOne() { return (float)(rand() & 0xFFFF) / 32768.0f; }
@@ -564,6 +565,20 @@ struct ValueWithinForwardArc : CommonEval<ValueWithinForwardArc, ValueDeterminer
 	}
 };
 
+struct ValueMapWidth : CommonEval<ValueMapWidth, ValueDeterminer> {
+	template<typename CTX> float common_eval(CTX* ctx) {
+		return ctx->program->terrain->getPlayableArea().first;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+};
+
+struct ValueMapDepth : CommonEval<ValueMapWidth, ValueDeterminer> {
+	template<typename CTX> float common_eval(CTX* ctx) {
+		return ctx->program->terrain->getPlayableArea().second;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -604,6 +619,8 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_NUM_REFERENCERS: vd = new ValueNumReferencers; break;
 	case Tags::VALUE_INDEXED_ITEM_VALUE: vd = new ValueIndexedItemValue; break;
 	case Tags::VALUE_WITHIN_FORWARD_ARC: vd = new ValueWithinForwardArc; break;
+	case Tags::VALUE_MAP_WIDTH: vd = new ValueMapWidth; break;
+	case Tags::VALUE_MAP_DEPTH: vd = new ValueMapDepth; break;
 	default: vd = new ValueUnknown(strtag); break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

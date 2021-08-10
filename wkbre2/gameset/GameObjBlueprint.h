@@ -52,6 +52,8 @@ struct GameObjBlueprint {
 	Model* representAs = nullptr;
 
 	ValueDeterminer* missileSpeed = nullptr;
+	int strikeFloorSound = -1;
+	int strikeWaterSound = -1;
 
 	std::map<int, std::vector<SoundRef>> soundMap;
 	std::map<int, std::vector<std::string>> musicMap;
@@ -68,6 +70,8 @@ struct GameObjBlueprint {
 
 	uint32_t getFullId() { return bpClass | (bpId << 6); }
 	std::string getFullName();
+
+	std::tuple<std::string, float, float> getSound(int sndTag, int subtype);
 
 	//GameObjBlueprint() {}
 	//GameObjBlueprint(GameSet *gameSet) : gameSet(gameSet) {}

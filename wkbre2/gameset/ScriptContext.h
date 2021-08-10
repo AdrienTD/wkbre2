@@ -37,7 +37,7 @@ template<typename TProgram, typename TAnyGO> struct ScriptContext {
 	};
 
 	CtxElement self;
-	CtxElement candidate, creator, packageSender, sequenceExecutor, target, orderGiver, chainOriginalSelf;
+	CtxElement candidate, creator, packageSender, sequenceExecutor, target, orderGiver, chainOriginalSelf, collisionSubject;
 
 	ScriptContext(Program* program, AnyGO* self = nullptr) : program(program), self(self) {}
 };

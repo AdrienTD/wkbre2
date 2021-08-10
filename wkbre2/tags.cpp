@@ -82,7 +82,7 @@ TagDict<5> Tags::CCOMMAND_tagDict({
     "START_SEQUENCE",
 });
 
-TagDict<28> Tags::CBLUEPRINT_tagDict({
+TagDict<30> Tags::CBLUEPRINT_tagDict({
     "BLUEPRINT_TOOLTIP",
     "BUILDING_TYPE",
     "CAN_SPAWN",
@@ -110,6 +110,8 @@ TagDict<28> Tags::CBLUEPRINT_tagDict({
     "SHOULD_PROCESS_SIGHT_RANGE",
     "SIGHT_RANGE_EQUATION",
     "STARTS_WITH_ITEM",
+    "STRIKE_FLOOR_SOUND",
+    "STRIKE_WATER_SOUND",
     "USE_FOOTPRINT",
 });
 
@@ -193,7 +195,7 @@ TagDict<27> Tags::ENODE_tagDict({
     "TRUNC",
 });
 
-TagDict<39> Tags::FINDER_tagDict({
+TagDict<40> Tags::FINDER_tagDict({
     "AG_SELECTION",
     "ALIAS",
     "ALTERNATIVE",
@@ -203,6 +205,7 @@ TagDict<39> Tags::FINDER_tagDict({
     "CANDIDATE",
     "CHAIN",
     "CHAIN_ORIGINAL_SELF",
+    "COLLISION_SUBJECT",
     "CONTROLLER",
     "CREATOR",
     "DISABLED_ASSOCIATES",

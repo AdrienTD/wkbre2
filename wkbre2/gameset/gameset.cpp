@@ -388,6 +388,8 @@ void GameSet::load(const char * fn)
 	appearances.names.insertString("Default");
 	animations.names.insertString("Default");
 	animations.names.insertString("Idle");
+	soundTags.names.insertString("Selected");
+	soundTags.names.insertString("Death");
 	for (auto &pde : Tags::PDEVENT_tagDict.tags) {
 		std::string s = pde;
 		for (char &c : s) if (c == '_') c = ' ';

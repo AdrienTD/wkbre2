@@ -175,6 +175,12 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 		case Tags::CBLUEPRINT_SIGHT_RANGE_EQUATION: {
 			sightRangeEquation = gameSet->equations.readIndex(gsf); break;
 		}
+		case Tags::CBLUEPRINT_STRIKE_FLOOR_SOUND: {
+			strikeFloorSound = gameSet->soundTags.readIndex(gsf); break;
+		}
+		case Tags::CBLUEPRINT_STRIKE_WATER_SOUND: {
+			strikeWaterSound = gameSet->soundTags.readIndex(gsf); break;
+		}
 		}
 		gsf.advanceLine();
 	}
@@ -187,4 +193,38 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 
 std::string GameObjBlueprint::getFullName() {
 	return std::string(Tags::GAMEOBJCLASS_tagDict.getStringFromID(bpClass)) + " \"" + name + "\"";
+}
+
+std::tuple<std::string, float, float> GameObjBlueprint::getSound(int sndTag, int subtype)
+{
+	const std::vector<GameObjBlueprint::SoundRef>* sndVars = nullptr;
+	auto it = soundMap.find(sndTag);
+	if (it != soundMap.end()) {
+		sndVars = &it->second;
+	}
+	else {
+		printf("from->subtype: %i\n", subtype);
+		auto& pssm = subtypes.at(subtype).soundMap;
+		it = pssm.find(sndTag);
+		if (it != pssm.end())
+			sndVars = &it->second;
+	}
+	if (sndVars) {
+		const std::string* path = nullptr;
+		float refDist = 30.0f; float maxDist = 300.0f;
+		const GameObjBlueprint::SoundRef& sndref = sndVars->at(rand() % sndVars->size());
+		if (sndref.soundBlueprint != -1) {
+			GSSound& snd = gameSet->sounds[sndref.soundBlueprint];
+			refDist = snd.gradientStartDist;
+			//maxDist = snd.muteDist;
+			if (snd.files.size() > 0)
+				path = &snd.files[rand() % snd.files.size()];
+		}
+		else if (!sndref.filePath.empty()) {
+			path = &sndref.filePath;
+		}
+		if (path)
+			return { *path, refDist, maxDist };
+	}
+	return {};
 }
