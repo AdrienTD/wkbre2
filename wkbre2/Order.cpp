@@ -263,6 +263,10 @@ void Task::process()
 				this->stopTriggers();
 				if (!go->movement.isMoving())
 					go->startMovement(this->target->position);
+				// If target slightly moves during the movement, restart the movement
+				if (go->movement.isMoving())
+					if ((this->target->position - go->movement.getDestination()).sqlen2xz() > 0.01f)
+						go->startMovement(this->target->position);
 				if (proximitySatisfied) {
 					proximitySatisfied = false;
 					//if (blueprint->defaultAnim != -1)
@@ -409,7 +413,9 @@ void AnimationLoopTrigger::init()
 
 void AnimationLoopTrigger::update()
 {
-	const float period = 1.5f;
+	ServerGameObject* obj = this->task->order->gameObject;
+	Model* model = obj->blueprint->getModel(obj->subtype, obj->appearance, obj->animationIndex, obj->animationVariant);
+	float period = model ? model->getDuration() : 1.5f;
 	if (Server::instance->timeManager.currentTime >= referenceTime + period) {
 		this->blueprint->actions.run(this->task->order->gameObject);
 		this->referenceTime += period;

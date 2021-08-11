@@ -17,7 +17,7 @@ void DefaultSceneRenderer::render()
 	gfx->NoTexture(0);
 
 	for (const auto &it : scene->matInsts) {
-		Material &mat = scene->modelCache->materials[it.first];
+		const Material &mat = scene->modelCache->getMaterial(it.first);
 		bool next_alphatest = mat.alphaTest;
 		texture next_texture = it.second.tex;
 		if (cur_alphatest != next_alphatest || cur_texture != next_texture)

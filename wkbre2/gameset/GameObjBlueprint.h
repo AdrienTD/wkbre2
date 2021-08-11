@@ -72,6 +72,7 @@ struct GameObjBlueprint {
 	std::string getFullName();
 
 	std::tuple<std::string, float, float> getSound(int sndTag, int subtype);
+	Model* getModel(int subtype, int appear, int anim, int variant);
 
 	//GameObjBlueprint() {}
 	//GameObjBlueprint(GameSet *gameSet) : gameSet(gameSet) {}

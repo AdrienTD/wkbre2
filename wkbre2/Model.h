@@ -25,6 +25,7 @@ struct Model {
 	virtual StaticModel *getStaticModel() = 0;
 	virtual Vector3 getSphereCenter() { return Vector3(0, 0, 0); }
 	virtual float getSphereRadius() { return 3.0f; }
+	virtual float getDuration() { return 1.5f; }
 	virtual void prepare() = 0;
 };
 
@@ -64,6 +65,7 @@ struct AnimatedModel : Model {
 	StaticModel *getStaticModel() override;
 	Vector3 getSphereCenter() override;
 	float getSphereRadius() override;
+	float getDuration() override;
 	void prepare() override;
 
 	Anim &getAnim() {
@@ -73,10 +75,15 @@ struct AnimatedModel : Model {
 };
 
 struct ModelCache {
+	friend Model;
+	friend StaticModel;
+	friend AnimatedModel;
+private:
 	std::map<std::string, std::unique_ptr<Model>, StriCompare> models;
 	int numCalls = 0, numHits = 0;
 	std::map<uint32_t, Material> materials;
 	IndexedStringList textureFilenames;
-
+public:
 	Model *getModel(const std::string &filename);
+	const Material& getMaterial(int id);
 };

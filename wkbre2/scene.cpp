@@ -9,7 +9,7 @@ void Scene::add(SceneEntity * ent)
 		MaterialInst &matinst = matInsts[mat[i]];
 		matinst.list.push_back(ent);
 		if (!matinst.tex)
-			matinst.tex = texCache.getTexture(modelCache->materials[mat[i]].textureFilename.c_str());
+			matinst.tex = texCache.getTexture(modelCache->getMaterial(mat[i]).textureFilename.c_str());
 	}
 }
 

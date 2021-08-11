@@ -228,3 +228,17 @@ std::tuple<std::string, float, float> GameObjBlueprint::getSound(int sndTag, int
 	}
 	return {};
 }
+
+Model* GameObjBlueprint::getModel(int subtype, int appearance, int animationIndex, int animationVariant)
+{
+	const auto& ap = subtypes[subtype].appearances[appearance];
+	auto it = ap.animations.find(animationIndex);
+	if (it == ap.animations.end())
+		it = ap.animations.find(0);
+	if (it != ap.animations.end()) {
+		const auto& anim = it->second;
+		if (!anim.empty())
+			return anim[animationVariant];
+	}
+	return nullptr;
+}
