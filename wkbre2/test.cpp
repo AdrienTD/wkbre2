@@ -38,7 +38,7 @@ void Test_GameSet()
 {
 	LoadBCP("data.bcp"); // C:\\Apps\\Warrior Kings - Battles\\
 
-	GameSet gameSet("Warrior Kings Game Set\\multi-player extensions.cpp");
+	GameSet gameSet("Warrior Kings Game Set\\multi-player extensions.cpp", GameSet::GSVERSION_UNKNOWN);
 
 	printf("List of %i items:\n", gameSet.items.names.size());
 	for (const std::string &item : gameSet.items.names)

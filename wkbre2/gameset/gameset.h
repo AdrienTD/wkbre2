@@ -90,6 +90,13 @@ struct GameSet
 
 	ModelCache modelCache;
 
+	enum {
+		GSVERSION_UNKNOWN = 0,
+		GSVERSION_WKONE = 1,
+		GSVERSION_WKBATTLES = 2,
+	};
+	int version = 0;
+
 	void parseFile(const char *fn, int pass);
 	void load(const char *fn);
 
@@ -108,5 +115,5 @@ struct GameSet
 	GameObjBlueprint *readObjBlueprintPtr(GSFileParser &gsf);
 
 	GameSet() {}
-	GameSet(const char *fn) { load(fn); }
+	GameSet(const char* fn, int ver) { version = ver; load(fn); }
 };

@@ -602,7 +602,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_CONSTANT: vd = new ValueConstant(gsf.nextFloat()); return vd;
 	case Tags::VALUE_DEFINED_VALUE: vd = new ValueConstant(gs.definedValues.at(gsf.nextString(true))); return vd;
 	case Tags::VALUE_ITEM_VALUE: vd = new ValueItemValue; break;
-	case Tags::VALUE_OBJECT_ID: vd = new ValueObjectId_WKO; break;
+	case Tags::VALUE_OBJECT_ID: if (gs.version >= gs.GSVERSION_WKBATTLES) vd = new ValueObjectId_Battles; else vd = new ValueObjectId_WKO; break;
 	case Tags::VALUE_OBJECT_CLASS: vd = new ValueObjectClass; break;
 	case Tags::VALUE_EQUATION_RESULT: vd = new ValueEquationResult; break;
 	case Tags::VALUE_IS_SUBSET_OF: vd = new ValueIsSubsetOf; break;

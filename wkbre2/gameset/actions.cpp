@@ -1084,7 +1084,7 @@ struct ActionSinkAndRemove : Action {
 	}
 };
 
-struct ActionPlaySoundAtPositionWKO : Action {
+struct ActionPlaySoundAtPosition_WKO : Action {
 	int soundTag;
 	std::unique_ptr<ObjectFinder> objPlayers;
 	virtual void run(SrvScriptContext* ctx) override {
@@ -1102,7 +1102,7 @@ struct ActionPlaySoundAtPositionWKO : Action {
 	}
 };
 
-struct ActionPlaySoundAtPositionWKB : Action {
+struct ActionPlaySoundAtPosition_Battles : Action {
 	int soundTag;
 	std::unique_ptr<PositionDeterminer> pPosition;
 	virtual void run(SrvScriptContext* ctx) override {
@@ -1191,7 +1191,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_TELEPORT: action = new ActionTeleport; break;
 	case Tags::ACTION_CHANGE_DIPLOMATIC_STATUS: action = new ActionChangeDiplomaticStatus; break;
 	case Tags::ACTION_SINK_AND_REMOVE: action = new ActionSinkAndRemove; break;
-	case Tags::ACTION_PLAY_SOUND_AT_POSITION: action = new ActionPlaySoundAtPositionWKO; break;
+	case Tags::ACTION_PLAY_SOUND_AT_POSITION: if (gs.version >= gs.GSVERSION_WKBATTLES) action = new ActionPlaySoundAtPosition_Battles; else action = new ActionPlaySoundAtPosition_WKO; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT:

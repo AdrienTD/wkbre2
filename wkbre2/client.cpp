@@ -102,13 +102,14 @@ void Client::tick()
 			case NETCLIMSG_GAME_SET:
 			{
 				std::string gsFileName = br.readStringZ();
+				int gsVersion = br.readUint8();
 				if (localServer) {
 					info("Client takes gameset from local server.\n");
 					gameSet = Server::instance->gameSet;
 				}
 				else {
 					info("Loading game set: %s\n", gsFileName.c_str());
-					gameSet = new GameSet(gsFileName.c_str());
+					gameSet = new GameSet(gsFileName.c_str(), gsVersion);
 				}
 				break;
 			}

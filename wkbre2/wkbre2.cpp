@@ -5,6 +5,7 @@
 #include <cstdio>
 #include "settings.h"
 #include "file.h"
+#include <nlohmann/json.hpp>
 
 void LaunchTest();
 

@@ -7,6 +7,8 @@
 #include "terrain.h"
 #include "gameset/ScriptContext.h"
 #include "NNSearch.h"
+#include "settings.h"
+#include <nlohmann/json.hpp>
 
 Server *Server::instance = nullptr;
 
@@ -25,9 +27,11 @@ void Server::loadSaveGame(const char * filename)
 		switch (tag) {
 		case Tags::SAVEGAME_GAME_SET: {
 			std::string gsFileName = gsf.nextString(true);
-			gameSet = new GameSet(gsFileName.c_str());
+			int version = g_settings.at("gameVersion").get<int>();
+			gameSet = new GameSet(gsFileName.c_str(), version);
 			NetPacketWriter msg(NETCLIMSG_GAME_SET);
 			msg.writeStringZ(gsFileName);
+			msg.writeUint8((uint8_t)version);
 			sendToAll(msg);
 			break;
 		}
