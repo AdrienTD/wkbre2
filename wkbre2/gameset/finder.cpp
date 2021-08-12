@@ -626,6 +626,14 @@ struct FinderTileRadius : ObjectFinder {
 	}
 };
 
+struct FinderDiscoveredUnits : ObjectFinder {
+	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+		// TODO
+		return {};
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+};
+
 ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	gsf.advanceLine();
@@ -649,6 +657,7 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::FINDER_GRADE_SELECT: finder = new FinderGradeSelect; break;
 			case Tags::FINDER_NEAREST_CANDIDATE: finder = new FinderNearestCandidate; break;
 			case Tags::FINDER_TILE_RADIUS: finder = new FinderTileRadius; break;
+			case Tags::FINDER_DISCOVERED_UNITS: finder = new FinderDiscoveredUnits; break;
 			default:
 				gsf.cursor = oldcur;
 				return ReadFinder(gsf, gs);

@@ -58,6 +58,8 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void enable();
 	void setIndexedItem(int item, int index, float value);
 	void startTrajectory(const Vector3& initPos, const Vector3& initVel, float startTime);
+	void playSoundAtObject(int soundTag, ServerGameObject* target);
+	void playSoundAtPosition(int soundTag, const Vector3& target);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();
@@ -112,6 +114,8 @@ struct Server : CommonGameState<Server, ServerGameObject>
 
 	ServerGameObject* objToDelete = nullptr;
 
+	bool isMusicPlaying1027_temp = false;
+
 	Server() : gameSet(nullptr), level(nullptr), terrain(nullptr) { instance = this; }
 
 	void loadSaveGame(const char *filename);
@@ -131,6 +135,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	void playCameraPath(ServerGameObject* player, int camPathIndex);
 	void stopCameraPath(ServerGameObject* player);
 	void setGameSpeed(float nextSpeed);
+	void playMusic(ServerGameObject* player, int musicTag);
 
 	void tick();
 

@@ -12,7 +12,6 @@
 #include "CommonEval.h"
 #include "position.h"
 #include "ScriptContext.h"
-#include "../SoundPlayer.h"
 #include "../terrain.h"
 
 namespace {
@@ -409,8 +408,7 @@ struct ValueIsMusicPlaying : ValueDeterminer {
 		if (!obj) return 0.0f;
 		ServerGameObject* player = obj->getPlayer();
 		if (player->id == 1027)
-			if (SoundPlayer::getSoundPlayer()->isMusicPlaying())
-				return 1.0f;
+			return ctx->server->isMusicPlaying1027_temp ? 1.0f : 0.0f;
 		return 0.0f;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {

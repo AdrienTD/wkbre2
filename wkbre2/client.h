@@ -59,6 +59,7 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	bool localServer;
 
 	std::map<int, int> gtwStates;
+	bool isMusicPlaying = false;
 
 	//void loadSaveGame(const char *filename);
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
@@ -66,7 +67,7 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	Client(bool localServer = false) : gameSet(nullptr), level(nullptr),
 		serverLink(nullptr), terrain(nullptr), cliInterface(nullptr), localServer(localServer) {instance = this;}
 
-	ClientGameObject *findObject(uint32_t id) { return idmap[id]; }
+	ClientGameObject* findObject(uint32_t id) { auto it = idmap.find(id); if (it != idmap.end()) return it->second; else return nullptr; }
 
 	void loadFromServerObject(Server &server);
 

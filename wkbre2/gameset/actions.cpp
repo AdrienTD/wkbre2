@@ -6,8 +6,6 @@
 #include "../server.h"
 #include "ScriptContext.h"
 
-#include "../SoundPlayer.h"
-
 struct ActionUnknown : Action {
 	std::string name;
 	virtual void run(SrvScriptContext* ctx) override {
@@ -995,17 +993,7 @@ struct ActionPlaySound : Action {
 		// TODO: Check for multiple objects
 		if (auto* from = objFrom->getFirst(ctx)) {
 			if (auto* to = objTo->getFirst(ctx)) {
-				std::string path; float refDist, maxDist;
-				std::tie(path, refDist, maxDist) = from->blueprint->getSound(soundTag, from->subtype);
-				if (!path.empty()) {
-					std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + path;
-					if (to->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
-						SoundPlayer::getSoundPlayer()->playSound(gfspath);
-					else {
-						//float rolloff = (refDist / 0.1f - refDist) / (maxDist - refDist);
-						SoundPlayer::getSoundPlayer()->playSound3D(gfspath, to->position, refDist, maxDist);
-					}
-				}
+				from->playSoundAtObject(soundTag, to);
 			}
 		}
 	}
@@ -1020,15 +1008,8 @@ struct ActionPlayMusic : Action {
 	int musicTag;
 	std::unique_ptr<ObjectFinder> fPlayer;
 	virtual void run(SrvScriptContext* ctx) override {
-		for (auto* obj : fPlayer->eval(ctx)) {
-			auto* player = obj->getPlayer();
-			if (player->id == 1027) {
-				auto it = player->blueprint->musicMap.find(musicTag);
-				if (it != player->blueprint->musicMap.end()) {
-					size_t var = (size_t)rand() % it->second.size();
-					SoundPlayer::getSoundPlayer()->playMusic("Warrior Kings Game Set\\Sounds\\" + it->second[var]);
-				}
-			}
+		for (auto* player : fPlayer->eval(ctx)) {
+			ctx->server->playMusic(player, musicTag);
 		}
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -1089,12 +1070,7 @@ struct ActionPlaySoundAtPosition_WKO : Action {
 	std::unique_ptr<ObjectFinder> objPlayers;
 	virtual void run(SrvScriptContext* ctx) override {
 		auto* from = ctx->self.get();
-		std::string path; float refDist, maxDist;
-		std::tie(path, refDist, maxDist) = from->blueprint->getSound(soundTag, from->subtype);
-		if (!path.empty()) {
-			std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + path;
-			SoundPlayer::getSoundPlayer()->playSound3D(gfspath, from->position, refDist, maxDist);
-		}
+		from->playSoundAtPosition(soundTag, from->position);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		soundTag = gs.soundTags.readIndex(gsf);
@@ -1107,12 +1083,7 @@ struct ActionPlaySoundAtPosition_Battles : Action {
 	std::unique_ptr<PositionDeterminer> pPosition;
 	virtual void run(SrvScriptContext* ctx) override {
 		auto* from = ctx->self.get();
-		std::string path; float refDist, maxDist;
-		std::tie(path, refDist, maxDist) = from->blueprint->getSound(soundTag, from->subtype);
-		if (!path.empty()) {
-			std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + path;
-			SoundPlayer::getSoundPlayer()->playSound3D(gfspath, pPosition->eval(ctx).position, refDist, maxDist);
-		}
+		from->playSoundAtPosition(soundTag, pPosition->eval(ctx).position);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		soundTag = gs.soundTags.readIndex(gsf);

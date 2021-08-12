@@ -82,8 +82,15 @@ void Client::tick()
 		}
 	}
 
-	// TEMPORARY
-	SoundPlayer::getSoundPlayer()->setListenerPosition(camera.position, camera.direction.normal());
+	SoundPlayer* soundPlayer = SoundPlayer::getSoundPlayer();
+	soundPlayer->setListenerPosition(camera.position, camera.direction.normal());
+	if (isMusicPlaying) {
+		if (!soundPlayer->isMusicPlaying()) {
+			isMusicPlaying = false;
+			NetPacketWriter msg{ NETSRVMSG_MUSIC_COMPLETED };
+			serverLink->send(msg);
+		}
+	}
 
 	if (serverLink) {
 		int pcnt = 1000000; //100;
@@ -340,6 +347,52 @@ void Client::tick()
 			}
 			case NETCLIMSG_GAME_SPEED_CHANGED: {
 				timeManager.setSpeed(br.readFloat());
+				break;
+			}
+			case NETCLIMSG_SOUND_AT_OBJECT: {
+				uint32_t objid; int soundTag; uint32_t targetid; uint8_t randval;
+				br.readTo(objid, soundTag, targetid, randval);
+				if (ClientGameObject* from = findObject(objid)) {
+					if (ClientGameObject* to = findObject(targetid)) {
+						std::string path; float refDist, maxDist;
+						std::tie(path, refDist, maxDist) = from->blueprint->getSound(soundTag, from->subtype);
+						if (!path.empty()) {
+							std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + path;
+							if (to->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
+								SoundPlayer::getSoundPlayer()->playSound(gfspath);
+							else {
+								//float rolloff = (refDist / 0.1f - refDist) / (maxDist - refDist);
+								SoundPlayer::getSoundPlayer()->playSound3D(gfspath, to->position, refDist, maxDist);
+							}
+						}
+					}
+				}
+				break;
+			}
+			case NETCLIMSG_SOUND_AT_POSITION: {
+				uint32_t objid; int soundTag; Vector3 targetPos; uint8_t randval;
+				br.readTo(objid, soundTag, targetPos, randval);
+				if (ClientGameObject* from = findObject(objid)) {
+					std::string path; float refDist, maxDist;
+					std::tie(path, refDist, maxDist) = from->blueprint->getSound(soundTag, from->subtype);
+					if (!path.empty()) {
+						std::string gfspath = "Warrior Kings Game Set\\Sounds\\" + path;
+						SoundPlayer::getSoundPlayer()->playSound3D(gfspath, targetPos, refDist, maxDist);
+					}
+				}
+				break;
+			}
+			case NETCLIMSG_MUSIC_CHANGED: {
+				int musicTag;
+				br.readTo(musicTag);
+				if (ClientGameObject* player = findObject(1027)) { // TODO: change 1027 to client's player
+					auto it = player->blueprint->musicMap.find(musicTag);
+					if (it != player->blueprint->musicMap.end()) {
+						size_t var = (size_t)rand() % it->second.size();
+						SoundPlayer::getSoundPlayer()->playMusic("Warrior Kings Game Set\\Sounds\\" + it->second[var]);
+						isMusicPlaying = true;
+					}
+				}
 				break;
 			}
 			}

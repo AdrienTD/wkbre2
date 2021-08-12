@@ -8,7 +8,6 @@
 #include "gameset/ScriptContext.h"
 #include "gameset/gameset.h"
 #include "terrain.h"
-#include "SoundPlayer.h" // temp
 
 void Order::init()
 {
@@ -196,13 +195,12 @@ void Task::process()
 			ServerGameObject* go = this->order->gameObject;
 			float theight = Server::instance->terrain->getHeight(go->position.x, go->position.z);
 			if (go->position.y < theight) {
-				this->blueprint->struckFloorTrigger.run(go);
-				// TODO: we could play sound on client (which is probably why strikeFloorSound was made for WKB in the first place)
+				// TODO: we could play sound directly on client without sending packet
+				// (which is probably why strikeFloorSound was made for WKB in the first place)
 				if (go->blueprint->strikeFloorSound != -1) {
-					std::string path; float refDist, maxDist;
-					std::tie(path, refDist, maxDist) = go->blueprint->getSound(go->blueprint->strikeFloorSound, go->subtype);
-					SoundPlayer::getSoundPlayer()->playSound3D("Warrior Kings Game Set\\Sounds\\" + path, go->position, refDist, maxDist);
+					go->playSoundAtObject(go->blueprint->strikeFloorSound, go);
 				}
+				this->blueprint->struckFloorTrigger.run(go);
 			}
 			return;
 		}

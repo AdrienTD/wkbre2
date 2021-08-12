@@ -40,6 +40,9 @@ enum NetClientMessages {
 	NETCLIMSG_STOP_CAMERA_PATH,
 	NETCLIMSG_OBJECT_TRAJECTORY_STARTED,
 	NETCLIMSG_GAME_SPEED_CHANGED,
+	NETCLIMSG_SOUND_AT_OBJECT,
+	NETCLIMSG_SOUND_AT_POSITION,
+	NETCLIMSG_MUSIC_CHANGED,
 };
 
 enum NetServerMessages {
@@ -52,6 +55,7 @@ enum NetServerMessages {
 	NETSRVMSG_GAME_TEXT_WINDOW_BUTTON_CLICKED,
 	NETSRVMSG_CAMERA_PATH_ENDED,
 	NETSRVMSG_CHANGE_GAME_SPEED,
+	NETSRVMSG_MUSIC_COMPLETED,
 };
 
 struct NetPacketWriter {
@@ -74,6 +78,7 @@ struct NetPacketWriter {
 	void writeValues(uint8_t a) { writeUint8(a); }
 	void writeValues(uint16_t a) { writeUint16(a); }
 	void writeValues(uint32_t a) { writeUint32(a); }
+	void writeValues(int32_t a) { writeUint32((uint32_t)a); }
 	void writeValues(float a) { writeFloat(a); }
 	void writeValues(const std::string & str) { writeStringZ(str); }
 	void writeValues(const Vector3 &vec) { writeVector3(vec); }

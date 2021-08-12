@@ -35,6 +35,7 @@ struct BinaryReader
 	inline void readTo(uint8_t& val) { val = readUint8(); }
 	inline void readTo(uint16_t& val) { val = readUint16(); }
 	inline void readTo(uint32_t& val) { val = readUint32(); }
+	inline void readTo(int32_t& val) { val = (int32_t)readUint32(); }
 	inline void readTo(float& val) { val = readFloat(); }
 	inline void readTo(std::string& val) { val = readStringZ(); }
 	inline void readTo(Vector3& val) { val = readVector3(); }

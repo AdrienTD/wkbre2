@@ -589,6 +589,25 @@ void ServerGameObject::startTrajectory(const Vector3& initPos, const Vector3& in
 	Server::instance->sendToAll(npw);
 }
 
+void ServerGameObject::playSoundAtObject(int soundTag, ServerGameObject* target)
+{
+	NetPacketWriter npw{ NETCLIMSG_SOUND_AT_OBJECT };
+	uint8_t randval = (uint8_t)rand() & 255;
+	npw.writeValues(this->id, soundTag, target->id, randval);
+	if (target->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
+		Server::instance->sendToAll(npw); // TODO: only send to relevant player
+	else
+		Server::instance->sendToAll(npw);
+}
+
+void ServerGameObject::playSoundAtPosition(int soundTag, const Vector3& target)
+{
+	NetPacketWriter npw{ NETCLIMSG_SOUND_AT_POSITION };
+	uint8_t randval = (uint8_t)rand() & 255;
+	npw.writeValues(this->id, soundTag, target, randval);
+	Server::instance->sendToAll(npw);
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;
@@ -758,6 +777,15 @@ void Server::setGameSpeed(float nextSpeed)
 	msg.writeFloat(nextSpeed);
 	sendToAll(msg);
 	syncTime();
+}
+
+void Server::playMusic(ServerGameObject* player, int musicTag)
+{
+	if (player->id != 1027) return; // temp
+	NetPacketWriter msg{ NETCLIMSG_MUSIC_CHANGED };
+	msg.writeValues(musicTag);
+	sendToAll(msg); // TODO: only send to single player
+	isMusicPlaying1027_temp = true;
 }
 
 void Server::tick()
@@ -941,6 +969,10 @@ void Server::tick()
 			}
 			case NETSRVMSG_CHANGE_GAME_SPEED: {
 				setGameSpeed(br.readFloat());
+				break;
+			}
+			case NETSRVMSG_MUSIC_COMPLETED: {
+				isMusicPlaying1027_temp = false;
 				break;
 			}
 			}
