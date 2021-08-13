@@ -424,7 +424,7 @@ void Test_Network()
 	Server server; Client client(true);
 	NetLocalBuffer queue1, queue2;
 	NetLocalLink srv2cli(&queue1,&queue2), cli2srv(&queue2,&queue1);
-	server.clientLinks.push_back(&srv2cli);
+	server.addClient(&srv2cli);
 	client.serverLink = &cli2srv;
 
 	InitWindow();
@@ -532,13 +532,13 @@ void Test_EnetServer() {
 			case ENET_EVENT_TYPE_CONNECT: {
 				printf("connection\n");
 				NetEnetLink *link = new NetEnetLink(eserver, event.peer);
-				server.clientLinks.push_back(link);
+				server.addClient(link);
 				event.peer->data = link;
 				break;
 			}
 			case ENET_EVENT_TYPE_DISCONNECT: {
 				printf("disconnected\n");
-				server.clientLinks.erase(std::remove(server.clientLinks.begin(), server.clientLinks.end(), (NetEnetLink*)event.peer->data), server.clientLinks.end());
+				server.removeClient((NetEnetLink*)event.peer->data);
 				break;
 			}
 			case ENET_EVENT_TYPE_RECEIVE: {

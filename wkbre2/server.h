@@ -34,6 +34,8 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	std::vector<SrvGORef> referencers;
 	std::unordered_set<SrvGORef> seenObjects;
 	std::set<std::pair<int, int>> zoneTiles;
+	int clientIndex = -1;
+	bool isMusicPlaying = false;
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 
@@ -107,14 +109,13 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	std::vector<std::string> chatMessages;
 
 	std::vector<NetLink*> clientLinks;
+	std::vector<SrvGORef> clientPlayerObjects;
 
 	time_t lastSync;
 
 	std::vector<std::tuple<ServerGameObject*, int, int>> postAssociations;
 
 	ServerGameObject* objToDelete = nullptr;
-
-	bool isMusicPlaying1027_temp = false;
 
 	Server() : gameSet(nullptr), level(nullptr), terrain(nullptr) { instance = this; }
 
@@ -124,8 +125,12 @@ struct Server : CommonGameState<Server, ServerGameObject>
 
 	ServerGameObject *findObject(uint32_t id) { return idmap[id]; }
 
+	void addClient(NetLink* link);
+	void removeClient(NetLink* link);
+
 	void syncTime();
 
+	void setClientPlayerControl(int clientIndex, uint32_t playerObjId);
 	void setDiplomaticStatus(ServerGameObject *a, ServerGameObject *b, int status);
 	void showGameTextWindow(ServerGameObject* player, int gtwIndex);
 	void hideGameTextWindow(ServerGameObject* player, int gtwIndex);
@@ -147,6 +152,7 @@ private:
 
 	void sendToAll(const NetPacket &packet);
 	void sendToAll(const NetPacketWriter &packet);
+	void sendTo(ServerGameObject* player, const NetPacketWriter& packet);
 
 	friend struct ServerGameObject;
 };

@@ -120,6 +120,10 @@ void Client::tick()
 				}
 				break;
 			}
+			case NETCLIMSG_CONTROL_PLAYER: {
+				clientPlayer = br.readUint32();
+				break;
+			}
 			case NETCLIMSG_OBJECT_CREATED: {
 				uint32_t objid = br.readUint32();
 				uint32_t bpid = br.readUint32();
@@ -385,7 +389,7 @@ void Client::tick()
 			case NETCLIMSG_MUSIC_CHANGED: {
 				int musicTag;
 				br.readTo(musicTag);
-				if (ClientGameObject* player = findObject(1027)) { // TODO: change 1027 to client's player
+				if (ClientGameObject* player = clientPlayer) {
 					auto it = player->blueprint->musicMap.find(musicTag);
 					if (it != player->blueprint->musicMap.end()) {
 						size_t var = (size_t)rand() % it->second.size();

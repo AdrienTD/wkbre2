@@ -61,6 +61,8 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	std::map<int, int> gtwStates;
 	bool isMusicPlaying = false;
 
+	CliGORef clientPlayer;
+
 	//void loadSaveGame(const char *filename);
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 

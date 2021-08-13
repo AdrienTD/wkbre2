@@ -46,6 +46,13 @@ void Server::loadSaveGame(const char * filename)
 		case Tags::SAVEGAME_TIME_MANAGER_STATE:
 			timeManager.load(gsf);
 			break;
+		case Tags::SAVEGAME_NUM_HUMAN_PLAYERS: {
+			size_t numPlayers = gsf.nextInt();
+			numPlayers = std::min(clientLinks.size(), numPlayers);
+			for (size_t i = 0; i < clientLinks.size(); i++)
+				setClientPlayerControl(i, gsf.nextInt());
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}
@@ -54,6 +61,9 @@ void Server::loadSaveGame(const char * filename)
 
 	for (auto &t : postAssociations)
 		std::get<0>(t)->associateObject(std::get<1>(t), findObject(std::get<2>(t)));
+
+	for (size_t i = 0; i < clientPlayerObjects.size(); i++)
+		clientPlayerObjects[i]->clientIndex = i;
 
 	timeManager.unlock();
 	timeManager.unpause();
@@ -595,7 +605,7 @@ void ServerGameObject::playSoundAtObject(int soundTag, ServerGameObject* target)
 	uint8_t randval = (uint8_t)rand() & 255;
 	npw.writeValues(this->id, soundTag, target->id, randval);
 	if (target->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
-		Server::instance->sendToAll(npw); // TODO: only send to relevant player
+		Server::instance->sendTo(target, npw);
 	else
 		Server::instance->sendToAll(npw);
 }
@@ -704,6 +714,16 @@ void Server::sendToAll(const NetPacketWriter & packet)
 		cli->send(packet);
 }
 
+void Server::sendTo(ServerGameObject* player, const NetPacketWriter& packet)
+{
+	assert(player->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER);
+	if (player->clientIndex == -1) {
+		printf("WARNING: Sending packet to player %i that has no assigned client!\n", player->id);
+		return;
+	}
+	clientLinks[player->clientIndex]->send(packet);
+}
+
 void Server::syncTime()
 {
 	NetPacketWriter msg(NETCLIMSG_TIME_SYNC);
@@ -729,45 +749,45 @@ void Server::showGameTextWindow(ServerGameObject* player, int gtwIndex)
 {
 	NetPacketWriter msg{ NETCLIMSG_SHOW_GAME_TEXT_WINDOW };
 	msg.writeUint32(gtwIndex);
-	sendToAll(msg); // TODO: Only send to one player's client, not all clients
+	sendTo(player, msg);
 }
 
 void Server::hideGameTextWindow(ServerGameObject* player, int gtwIndex)
 {
 	NetPacketWriter msg{ NETCLIMSG_HIDE_GAME_TEXT_WINDOW };
 	msg.writeUint32(gtwIndex);
-	sendToAll(msg); // TODO: Only send to one player's client, not all clients
+	sendTo(player, msg);
 }
 
 void Server::hideCurrentGameTextWindow(ServerGameObject* player)
 {
 	NetPacketWriter msg{ NETCLIMSG_HIDE_CURRENT_GAME_TEXT_WINDOW };
-	sendToAll(msg); // TODO: Only send to one player's client, not all clients
+	sendTo(player, msg);
 }
 
 void Server::storeCameraPosition(ServerGameObject* player)
 {
 	NetPacketWriter msg{ NETCLIMSG_STORE_CAMERA_POSITION };
-	sendToAll(msg);
+	sendTo(player, msg);
 }
 
 void Server::restoreCameraPosition(ServerGameObject* player)
 {
 	NetPacketWriter msg{ NETCLIMSG_RESTORE_CAMERA_POSITION };
-	sendToAll(msg);
+	sendTo(player, msg);
 }
 
 void Server::playCameraPath(ServerGameObject* player, int camPathIndex)
 {
 	NetPacketWriter msg{ NETCLIMSG_PLAY_CAMERA_PATH };
 	msg.writeUint32(camPathIndex);
-	sendToAll(msg);
+	sendTo(player, msg);
 }
 
 void Server::stopCameraPath(ServerGameObject* player)
 {
 	NetPacketWriter msg{ NETCLIMSG_STOP_CAMERA_PATH };
-	sendToAll(msg);
+	sendTo(player, msg);
 }
 
 void Server::setGameSpeed(float nextSpeed)
@@ -779,13 +799,37 @@ void Server::setGameSpeed(float nextSpeed)
 	syncTime();
 }
 
+void Server::setClientPlayerControl(int clientIndex, uint32_t playerObjId)
+{
+	clientPlayerObjects[clientIndex] = playerObjId;
+	NetPacketWriter msg{ NETCLIMSG_CONTROL_PLAYER };
+	msg.writeUint32(playerObjId);
+	clientLinks[clientIndex]->send(msg);
+}
+
 void Server::playMusic(ServerGameObject* player, int musicTag)
 {
-	if (player->id != 1027) return; // temp
 	NetPacketWriter msg{ NETCLIMSG_MUSIC_CHANGED };
 	msg.writeValues(musicTag);
-	sendToAll(msg); // TODO: only send to single player
-	isMusicPlaying1027_temp = true;
+	sendTo(player, msg);
+	player->isMusicPlaying = true;
+}
+
+void Server::addClient(NetLink* link)
+{
+	clientLinks.push_back(link);
+	clientPlayerObjects.emplace_back();
+}
+
+void Server::removeClient(NetLink* link)
+{
+	auto it = std::find(clientLinks.begin(), clientLinks.end(), link);
+	assert(it != clientLinks.end());
+	size_t clientIndex = it - clientLinks.begin();
+	if (ServerGameObject* player = clientPlayerObjects[clientIndex])
+		player->clientIndex = -1;
+	clientLinks.erase(it);
+	clientPlayerObjects.erase(clientPlayerObjects.begin() + clientIndex);
 }
 
 void Server::tick()
@@ -887,7 +931,9 @@ void Server::tick()
 		syncTime();
 	}
 
+	int clientIndex = 0;
 	for (NetLink *cli : clientLinks) {
+		ServerGameObject* player = clientPlayerObjects[clientIndex++];
 		int pcnt = 20;
 		while (cli->available() && (pcnt--)) { // DDoS !!!
 			NetPacket packet = cli->receive();
@@ -903,7 +949,7 @@ void Server::tick()
 				if (msg.size() >= 2 && msg[0] == '!') {
 					GSFileParser gsf = GSFileParser(msg.c_str() + 1);
 					Action* act = ReadAction(gsf, *gameSet);
-					SrvScriptContext ctx(this, findObject(1027));
+					SrvScriptContext ctx(this, player);
 					act->run(&ctx);
 					delete act;
 				}
@@ -957,13 +1003,13 @@ void Server::tick()
 			case NETSRVMSG_GAME_TEXT_WINDOW_BUTTON_CLICKED: {
 				int gtwid = br.readUint32();
 				int button = br.readUint32();
-				SrvScriptContext ctx(this, findObject(1027));
+				SrvScriptContext ctx(this, player);
 				gameSet->gameTextWindows[gtwid].buttons[button].onClickSequence.run(&ctx); // TODO: Correct player object
 				break;
 			}
 			case NETSRVMSG_CAMERA_PATH_ENDED: {
 				int camPathIndex = br.readUint32();
-				SrvScriptContext ctx(this, findObject(1027));
+				SrvScriptContext ctx(this, player);
 				gameSet->cameraPaths[camPathIndex].postPlaySequence.run(&ctx);
 				break;
 			}
@@ -972,7 +1018,7 @@ void Server::tick()
 				break;
 			}
 			case NETSRVMSG_MUSIC_COMPLETED: {
-				isMusicPlaying1027_temp = false;
+				player->isMusicPlaying = false;
 				break;
 			}
 			}
