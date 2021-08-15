@@ -48,7 +48,7 @@ struct ValueItemValue : CommonEval<ValueItemValue, ValueDeterminer> {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX *ctx) {
-		if (CTX::AnyGO* obj = finder->getFirst(ctx))
+		if (typename CTX::AnyGO* obj = finder->getFirst(ctx))
 			return obj->getItem(item);
 		return 0.0f;
 	}
@@ -63,8 +63,8 @@ struct ValueItemValue : CommonEval<ValueItemValue, ValueDeterminer> {
 struct ValueObjectId_WKO : CommonEval<ValueObjectId_WKO, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder1, finder2;
 	template<typename CTX> float common_eval(CTX* ctx) {
-		CTX::AnyGO* obj1 = finder1->getFirst(ctx);
-		CTX::AnyGO* obj2 = finder2->getFirst(ctx);
+		typename CTX::AnyGO* obj1 = finder1->getFirst(ctx);
+		typename CTX::AnyGO* obj2 = finder2->getFirst(ctx);
 		if (obj1 && obj2)
 			return (obj1 == obj2) ? 1.0f : 0.0f;
 		return 0.0f;
@@ -78,7 +78,7 @@ struct ValueObjectId_WKO : CommonEval<ValueObjectId_WKO, ValueDeterminer> {
 struct ValueObjectId_Battles : CommonEval<ValueObjectId_Battles, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX *ctx) {
-		if (CTX::AnyGO *obj = finder->getFirst(ctx))
+		if (typename CTX::AnyGO *obj = finder->getFirst(ctx))
 			return obj->id;
 		return 0.0f;
 	}
@@ -94,7 +94,7 @@ struct ValueObjectClass : CommonEval<ValueObjectClass, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX *ctx) {
 		auto vec = finder->eval(ctx);
-		return !vec.empty() && std::all_of(vec.begin(), vec.end(), [this](CTX::AnyGO *obj) {return obj->blueprint->bpClass == objclass; });
+		return !vec.empty() && std::all_of(vec.begin(), vec.end(), [this](typename CTX::AnyGO *obj) {return obj->blueprint->bpClass == objclass; });
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		objclass = Tags::GAMEOBJCLASS_tagDict.getTagID(gsf.nextString().c_str());
@@ -108,7 +108,7 @@ struct ValueEquationResult : CommonEval<ValueEquationResult, ValueDeterminer> {
 	int equation;
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX *ctx) {
-		CTX::AnyGO *obj = finder->getFirst(ctx);
+		typename CTX::AnyGO *obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
 		auto _ = ctx->self.change(obj);
 		return CTX::Program::instance->gameSet->equations[equation]->eval(ctx);
@@ -195,9 +195,9 @@ struct ValueSamePlayer : CommonEval<ValueSamePlayer, ValueDeterminer> {
 		auto vec1 = fnd1->eval(ctx);
 		auto vec2 = fnd2->eval(ctx);
 		if (vec1.empty() || vec2.empty()) return 0.0f;
-		for (CTX::AnyGO *b : vec2) {
-			CTX::AnyGO *bp = b->getPlayer();
-			if (std::find_if(vec1.begin(), vec1.end(), [&bp](CTX::AnyGO * a) {return a->getPlayer() == bp;}) == vec1.end())
+		for (typename CTX::AnyGO *b : vec2) {
+			typename CTX::AnyGO *bp = b->getPlayer();
+			if (std::find_if(vec1.begin(), vec1.end(), [&bp](typename CTX::AnyGO * a) {return a->getPlayer() == bp;}) == vec1.end())
 				return 0.0f;
 		}
 		return 1.0f;
@@ -279,7 +279,7 @@ struct ValueDiplomaticStatusAtLeast : CommonEval<ValueDiplomaticStatusAtLeast, V
 	int status;
 	std::unique_ptr<ObjectFinder> a, b;
 	template<typename CTX> float common_eval(CTX *ctx) {
-		CTX::AnyGO *x = a->getFirst(ctx), *y = b->getFirst(ctx);
+		typename CTX::AnyGO *x = a->getFirst(ctx), *y = b->getFirst(ctx);
 		if (!(x && y)) return 0.0f;
 		return CTX::Program::instance->getDiplomaticStatus(x->getPlayer(), y->getPlayer()) <= status;
 	}
@@ -325,7 +325,7 @@ struct ValueTotalItemValue : CommonEval<ValueTotalItemValue, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX *ctx) {
 		float sum = 0.0f;
-		for (CTX::AnyGO* obj : finder->eval(ctx))
+		for (typename CTX::AnyGO* obj : finder->eval(ctx))
 			sum += obj->getItem(item);
 		return sum;
 	}
@@ -537,7 +537,7 @@ struct ValueIndexedItemValue : CommonEval<ValueIndexedItemValue, ValueDeterminer
 	std::unique_ptr<ValueDeterminer> index;
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX* ctx) {
-		if (CTX::AnyGO* obj = finder->getFirst(ctx))
+		if (typename CTX::AnyGO* obj = finder->getFirst(ctx))
 			return obj->getIndexedItem(item, (int)index->eval(ctx));
 		return 0.0f;
 	}
@@ -793,8 +793,8 @@ struct QuaternaryEnode : ValueDeterminer {
 struct EnodeFrontBackLeftRight : CommonEval<EnodeFrontBackLeftRight, QuaternaryEnode> {
 	std::unique_ptr<ObjectFinder> f_unit, f_target;
 	template<typename CTX> float common_eval(CTX* ctx) {
-		CTX::AnyGO* unit = f_unit->getFirst(ctx);
-		CTX::AnyGO* target = f_unit->getFirst(ctx);
+		typename CTX::AnyGO* unit = f_unit->getFirst(ctx);
+		typename CTX::AnyGO* target = f_unit->getFirst(ctx);
 		if (!(unit && target))
 			return 0.0f;
 		Vector3 vec = unit->position - target->position;

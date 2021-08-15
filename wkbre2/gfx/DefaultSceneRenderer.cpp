@@ -8,7 +8,8 @@ void DefaultSceneRenderer::render()
 {
 	gfx->BeginMeshDrawing();
 	gfx->BeginBatchDrawing();
-	RBatch *batch = gfx->CreateBatch(16384, 25000);
+	if (!batch)
+		batch = gfx->CreateBatch(16384, 25000);
 	batch->begin();
 
 	bool cur_alphatest = false;
@@ -105,5 +106,5 @@ void DefaultSceneRenderer::render()
 	
 	batch->flush();
 	batch->end();
-	delete batch;
+	//delete batch;
 }

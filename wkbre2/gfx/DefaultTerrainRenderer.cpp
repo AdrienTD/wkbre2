@@ -8,10 +8,11 @@
 #include "TextureCache.h"
 #include "../Camera.h"
 #include <cassert>
+#include <algorithm>
 
 void DefaultTerrainRenderer::init()
 {
-	batch = gfx->CreateBatch(4*1024, 6*1024);
+	batch = gfx->CreateBatch(4*256, 6*256);
 	texcache = new TextureCache(gfx, "Maps\\Map_Textures\\");
 
 	// Load terrain color textures
@@ -34,15 +35,35 @@ void DefaultTerrainRenderer::render() {
 
 	gfx->BeginMapDrawing();
 
-	const float tilesize = 5.0f;
+	constexpr float tilesize = 5.0f;
 	Vector3 sunNormal = terrain->sunVector.normal();
+
+	// camera space bounding box
+	const Vector3& camstart = camera->position;
+	Vector3 camend = camera->position + camera->direction * camera->farDist;
+	float farheight = std::tan(0.9f) * camera->farDist;
+	float farwidth = farheight * camera->aspect;
+	Vector3 camside = camera->direction.cross(Vector3(0, 1, 0)).normal();
+	Vector3 campup = camside.cross(camera->direction).normal();
+	Vector3 farleft = camend + camside * farwidth;
+	Vector3 farright = camend - camside * farwidth;
+	Vector3 farup = camend + campup * farheight;
+	Vector3 fardown = camend - campup * farheight;
+	float bbx1, bbz1, bbx2, bbz2;
+	std::tie(bbx1, bbx2) = std::minmax({ camstart.x, farleft.x, farright.x, farup.x, fardown.x });
+	std::tie(bbz1, bbz2) = std::minmax({ camstart.z, farleft.z, farright.z, farup.z, fardown.z });
+	int tlsx = (int)std::floor(bbx1 / tilesize) + terrain->edge;
+	int tlsz = (int)std::floor(bbz1 / tilesize) + terrain->edge;
+	int tlex = (int)std::ceil(bbx2 / tilesize) + terrain->edge;
+	int tlez = (int)std::ceil(bbz2 / tilesize) + terrain->edge;
+	//int tlsx = 0, tlsz = 0, tlex = terrain->width, tlez = terrain->height;
 
 	gfx->BeginBatchDrawing();
 	gfx->SetBlendColor(-1);
 	batch->begin();
 	texture oldgfxtex = 0;
-	for (int z = 0; z <= terrain->height; z++) {
-		for (int x = 0; x <= terrain->width; x++) {
+	for (int z = tlsz; z <= tlez; z++) {
+		for (int x = tlsx; x <= tlex; x++) {
 			if (x < 0 || x >= terrain->width || z < 0 || z >= terrain->height)
 				continue;
 

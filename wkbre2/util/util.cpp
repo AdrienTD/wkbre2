@@ -7,7 +7,7 @@
 #define NOMINMAX
 #include <Windows.h>
 
-void fc_ferr(char *f, int l, char *s, ...)
+void fc_ferr(const char *f, int l, const char *s, ...)
 {
 	char t[512]; va_list v;
 	va_start(v, s);
