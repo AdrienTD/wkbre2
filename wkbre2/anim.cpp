@@ -1,6 +1,7 @@
 #include "anim.h"
 #include "util/BinaryReader.h"
 #include "file.h"
+#include "mesh.h"
 
 void Anim::load(const char *filename) {
 	char *fcnt; int fsize;
@@ -32,4 +33,29 @@ void Anim::load(const char *filename) {
 				pc.verts[f][g] = br.readUint32();
 		}
 	}
+}
+
+const float* Anim::interpolate(uint32_t animTime, const Mesh& mesh)
+{
+	static std::vector<float> animverts;
+	animverts.resize(3 * this->numVertices);
+	if ((int32_t)animTime < 0) animTime = 0;
+	int animtime = animTime % this->duration;
+	for (int c = 0; c < 3; c++) {
+		auto& ac = this->coords[c];
+		int cf = 0;
+		for (; cf < ac.numFrames - 1; cf++)
+			if (ac.frameTimes[cf + 1] >= animtime)
+				break;
+		int frame = cf;
+		for (int i = 0; i < this->numVertices; i++) {
+			float z1 = ((ac.verts[frame][i / 3] >> (11 * (i % 3))) & 1023) / 1023.0f;
+			float z2 = ((ac.verts[frame + 1][i / 3] >> (11 * (i % 3))) & 1023) / 1023.0f;
+			float v1 = ac.vertadd[frame] + ac.vertmul[frame] * z1;
+			float v2 = ac.vertadd[frame + 1] + ac.vertmul[frame + 1] * z2;
+			int rmi = mesh.vertexRemapper[i];
+			animverts[3 * rmi + c] = v1 + (v2 - v1) * (animtime - ac.frameTimes[frame]) / (ac.frameTimes[frame + 1] - ac.frameTimes[frame]);
+		}
+	}
+	return animverts.data();
 }

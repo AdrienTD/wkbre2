@@ -43,5 +43,6 @@ private:
 	time_t lastfpscheck = 0;
 	Vector3 rayDirection;
 	CliGORef nextSelectedObject;
+	float nextSelObjDistance = 0.0f;
 	Language lang;
 };

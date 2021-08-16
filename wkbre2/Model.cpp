@@ -37,6 +37,7 @@ size_t StaticModel::getNumMaterials() { prepare(); return this->mesh.materials.s
 StaticModel* StaticModel::getStaticModel() { prepare(); return this; }
 Vector3 StaticModel::getSphereCenter() { prepare(); return mesh.sphereCenter; }
 float StaticModel::getSphereRadius() { prepare(); return mesh.sphereRadius; }
+const float* StaticModel::interpolate(uint32_t animTime) { prepare(); return mesh.vertices.data(); }
 
 void StaticModel::prepare() {
 	if (ready) return;
@@ -66,6 +67,7 @@ StaticModel* AnimatedModel::getStaticModel() { prepare(); return this->staticMod
 Vector3 AnimatedModel::getSphereCenter() { prepare(); return this->staticModel->getSphereCenter(); }
 float AnimatedModel::getSphereRadius() { prepare(); return this->staticModel->getSphereRadius(); }
 float AnimatedModel::getDuration() { prepare(); return (float)this->anim.duration / 1000.0f; }
+const float* AnimatedModel::interpolate(uint32_t animTime) { prepare(); staticModel->prepare(); return anim.interpolate(animTime, staticModel->mesh); }
 
 void AnimatedModel::prepare() {
 	if (ready) return;

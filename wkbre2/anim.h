@@ -5,6 +5,7 @@
 #include <array>
 
 struct AttachmentPointState;
+struct Mesh;
 
 struct Anim //: public Model
 {
@@ -43,6 +44,7 @@ struct Anim //: public Model
 	*/
 
 	void load(const char *filename);
+	const float* Anim::interpolate(uint32_t animTime, const Mesh& mesh);
 
 	Anim() {}
 	Anim(const char *filename) { load(filename); }

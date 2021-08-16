@@ -93,7 +93,8 @@ namespace {
 		Vector3 rdnorm = raydir.normal();
 		Vector3 smc = raystart - center;
 		float ddt = rdnorm.dot(smc);
-		float delta = ddt * ddt - rdnorm.sqlen3()*(smc.sqlen3() - radius * radius);
+		//float delta = ddt * ddt - rdnorm.sqlen3()*(smc.sqlen3() - radius * radius);
+		float delta = ddt * ddt - (smc.sqlen3() - radius * radius);
 		if (delta < 0.0f)
 			return false;
 		float k1 = -ddt + sqrtf(delta),
@@ -105,13 +106,34 @@ namespace {
 
 	Matrix CreateWorldMatrix(const Vector3 &is, const Vector3 &ir, const Vector3 &it)
 	{
-		//Matrix mscale, mrot, mtrans;
-		//CreateScaleMatrix(&mscale, is.x, is.y, is.z);
-		//CreateRotationYXZMatrix(&mrot, ir.y, ir.x, ir.z);
-		//CreateTranslationMatrix(&mtrans, it.x, it.y, it.z);
-		//*mWorld = mscale * mrot*mtrans;
 		return Matrix::getScaleMatrix(is) * Matrix::getRotationYMatrix(ir.y) * Matrix::getRotationXMatrix(ir.x)
 			* Matrix::getRotationZMatrix(ir.z) * Matrix::getTranslationMatrix(it);
+	}
+
+	std::pair<bool, Vector3> getRayTriangleIntersection(const Vector3& rayStart, const Vector3& _rayDir, const Vector3& p1, const Vector3& p2, const Vector3& p3) {
+		Vector3 rayDir = _rayDir.normal();
+		Vector3 v2 = p2 - p1, v3 = p3 - p1;
+		Vector3 trinorm = v2.cross(v3).normal(); // order?
+		if (trinorm == Vector3(0, 0, 0))
+			return std::make_pair(false, trinorm);
+		float rayDir_dot_trinorm = rayDir.dot(trinorm);
+		if (rayDir_dot_trinorm < 0.0f)
+			return std::make_pair(false, Vector3(0, 0, 0));
+		float p = p1.dot(trinorm);
+		float alpha = (p - rayStart.dot(trinorm)) / rayDir_dot_trinorm;
+		if (alpha < 0.0f)
+			return std::make_pair(false, Vector3(0, 0, 0));
+		Vector3 sex = rayStart + rayDir * alpha;
+
+		Vector3 c = sex - p1;
+		float d = v2.sqlen3() * v3.sqlen3() - v2.dot(v3) * v2.dot(v3);
+		//assert(d != 0.0f);
+		float a = (c.dot(v2) * v3.sqlen3() - c.dot(v3) * v2.dot(v3)) / d;
+		float b = (c.dot(v3) * v2.sqlen3() - c.dot(v2) * v3.dot(v2)) / d;
+		if (a >= 0.0f && b >= 0.0f && (a + b) <= 1.0f)
+			return std::make_pair(true, sex);
+		else
+			return std::make_pair(false, Vector3(0, 0, 0));
 	}
 }
 
@@ -141,13 +163,37 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				obj->sceneEntity.model = model;
 				obj->sceneEntity.transform = CreateWorldMatrix(obj->scale, -obj->orientation, obj->position);
 				obj->sceneEntity.color = obj->getPlayer()->color;
-				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
-					obj->sceneEntity.color = 0;
-					nextSelectedObject = obj;
-				}
 				obj->sceneEntity.animTime = (client->timeManager.currentTime - obj->animStartTime) * 1000.0f;
 				scene->add(&obj->sceneEntity);
 				numObjectsDrawn++;
+				// Ray collision check
+				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
+					const float *verts = model->interpolate(obj->sceneEntity.animTime);
+					Mesh& mesh = model->getStaticModel()->getMesh();
+					PolygonList& polylist = mesh.polyLists[0];
+					for (size_t g = 0; g < polylist.groups.size(); g++) {
+						PolyListGroup& group = polylist.groups[g];
+						for (auto& tuple : group.tupleIndex) {
+							Vector3 vec[3];
+							for (int j = 0; j < 3; j++) {
+								uint16_t i = tuple[j];
+								IndexTuple& tind = mesh.groupIndices[g][i];
+								const float* fl = &verts[tind.vertex * 3];
+								Vector3 prever(fl[0], fl[1], fl[2]);
+								vec[j] = prever.transform(obj->sceneEntity.transform);
+							}
+							auto col = getRayTriangleIntersection(client->camera.position, rayDirection, vec[0], vec[2], vec[1]);
+							if (col.first) {
+								float dist = (client->camera.position - col.second).sqlen3();
+								if (dist < nextSelObjDistance) {
+									obj->sceneEntity.color = 0;
+									nextSelectedObject = obj;
+									nextSelObjDistance = dist;
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
@@ -343,6 +389,7 @@ void ClientInterface::iter()
 	// Get ray
 	rayDirection = getRay(client->camera).normal();
 	nextSelectedObject = nullptr;
+	nextSelObjDistance = std::numeric_limits<float>::infinity();
 
 	if (client->gameSet) {
 		if(!scene)

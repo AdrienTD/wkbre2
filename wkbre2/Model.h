@@ -26,6 +26,7 @@ struct Model {
 	virtual Vector3 getSphereCenter() { return Vector3(0, 0, 0); }
 	virtual float getSphereRadius() { return 3.0f; }
 	virtual float getDuration() { return 1.5f; }
+	virtual const float* interpolate(uint32_t animTime) = 0;
 	virtual void prepare() = 0;
 };
 
@@ -43,6 +44,7 @@ struct StaticModel : Model {
 	StaticModel *getStaticModel() override;
 	Vector3 getSphereCenter() override;
 	float getSphereRadius() override;
+	const float* interpolate(uint32_t animTime) override;
 	void prepare() override;
 
 	Mesh &getMesh() {
@@ -66,6 +68,7 @@ struct AnimatedModel : Model {
 	Vector3 getSphereCenter() override;
 	float getSphereRadius() override;
 	float getDuration() override;
+	const float* interpolate(uint32_t animTime) override;
 	void prepare() override;
 
 	Anim &getAnim() {
