@@ -1091,6 +1091,25 @@ struct ActionPlaySoundAtPosition_Battles : Action {
 	}
 };
 
+struct ActionFaceTowards : Action {
+	std::unique_ptr<ObjectFinder> fObjects, fTarget;
+	virtual void run(SrvScriptContext* ctx) override {
+		if (auto* target = fTarget->getFirst(ctx)) {
+			const Vector3& b = target->position;
+			for (auto* obj : fObjects->eval(ctx)) {
+				const Vector3& a = obj->position;
+				Vector3 dir = b - a;
+				obj->setOrientation(Vector3(0.0f, std::atan2(dir.x, -dir.z), 0.0f));
+				//Vector3 d{ sinf(op.rotation.y), 0.0f, -cosf(op.rotation.y) };
+			}
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		fObjects.reset(ReadFinder(gsf, gs));
+		fTarget.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1163,6 +1182,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_CHANGE_DIPLOMATIC_STATUS: action = new ActionChangeDiplomaticStatus; break;
 	case Tags::ACTION_SINK_AND_REMOVE: action = new ActionSinkAndRemove; break;
 	case Tags::ACTION_PLAY_SOUND_AT_POSITION: if (gs.version >= gs.GSVERSION_WKBATTLES) action = new ActionPlaySoundAtPosition_Battles; else action = new ActionPlaySoundAtPosition_WKO; break;
+	case Tags::ACTION_FACE_TOWARDS: action = new ActionFaceTowards; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT:
@@ -1207,6 +1227,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_DISABLE_DIPLOMATIC_REPORT_WINDOW:
 	case Tags::ACTION_ENABLE_TRIBUTES_WINDOW:
 	case Tags::ACTION_DISABLE_TRIBUTES_WINDOW:
+	case Tags::ACTION_SET_RECONNAISSANCE:
 		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown(name); break;

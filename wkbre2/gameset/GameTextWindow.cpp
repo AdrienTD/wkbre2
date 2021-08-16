@@ -26,9 +26,10 @@ void GameTextWindow::Page::parse(GSFileParser& gsf, GameSet& gs)
 	gsf.advanceLine();
 	while (!gsf.eof) {
 		auto tag = gsf.nextTag();
-		if (tag == "TEXT_BODY") {
+		if (tag == "TEXT_BODY")
 			textBody = gsf.nextString();
-		}
+		else if (tag == "ACTIVATION_SOUND")
+			activationSound = gsf.nextString(true);
 		else if (tag == "PAGE_END")
 			break;
 		gsf.advanceLine();

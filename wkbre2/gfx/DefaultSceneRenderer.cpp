@@ -54,6 +54,7 @@ void DefaultSceneRenderer::render()
 			if (animmod) {
 				Anim &anim = animmod->anim;
 				animverts.resize(3 * anim.numVertices);
+				if ((int32_t)ent->animTime < 0) ent->animTime = 0;
 				int animtime = ent->animTime % anim.duration;
 				for (int c = 0; c < 3; c++) {
 					auto &ac = anim.coords[c];
@@ -87,9 +88,9 @@ void DefaultSceneRenderer::render()
 					bver[i].x = postver.x;
 					bver[i].y = postver.y;
 					bver[i].z = postver.z;
+					bver[i].color = -1;
 					bver[i].u = mesh.uvLists[color][2 * tind.uv];
 					bver[i].v = mesh.uvLists[color][2 * tind.uv + 1];
-					bver[i].color = -1;
 				}
 				int nxtind = 0;
 				for (auto &tuple : group.tupleIndex) {

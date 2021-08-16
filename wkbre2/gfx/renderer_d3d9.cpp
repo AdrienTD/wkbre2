@@ -35,7 +35,7 @@ struct RBatchD3D9;
 
 const int VSYNCenabled = 1;
 const int numBackBuffers = 0;
-const int HWVPenabled = 0;
+const int HWVPenabled = 1;
 const int fullscreen = 0;
 const int mapfogcolor = 0;
 const float farzvalue = 250.0f;

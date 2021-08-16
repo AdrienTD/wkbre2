@@ -278,6 +278,9 @@ void Client::tick()
 			case NETCLIMSG_SHOW_GAME_TEXT_WINDOW: {
 				int gtwIndex = br.readUint32();
 				gtwStates[gtwIndex] = 0;
+				const auto& snd = gameSet->gameTextWindows[gtwIndex].pages[0].activationSound;
+				if(!snd.empty())
+					SoundPlayer::getSoundPlayer()->playSound(snd);
 				break;
 			}
 			case NETCLIMSG_OBJECT_SCALE_SET: {

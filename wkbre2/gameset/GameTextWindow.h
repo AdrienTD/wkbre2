@@ -10,6 +10,7 @@ struct GSFileParser;
 struct GameTextWindow {
 	struct Page {
 		std::string textBody;
+		std::string activationSound;
 		void parse(GSFileParser& gsf, GameSet& gs);
 	};
 	struct Button {
