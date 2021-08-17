@@ -1228,6 +1228,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_ENABLE_TRIBUTES_WINDOW:
 	case Tags::ACTION_DISABLE_TRIBUTES_WINDOW:
 	case Tags::ACTION_SET_RECONNAISSANCE:
+	case Tags::ACTION_REMOVE_MULTIPLAYER_PLAYER:
 		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown(name); break;

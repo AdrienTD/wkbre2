@@ -226,6 +226,14 @@ void Task::process()
 				this->setTarget(blueprint->taskTarget->getFirst(&ctx));
 			}
 		}
+		if (blueprint->rejectTargetIfItIsTerminated) {
+			if (this->target && (this->target->flags & ServerGameObject::fTerminated)) {
+				this->setTarget(nullptr);
+				ServerGameObject* go = this->order->gameObject;
+				if (go->movement.isMoving())
+					go->stopMovement();
+			}
+		}
 		if (this->target) {
 			if (!this->startSequenceExecuted) {
 				this->blueprint->startSequence.run(order->gameObject);
@@ -279,6 +287,8 @@ void Task::process()
 		}
 		else {
 			terminate();
+			if (blueprint->terminateEntireOrderIfNoTarget)
+				order->terminate();
 		}
 	}
 }

@@ -590,6 +590,18 @@ struct ValueMapDepth : CommonEval<ValueMapWidth, ValueDeterminer> {
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
 };
 
+struct ValueIsDisabled : CommonEval<ValueIsDisabled, ValueDeterminer> {
+	std::unique_ptr<ObjectFinder> finder;
+	template<typename CTX> float common_eval(CTX* ctx) {
+		auto* obj = finder->getFirst(ctx);
+		if (!obj) return 0.0f;
+		return (obj->disableCount > 0) ? 1.0f : 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -632,6 +644,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_WITHIN_FORWARD_ARC: vd = new ValueWithinForwardArc; break;
 	case Tags::VALUE_MAP_WIDTH: vd = new ValueMapWidth; break;
 	case Tags::VALUE_MAP_DEPTH: vd = new ValueMapDepth; break;
+	case Tags::VALUE_IS_DISABLED: vd = new ValueIsDisabled; break;
 	default: vd = new ValueUnknown(strtag); break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

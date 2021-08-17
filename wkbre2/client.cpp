@@ -141,7 +141,10 @@ void Client::tick()
 				uint32_t index = br.readUint32();
 				float value = br.readFloat();
 				info("Object %u changed its item \"%s\" to the value %f.\n", objid, gameSet->items.names.getString(index).c_str(), value);
-				findObject(objid)->items[index] = value;
+				auto* obj = findObject(objid);
+				if (!obj) printf("CLI-WARN: Obj %i from message does not exist\n", objid);
+				if (obj)
+					obj->items[index] = value;
 				break;
 			}
 			case NETCLIMSG_OBJECT_PARENT_SET: {
