@@ -10,7 +10,7 @@
 struct AttachmentPointState
 {
 	Vector3 position;
-	float orientation[4];
+	std::array<float, 4> orientation;
 	bool on;
 };
 

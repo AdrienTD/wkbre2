@@ -93,7 +93,7 @@ Task::Task(int id, TaskBlueprint * blueprint, Order * order) : id(id), blueprint
 		else if (trigbp.type == Tags::TASKTRIGGER_UNINTERRUPTIBLE_ANIMATION_LOOP)
 			trigger = new AnimationLoopTrigger(this, &trigbp);
 		else if (trigbp.type == Tags::TASKTRIGGER_ATTACHMENT_POINT)
-			trigger = new AnimationLoopTrigger(this, &trigbp); // TODO: Related class
+			trigger = new AttachmentPointTrigger(this, &trigbp);
 		else
 			trigger = new Trigger(this, &trigbp);
 		this->triggers[i] = trigger;
@@ -207,11 +207,12 @@ void Task::process()
 		// Move tasks
 		if (this->blueprint->classType == Tags::ORDTSKTYPE_MOVE) {
 			ServerGameObject *go = this->order->gameObject;
-			if ((go->position - this->destination).sqlen2xz() < 0.1f) {
+			const Vector3& dest = this->target ? this->target->position : this->destination;
+			if ((go->position - dest).sqlen2xz() < 0.1f) {
 				terminate();
 			}
 			if (!go->movement.isMoving())
-				go->startMovement(this->destination);
+				go->startMovement(dest);
 			return;
 		}
 		// Target tasks
@@ -263,7 +264,7 @@ void Task::process()
 					go->startMovement(this->target->position);
 				// If target slightly moves during the movement, restart the movement
 				if (go->movement.isMoving())
-					if ((this->target->position - go->movement.getDestination()).sqlen2xz() > 0.01f)
+					if ((this->target->position - go->movement.getDestination()).sqlen2xz() > 0.1f)
 						go->startMovement(this->target->position);
 				if (proximitySatisfied) {
 					proximitySatisfied = false;
@@ -360,6 +361,10 @@ void OrderConfiguration::process()
 	if (!orders.empty()) {
 		orders.front().process();
 	}
+	bool nextBusy = !orders.empty();
+	if (busy && !nextBusy)
+		gameobj->sendEvent(Tags::PDEVENT_ON_IDLE);
+	busy = nextBusy;
 }
 
 void Trigger::parse(GSFileParser &gsf, GameSet &gs)
@@ -427,6 +432,45 @@ void AnimationLoopTrigger::parse(GSFileParser & gsf, GameSet & gs)
 		std::string word = gsf.nextTag();
 		if (word == "REFERENCE_TIME")
 			referenceTime = (float)gsf.nextInt() / 1000.0f;
+		else if (word == "END_TRIGGER")
+			break;
+		gsf.advanceLine();
+	}
+}
+
+void AttachmentPointTrigger::init()
+{
+	referenceTime = (uint32_t)(Server::instance->timeManager.currentTime * 1000.0f);
+}
+
+void AttachmentPointTrigger::update()
+{
+	ServerGameObject* obj = this->task->order->gameObject;
+	Model* model = obj->blueprint->getModel(obj->subtype, obj->appearance, obj->animationIndex, obj->animationVariant);
+	if (model) {
+		uint32_t startTime = (uint32_t)(obj->animStartTime * 1000.0f);
+		uint32_t prevTime = (uint32_t)(Server::instance->timeManager.previousTime * 1000.0f) - startTime;
+		uint32_t nextTime = (uint32_t)(Server::instance->timeManager.currentTime * 1000.0f) - startTime;
+		size_t numAPs = model->getNumAPs();
+		for (size_t i = 0; i < numAPs; i++) {
+			if (model->getAPInfo(i).tag.substr(0, 3) == "SP_") {
+				auto p = model->hasAPFlagSwitched(i, prevTime, nextTime);
+				if (p.first && p.second) {
+					blueprint->actions.run(obj);
+					break;
+				}
+			}
+		}
+	}
+}
+
+void AttachmentPointTrigger::parse(GSFileParser& gsf, GameSet& gs)
+{
+	gsf.advanceLine();
+	while (!gsf.eof) {
+		std::string word = gsf.nextTag();
+		if (word == "REFERENCE_TIME")
+			referenceTime = gsf.nextInt();
 		else if (word == "END_TRIGGER")
 			break;
 		gsf.advanceLine();

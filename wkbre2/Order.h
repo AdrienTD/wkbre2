@@ -110,11 +110,19 @@ struct AnimationLoopTrigger : Trigger {
 	void parse(GSFileParser &gsf, GameSet &gs) override;
 };
 
+struct AttachmentPointTrigger : Trigger {
+	uint32_t referenceTime;
+	using Trigger::Trigger;
+	void init() override;
+	void update() override;
+	void parse(GSFileParser& gsf, GameSet& gs) override;
+};
 
 struct OrderConfiguration {
 	ServerGameObject *gameobj;
 	std::deque<Order> orders;
 	int nextOrderId = 0;
+	bool busy = false;
 
 	OrderConfiguration(ServerGameObject *gameobj) : gameobj(gameobj) {}
 	void process();

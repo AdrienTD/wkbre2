@@ -38,6 +38,9 @@ StaticModel* StaticModel::getStaticModel() { prepare(); return this; }
 Vector3 StaticModel::getSphereCenter() { prepare(); return mesh.sphereCenter; }
 float StaticModel::getSphereRadius() { prepare(); return mesh.sphereRadius; }
 const float* StaticModel::interpolate(uint32_t animTime) { prepare(); return mesh.vertices.data(); }
+size_t StaticModel::getNumAPs() { prepare(); return mesh.attachPoints.size(); }
+const AttachmentPoint& StaticModel::getAPInfo(size_t index) { prepare(); return mesh.attachPoints[index]; }
+AttachmentPointState StaticModel::getAPState(size_t index, uint32_t animTime) { prepare(); return mesh.attachPoints[index].staticState; }
 
 void StaticModel::prepare() {
 	if (ready) return;
@@ -68,6 +71,20 @@ Vector3 AnimatedModel::getSphereCenter() { prepare(); return this->staticModel->
 float AnimatedModel::getSphereRadius() { prepare(); return this->staticModel->getSphereRadius(); }
 float AnimatedModel::getDuration() { prepare(); return (float)this->anim.duration / 1000.0f; }
 const float* AnimatedModel::interpolate(uint32_t animTime) { prepare(); staticModel->prepare(); return anim.interpolate(animTime, staticModel->mesh); }
+size_t AnimatedModel::getNumAPs() { prepare(); return anim.attachPoints.size(); }
+const AttachmentPoint& AnimatedModel::getAPInfo(size_t index) { prepare(); return staticModel->getAPInfo(index); }
+AttachmentPointState AnimatedModel::getAPState(size_t index, uint32_t animTime) { prepare(); return anim.getAPState(index, animTime); }
+
+std::pair<bool, bool> AnimatedModel::hasAPFlagSwitched(size_t index, uint32_t prevAnimTime, uint32_t nextAnimTime)
+{
+	prepare();
+	auto& aap = anim.attachPoints[index];
+	if ((int32_t)prevAnimTime < 0) prevAnimTime = 0; else prevAnimTime %= anim.duration;
+	if ((int32_t)nextAnimTime < 0) nextAnimTime = 0; else nextAnimTime %= anim.duration;
+	auto prevFrame = aap.getAPFrame(prevAnimTime);
+	auto nextFrame = aap.getAPFrame(nextAnimTime);
+	return { aap.states[prevFrame].on != aap.states[nextFrame].on, aap.states[nextFrame].on };
+}
 
 void AnimatedModel::prepare() {
 	if (ready) return;

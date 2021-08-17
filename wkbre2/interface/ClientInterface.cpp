@@ -161,11 +161,26 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				model = obj->blueprint->representAs;
 			if (model) {
 				obj->sceneEntity.model = model;
-				obj->sceneEntity.transform = CreateWorldMatrix(obj->scale, -obj->orientation, obj->position);
+				obj->sceneEntity.transform = obj->getWorldMatrix();
 				obj->sceneEntity.color = obj->getPlayer()->color;
-				obj->sceneEntity.animTime = (client->timeManager.currentTime - obj->animStartTime) * 1000.0f;
+				obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
 				scene->add(&obj->sceneEntity);
 				numObjectsDrawn++;
+				// Attachment points
+				size_t numAPs = model->getNumAPs();
+				for (size_t i = 0; i < numAPs; i++) {
+					auto ap = model->getAPInfo(i);
+					if (!ap.path.empty()) {
+						auto state = model->getAPState(i, obj->sceneEntity.animTime);
+						attachSceneEntities.emplace_back();
+						auto& apse = attachSceneEntities.back();
+						apse.model = model->cache->getModel("Warrior Kings Game Set\\" + ap.path);
+						apse.transform = Matrix::getTranslationMatrix(state.position) * obj->sceneEntity.transform;
+						apse.color = obj->sceneEntity.color;
+						apse.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
+						scene->add(&apse);
+					}
+				}
 				// Ray collision check
 				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
 					const float *verts = model->interpolate(obj->sceneEntity.animTime);
@@ -396,6 +411,7 @@ void ClientInterface::iter()
 			scene = new Scene(gfx, &client->gameSet->modelCache);
 
 		numObjectsDrawn = 0;
+		attachSceneEntities.clear();
 		if (client->level)
 			drawObject(client->level);
 		// test

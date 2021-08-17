@@ -12,6 +12,8 @@
 #include "values.h"
 #include <cmath>
 #include "ScriptContext.h"
+#include "GameObjBlueprint.h"
+#include "../Model.h"
 
 namespace {
 	OrientedPosition PosFromObjVec(const std::vector<ServerGameObject*> &vec) {
@@ -264,7 +266,18 @@ struct PDMatchingOffset : PositionDeterminer {
 
 struct PDFiringAttachmentPoint : PositionDeterminer {
 	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
-		return ctx->self.get()->position + Vector3(0, 1, 0);
+		ServerGameObject* obj = ctx->self.get();
+		Model* model = obj->blueprint->getModel(obj->subtype, obj->appearance, obj->animationIndex, obj->animationVariant);
+		if (model) {
+			size_t numAPs = model->getNumAPs();
+			for (size_t i = 0; i < numAPs; i++) {
+				if (model->getAPInfo(i).tag.substr(0, 3) == "SP_") {
+					Matrix mat = obj->getWorldMatrix();
+					return model->getAPState(i, obj->animStartTime).position.transform(mat);
+				}
+			}
+		}
+		return obj->position + Vector3(0, 1, 0);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 	}

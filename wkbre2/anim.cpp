@@ -18,19 +18,35 @@ void Anim::load(const char *filename) {
 	uint32_t numVertexGroups = this->numVertices / 3 + ((this->numVertices % 3) ? 1 : 0);
 	for (Anim::AnimPosCoord &pc : this->coords) {
 		pc.numFrames = br.readUint32();
-		pc.frameTimes = new uint32_t[pc.numFrames];
-		pc.verts = new uint32_t*[pc.numFrames];
-		pc.vertadd = new float[pc.numFrames];
-		pc.vertmul = new float[pc.numFrames];
+		pc.frameTimes.resize(pc.numFrames);
+		pc.verts.resize(pc.numFrames);
+		pc.vertadd.resize(pc.numFrames);
+		pc.vertmul.resize(pc.numFrames);
 		for (uint32_t f = 0; f < pc.numFrames; f++) {
 			pc.frameTimes[f] = br.readUint32();
 		}
 		for (uint32_t f = 0; f < pc.numFrames; f++) {
 			pc.vertadd[f] = br.readFloat();
 			pc.vertmul[f] = br.readFloat();
-			pc.verts[f] = new uint32_t[numVertexGroups];
+			pc.verts[f].resize(numVertexGroups);
 			for (uint32_t g = 0; g < numVertexGroups; g++)
 				pc.verts[f][g] = br.readUint32();
+		}
+	}
+	uint32_t numAttachPoints = br.readUint32();
+	attachPoints.resize(numAttachPoints);
+	for (uint32_t i = 0; i < numAttachPoints; i++) {
+		auto& aap = attachPoints[i];
+		aap.numFrames = br.readUint32();
+		aap.frameTimes.resize(aap.numFrames);
+		aap.states.resize(aap.numFrames);
+		for (uint32_t& ft : aap.frameTimes)
+			ft = br.readUint32();
+		for (auto& st : aap.states) {
+			st.position = br.readVector3();
+			for (float& fl : st.orientation)
+				fl = br.readFloat();
+			st.on = br.readUint8() != 0;
 		}
 	}
 }
@@ -58,4 +74,28 @@ const float* Anim::interpolate(uint32_t animTime, const Mesh& mesh)
 		}
 	}
 	return animverts.data();
+}
+
+AttachmentPointState Anim::getAPState(size_t index, uint32_t animTime)
+{
+	if ((int32_t)animTime < 0) animTime = 0; else animTime %= this->duration;
+	auto& ap = this->attachPoints[index];
+	size_t frame = ap.getAPFrame(animTime);
+	float delta = (float)(animTime - ap.frameTimes[frame]) / (ap.frameTimes[frame + 1] - ap.frameTimes[frame]);
+
+	AttachmentPointState state;
+	state.position = ap.states[frame].position + (ap.states[frame + 1].position - ap.states[frame].position) * delta;
+	// TODO: Orientation
+	state.orientation = { 1.0f, 0.0f, 0.0f, 0.0f };
+	state.on = ap.states[frame].on;
+	return state;
+}
+
+size_t Anim::AnimAttachPoint::getAPFrame(uint32_t animTime)
+{
+	int frame = 0;
+	for (; frame < numFrames - 1; frame++)
+		if (frameTimes[frame + 1] >= animTime)
+			break;
+	return frame;
 }

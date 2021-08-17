@@ -66,6 +66,14 @@ template<class AnyGameObject> struct CommonGameObject {
 		return nullptr;
 	}
 
+	Matrix getWorldMatrix() {
+		return Matrix::getScaleMatrix(scale)
+			* Matrix::getRotationYMatrix(-orientation.y)
+			* Matrix::getRotationXMatrix(-orientation.x)
+			* Matrix::getRotationZMatrix(-orientation.z)
+			* Matrix::getTranslationMatrix(position);
+	}
+
 	CommonGameObject(uint32_t id, GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr) {}
 };
 

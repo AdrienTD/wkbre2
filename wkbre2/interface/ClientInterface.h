@@ -5,6 +5,7 @@
 #include <ctime>
 #include "../GameObjectRef.h"
 #include "../Language.h"
+#include <deque>
 
 struct Client;
 struct TerrainRenderer;
@@ -45,4 +46,5 @@ private:
 	CliGORef nextSelectedObject;
 	float nextSelObjDistance = 0.0f;
 	Language lang;
+	std::deque<SceneEntity> attachSceneEntities;
 };

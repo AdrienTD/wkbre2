@@ -3,25 +3,27 @@
 #include <cstdint>
 #include <string>
 #include <array>
+#include "mesh.h"
 
-struct AttachmentPointState;
-struct Mesh;
+//struct AttachmentPointState;
+//struct Mesh;
 
-struct Anim //: public Model
+struct Anim
 {
 	struct AnimPosCoord
 	{
 		uint32_t numFrames;
-		uint32_t *frameTimes;
-		uint32_t **verts;
-		float *vertadd, *vertmul;
+		DynArray<uint32_t> frameTimes;
+		DynArray<DynArray<uint32_t>> verts;
+		DynArray<float> vertadd, vertmul;
 	};
 
 	struct AnimAttachPoint
 	{
 		uint32_t numFrames;
-		uint32_t *frameTimes;
-		AttachmentPointState *states;
+		DynArray<uint32_t> frameTimes;
+		DynArray<AttachmentPointState> states;
+		size_t getAPFrame(uint32_t animTime);
 	};
 
 	//Mesh *mesh;
@@ -29,22 +31,12 @@ struct Anim //: public Model
 	uint32_t duration;
 	uint32_t numVertices;
 	std::array<AnimPosCoord,3> coords;
-	uint32_t numAttachPoints;
-	AnimAttachPoint *attachPoints;
-	/*
-	Anim(char *fn);
-	void CreateVertsFromTime(batchVertex *out, int tm, int grp);
-	void loadMin();
-	void prepare();
-	void draw(int iwtcolor = 0);
-	void drawInBatch(RBatch *batch, int grp, int uvl = 0, int dif = 0, int tm = 0);
-	void getAttachPointPos(Vector3 *vout, int apindex, int tm = 0);
-	bool isAttachPointOn(int apindex, int tm = 0);
-	int hasAttachPointTurnedOn(int apindex, int tma, int tmb);
-	*/
+	//uint32_t numAttachPoints;
+	DynArray<AnimAttachPoint> attachPoints;
 
 	void load(const char *filename);
-	const float* Anim::interpolate(uint32_t animTime, const Mesh& mesh);
+	const float* interpolate(uint32_t animTime, const Mesh& mesh);
+	AttachmentPointState getAPState(size_t index, uint32_t animTime);
 
 	Anim() {}
 	Anim(const char *filename) { load(filename); }
