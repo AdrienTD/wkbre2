@@ -279,9 +279,17 @@ struct ValueDiplomaticStatusAtLeast : CommonEval<ValueDiplomaticStatusAtLeast, V
 	int status;
 	std::unique_ptr<ObjectFinder> a, b;
 	template<typename CTX> float common_eval(CTX *ctx) {
-		typename CTX::AnyGO *x = a->getFirst(ctx), *y = b->getFirst(ctx);
-		if (!(x && y)) return 0.0f;
-		return CTX::Program::instance->getDiplomaticStatus(x->getPlayer(), y->getPlayer()) <= status;
+		auto objlist1 = a->eval(ctx);
+		auto objlist2 = b->eval(ctx);
+		if (objlist1.empty() || objlist2.empty())
+			return 0.0f; // TODO: WARNING
+		for (auto* obj1 : objlist1) {
+			for (auto* obj2 : objlist2) {
+				if (ctx->program->getDiplomaticStatus(obj1->getPlayer(), obj2->getPlayer()) > status)
+					return 0.0f;
+			}
+		}
+		return 1.0f;
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		status = gs.diplomaticStatuses.readIndex(gsf);

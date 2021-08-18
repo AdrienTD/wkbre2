@@ -22,6 +22,8 @@ void OrderBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			std::string flag = gsf.nextString();
 			if (flag == "CYCLE_ORDER")
 				cycleOrder = true;
+			else if (flag == "CANNOT_INTERRUPT_ORDER")
+				cannotInterruptOrder = true;
 		}
 		else if (tag == "INITIALISATION_SEQUENCE")
 			this->initSequence.init(gsf, gs, "END_INITIALISATION_SEQUENCE");

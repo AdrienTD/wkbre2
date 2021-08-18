@@ -23,6 +23,7 @@ struct OrderBlueprint {
 	int classType;
 	int category = -1;
 	bool cycleOrder = false;
+	bool cannotInterruptOrder = false;
 	std::vector<TaskBlueprint*> tasks;
 	ActionSequence initSequence, startSequence, resumptionSequence, terminationSequence, cancellationSequence;
 

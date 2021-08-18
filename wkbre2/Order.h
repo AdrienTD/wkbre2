@@ -54,19 +54,18 @@ struct Order {
 };
 
 struct Task {
-	Order *order;
+	Order* order;
 	int id, state = OTS_UNINITIALISED;
-	TaskBlueprint *blueprint;
+	TaskBlueprint* blueprint;
 	bool firstExecution = true, triggersStarted = false;
 	std::vector<Trigger*> triggers;
 	bool startSequenceExecuted = false;
 	SrvGORef target;
 	Vector3 destination;
 	float proximity = -1.0f; bool proximitySatisfied = false, lastDestinationValid = false;
-	float msStartTime; Vector3 msInitialPosition, msInitialVelocity;
 
-	Task(int id, TaskBlueprint *blueprint, Order *order);
-	~Task();
+	Task(int id, TaskBlueprint* blueprint, Order* order);
+	virtual ~Task();
 
 	bool isDone() const { return state >= OTS_ABORTED; }
 	bool isWorking() const { return (state == OTS_PROCESSING) || (state == OTS_SUSPENDED); }
@@ -83,7 +82,36 @@ struct Task {
 	void stopTriggers();
 
 	void setTarget(ServerGameObject* obj);
+
+	virtual void onStart() {}
+	virtual void onUpdate() {}
 };
+
+struct MissileTask : Task {
+	float msStartTime; Vector3 msInitialPosition, msInitialVelocity;
+	using Task::Task;
+	virtual void onStart() override;
+	virtual void onUpdate() override;
+};
+
+struct MoveTask : Task {
+	using Task::Task;
+	virtual void onStart() override;
+	virtual void onUpdate() override;
+};
+
+struct ObjectReferenceTask : Task {
+	using Task::Task;
+	virtual void onStart() override;
+	virtual void onUpdate() override;
+};
+
+struct FaceTowardsTask : Task {
+	using Task::Task;
+	//virtual void onStart() override;
+	virtual void onUpdate() override;
+};
+
 
 struct Trigger {
 	Task *task;

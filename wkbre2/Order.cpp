@@ -114,32 +114,26 @@ void Task::start()
 {
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
-	if (this->blueprint->usePreviousTaskTarget)
+	if (this->blueprint->usePreviousTaskTarget) {
 		if (this->id > 0)
 			this->setTarget(this->order->tasks[this->id - 1]->target.get());
+	}
 	else if (!this->target && blueprint->taskTarget) {
 		SrvScriptContext ctx(Server::instance, this->order->gameObject);
 		this->setTarget(blueprint->taskTarget->getFirst(&ctx)); // FIXME: that would override the order's target!!!
 	}
 	this->startSequenceExecuted = false; // is this correct?
-
-	if (blueprint->classType == Tags::ORDTSKTYPE_MISSILE) {
-		SrvScriptContext ssc{ Server::instance, this->order->gameObject };
-		float speed = this->order->gameObject->blueprint->missileSpeed->eval(&ssc);
-
-		// compute initial vertical velocity such that the missile hits the target in its trajectory
-		Vector3 hvec = (this->target->position - this->order->gameObject->position);
-		hvec.y = 0.0f;
-		const Vector3 &pos_i = this->order->gameObject->position;
-		float y_i = pos_i.y, y_b = this->target->position.y;
-		float b = hvec.len2xz() / speed; // time when missile hits target on XZ coordinates
-		float vy = (y_b - y_i - 0.5f * (-9.81f) * b * b) / b;
-
-		this->msInitialVelocity = hvec.normal2xz() * speed + Vector3(0, vy, 0);
-		this->msInitialPosition = pos_i;
-		this->msStartTime = Server::instance->timeManager.currentTime;
-		this->order->gameObject->startTrajectory(msInitialPosition, msInitialVelocity, msStartTime);
+	if (this->target) {
+		if (!this->startSequenceExecuted) {
+			this->blueprint->startSequence.run(order->gameObject);
+			this->startSequenceExecuted = true;
+			if (this->blueprint->proximityRequirement) {
+				SrvScriptContext ctx(Server::instance, this->order->gameObject);
+				this->proximity = this->blueprint->proximityRequirement->eval(&ctx); // should this be here?
+			}
+		}
 	}
+	this->onStart();
 }
 
 void Task::suspend()
@@ -189,107 +183,7 @@ void Task::process()
 	else if (this->state != OTS_PROCESSING)
 		this->start();
 	if (this->state == OTS_PROCESSING) {
-		// TODO: Make derived classes of Task to avoid future if elses
-		// Missile tasks
-		if (this->blueprint->classType == Tags::ORDTSKTYPE_MISSILE) {
-			ServerGameObject* go = this->order->gameObject;
-			float theight = Server::instance->terrain->getHeight(go->position.x, go->position.z);
-			if (go->position.y < theight) {
-				// TODO: we could play sound directly on client without sending packet
-				// (which is probably why strikeFloorSound was made for WKB in the first place)
-				if (go->blueprint->strikeFloorSound != -1) {
-					go->playSoundAtObject(go->blueprint->strikeFloorSound, go);
-				}
-				this->blueprint->struckFloorTrigger.run(go);
-			}
-			return;
-		}
-		// Move tasks
-		if (this->blueprint->classType == Tags::ORDTSKTYPE_MOVE) {
-			ServerGameObject *go = this->order->gameObject;
-			const Vector3& dest = this->target ? this->target->position : this->destination;
-			if ((go->position - dest).sqlen2xz() < 0.1f) {
-				terminate();
-			}
-			if (!go->movement.isMoving())
-				go->startMovement(dest);
-			return;
-		}
-		// Target tasks
-		if (!this->target) {
-			this->stopTriggers();
-			ServerGameObject* go = this->order->gameObject;
-			if (go->movement.isMoving())
-				go->stopMovement();
-			if (blueprint->taskTarget) {
-				SrvScriptContext ctx(Server::instance, this->order->gameObject);
-				this->setTarget(blueprint->taskTarget->getFirst(&ctx));
-			}
-		}
-		if (blueprint->rejectTargetIfItIsTerminated) {
-			if (this->target && (this->target->flags & ServerGameObject::fTerminated)) {
-				this->setTarget(nullptr);
-				ServerGameObject* go = this->order->gameObject;
-				if (go->movement.isMoving())
-					go->stopMovement();
-			}
-		}
-		if (this->target) {
-			if (!this->startSequenceExecuted) {
-				this->blueprint->startSequence.run(order->gameObject);
-				this->startSequenceExecuted = true;
-				if (this->blueprint->proximityRequirement) {
-					SrvScriptContext ctx(Server::instance, this->order->gameObject);
-					this->proximity = this->blueprint->proximityRequirement->eval(&ctx); // should this be here?
-				}
-			}
-			ServerGameObject *go = this->order->gameObject;
-			if (this->proximity < 0.0f || (go->position - this->target->position).sqlen2xz() < this->proximity * this->proximity) {
-				this->startTriggers();
-				if (go->movement.isMoving())
-					go->stopMovement();
-				if (!proximitySatisfied) {
-					proximitySatisfied = true;
-					blueprint->proximitySatisfiedSequence.run(order->gameObject);
-					//
-					int animtoplay = -1;
-					for (const auto& ea : blueprint->equAnims) {
-						SrvScriptContext ctx(Server::instance, this->order->gameObject);
-						if (Server::instance->gameSet->equations[ea.first]->booleval(&ctx)) {
-							animtoplay = ea.second;
-							break;
-						}
-					}
-					if (animtoplay == -1)
-						animtoplay = blueprint->defaultAnim;
-					if (animtoplay != -1)
-						go->setAnimation(animtoplay);
-				}
-			}
-			else {
-				this->stopTriggers();
-				if (!go->movement.isMoving())
-					go->startMovement(this->target->position);
-				// If target slightly moves during the movement, restart the movement
-				if (go->movement.isMoving())
-					if ((this->target->position - go->movement.getDestination()).sqlen2xz() > 0.1f)
-						go->startMovement(this->target->position);
-				if (proximitySatisfied) {
-					proximitySatisfied = false;
-					//if (blueprint->defaultAnim != -1)
-					//	go->setAnimation(0);
-				}
-			}
-			if (this->triggersStarted) {
-				for (Trigger *trigger : this->triggers)
-					trigger->update();
-			}
-		}
-		else {
-			terminate();
-			if (blueprint->terminateEntireOrderIfNoTarget)
-				order->terminate();
-		}
+		this->onUpdate();
 	}
 }
 
@@ -327,7 +221,11 @@ void Task::setTarget(ServerGameObject* newtarget)
 
 void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination)
 {
-	Order *neworder;
+	if (Order* currentOrder = getCurrentOrder()) {
+		if (currentOrder->blueprint->cannotInterruptOrder && assignMode != Tags::ORDERASSIGNMODE_DO_LAST)
+			return;
+	}
+	Order* neworder;
 	switch (assignMode) {
 	case Tags::ORDERASSIGNMODE_DO_FIRST:
 		if (!this->orders.empty()) {
@@ -344,8 +242,18 @@ void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMod
 		neworder = &this->orders.back();
 		break;
 	}
-	for (TaskBlueprint *taskBp : orderBlueprint->tasks)
-		neworder->tasks.push_back(new Task(neworder->nextTaskId++, taskBp, neworder));
+	for (TaskBlueprint* taskBp : orderBlueprint->tasks) {
+		int id = neworder->nextTaskId++;
+		Task* task;
+		switch (taskBp->classType) {
+		default:
+		case Tags::ORDTSKTYPE_OBJECT_REFERENCE: task = new ObjectReferenceTask(id, taskBp, neworder); break;
+		case Tags::ORDTSKTYPE_MOVE: task = new MoveTask(id, taskBp, neworder); break;
+		case Tags::ORDTSKTYPE_MISSILE: task = new MissileTask(id, taskBp, neworder); break;
+		case Tags::ORDTSKTYPE_FACE_TOWARDS: task = new FaceTowardsTask(id, taskBp, neworder); break;
+		}
+		neworder->tasks.push_back(task);
+	}
 	if (target) {
 		neworder->tasks.at(0)->setTarget(target);
 	}
@@ -485,4 +393,136 @@ void AttachmentPointTrigger::parse(GSFileParser& gsf, GameSet& gs)
 			break;
 		gsf.advanceLine();
 	}
+}
+
+void MissileTask::onStart()
+{
+	SrvScriptContext ssc{ Server::instance, this->order->gameObject };
+	float speed = this->order->gameObject->blueprint->missileSpeed->eval(&ssc);
+
+	// compute initial vertical velocity such that the missile hits the target in its trajectory
+	Vector3 hvec = (this->target->position - this->order->gameObject->position);
+	hvec.y = 0.0f;
+	const Vector3& pos_i = this->order->gameObject->position;
+	float y_i = pos_i.y, y_b = this->target->position.y;
+	float b = hvec.len2xz() / speed; // time when missile hits target on XZ coordinates
+	float vy = (y_b - y_i - 0.5f * (-9.81f) * b * b) / b;
+
+	this->msInitialVelocity = hvec.normal2xz() * speed + Vector3(0, vy, 0);
+	this->msInitialPosition = pos_i;
+	this->msStartTime = Server::instance->timeManager.currentTime;
+	this->order->gameObject->startTrajectory(msInitialPosition, msInitialVelocity, msStartTime);
+}
+
+void MissileTask::onUpdate()
+{
+	ServerGameObject* go = this->order->gameObject;
+	float theight = Server::instance->terrain->getHeight(go->position.x, go->position.z);
+	if (go->position.y < theight) {
+		// TODO: we could play sound directly on client without sending packet
+		// (which is probably why strikeFloorSound was made for WKB in the first place)
+		if (go->blueprint->strikeFloorSound != -1) {
+			go->playSoundAtObject(go->blueprint->strikeFloorSound, go);
+		}
+		this->blueprint->struckFloorTrigger.run(go);
+	}
+}
+
+void MoveTask::onStart()
+{
+}
+
+void MoveTask::onUpdate()
+{
+	ServerGameObject* go = this->order->gameObject;
+	const Vector3& dest = this->target ? this->target->position : this->destination;
+	if ((go->position - dest).sqlen2xz() < 0.1f) {
+		terminate();
+	}
+	if (!go->movement.isMoving())
+		go->startMovement(dest);
+}
+
+void ObjectReferenceTask::onStart()
+{
+}
+
+void ObjectReferenceTask::onUpdate()
+{
+	if (!this->target) {
+		this->stopTriggers();
+		ServerGameObject* go = this->order->gameObject;
+		if (go->movement.isMoving())
+			go->stopMovement();
+		if (blueprint->taskTarget) {
+			SrvScriptContext ctx(Server::instance, this->order->gameObject);
+			this->setTarget(blueprint->taskTarget->getFirst(&ctx));
+		}
+	}
+	if (blueprint->rejectTargetIfItIsTerminated) {
+		if (this->target && (this->target->flags & ServerGameObject::fTerminated)) {
+			this->setTarget(nullptr);
+			ServerGameObject* go = this->order->gameObject;
+			if (go->movement.isMoving())
+				go->stopMovement();
+		}
+	}
+	if (this->target) {
+		ServerGameObject* go = this->order->gameObject;
+		if (this->proximity < 0.0f || (go->position - this->target->position).sqlen2xz() < this->proximity * this->proximity) {
+			this->startTriggers();
+			if (go->movement.isMoving())
+				go->stopMovement();
+			if (!proximitySatisfied) {
+				proximitySatisfied = true;
+				blueprint->proximitySatisfiedSequence.run(order->gameObject);
+				//
+				int animtoplay = -1;
+				for (const auto& ea : blueprint->equAnims) {
+					SrvScriptContext ctx(Server::instance, this->order->gameObject);
+					if (Server::instance->gameSet->equations[ea.first]->booleval(&ctx)) {
+						animtoplay = ea.second;
+						break;
+					}
+				}
+				if (animtoplay == -1)
+					animtoplay = blueprint->defaultAnim;
+				if (animtoplay != -1)
+					go->setAnimation(animtoplay);
+			}
+		}
+		else {
+			this->stopTriggers();
+			if (!go->movement.isMoving())
+				go->startMovement(this->target->position);
+			// If target slightly moves during the movement, restart the movement
+			if (go->movement.isMoving())
+				if ((this->target->position - go->movement.getDestination()).sqlen2xz() > 0.1f)
+					go->startMovement(this->target->position);
+			if (proximitySatisfied) {
+				proximitySatisfied = false;
+				//if (blueprint->defaultAnim != -1)
+				//	go->setAnimation(0);
+			}
+		}
+		if (this->triggersStarted) {
+			for (Trigger* trigger : this->triggers)
+				trigger->update();
+		}
+	}
+	else {
+		terminate();
+		if (blueprint->terminateEntireOrderIfNoTarget)
+			order->terminate();
+	}
+}
+
+void FaceTowardsTask::onUpdate()
+{
+	if (target) {
+		ServerGameObject* obj = this->order->gameObject;
+		Vector3 dir = target->position - obj->position;
+		obj->setOrientation(Vector3(0.0f, std::atan2(dir.x, -dir.z), 0.0f));
+	}
+	terminate();
 }
