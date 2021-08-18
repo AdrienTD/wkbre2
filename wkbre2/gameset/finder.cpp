@@ -85,7 +85,7 @@ struct FinderAlias : ObjectFinder {
 		auto &alias = Server::instance->aliases[aliasIndex];
 		std::vector<ServerGameObject*> res;
 		for (auto &ref : alias)
-			if (ref)
+			if (ref && ref->isInteractable())
 				res.push_back(ref);
 		return res;
 	}
@@ -141,7 +141,11 @@ struct FinderAssociates : ObjectFinder {
 	int category;
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
 		const auto &set = ctx->self.get()->associates[category];
-		return { set.begin(), set.end() };
+		std::vector<ServerGameObject*> vec;
+		for (auto& ref : set)
+			if (ref && ref->isInteractable())
+				vec.push_back(ref);
+		return vec;
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		category = gs.associations.readIndex(gsf);
@@ -152,7 +156,11 @@ struct FinderAssociators : ObjectFinder {
 	int category;
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
 		const auto &set = ctx->self.get()->associators[category];
-		return { set.begin(), set.end() };
+		std::vector<ServerGameObject*> vec;
+		for (auto& ref : set)
+			if (ref && ref->isInteractable())
+				vec.push_back(ref);
+		return vec;
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		category = gs.associations.readIndex(gsf);
@@ -222,6 +230,7 @@ struct FinderNearestToSatisfy : ObjectFinder {
 		search.start(Server::instance, ctx->self.get()->position, radius);
 		std::vector<ServerGameObject*> res;
 		while (ServerGameObject *obj = search.next()) {
+			if (!obj->isInteractable()) continue;
 			auto _ = ctx->candidate.change(obj);
 			if (vdcond->eval(ctx) > 0.0f)
 				res.push_back(obj);
@@ -244,9 +253,12 @@ struct FinderLevel : CommonEval<FinderLevel, ObjectFinder> {
 struct FinderDisabledAssociates : ObjectFinder {
 	int category;
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
-		//const auto& set = ctx->self.get()->associates[category];
-		//return { set.begin(), set.end() };
-		return {}; // TODO
+		const auto& set = ctx->self.get()->associates[category];
+		std::vector<ServerGameObject*> vec;
+		for (auto& ref : set)
+			if (ref && ref->disableCount > 0) // terminated?
+				vec.push_back(ref);
+		return vec;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		category = gs.associations.readIndex(gsf);
@@ -354,6 +366,7 @@ struct FinderSubordinates : ObjectFinder {
 	bool immediateLevel = false;
 	static /*thread_local*/ std::vector<ServerGameObject*> results;
 	bool eligible(ServerGameObject *obj, SrvScriptContext *ctx) {
+		if (!obj->isInteractable()) return false;
 		if (!objbp || (objbp == obj->blueprint)) {
 			if ((bpclass == -1) || (bpclass == obj->blueprint->bpClass)) {
 				auto _ = ctx->candidate.change(obj);
@@ -503,6 +516,7 @@ struct FinderMetreRadius : ObjectFinder {
 	int relationship = 0;
 	int classFilter = 0;
 	bool eligible(ServerGameObject* obj, ServerGameObject* refplayer) {
+		if (!obj->isInteractable()) return false;
 		ServerGameObject* objplayer = obj->getPlayer();
 		switch (relationship) {
 		case 1: if (objplayer != refplayer) return false; break;
@@ -618,7 +632,8 @@ struct FinderTileRadius : ObjectFinder {
 		search.start(Server::instance, ctx->self.get()->position, radius);
 		std::vector<ServerGameObject*> res;
 		while (ServerGameObject* obj = search.next())
-			res.push_back(obj);
+			if (obj->isInteractable())
+				res.push_back(obj);
 		return res;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {

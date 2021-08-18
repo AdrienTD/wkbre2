@@ -74,6 +74,8 @@ template<class AnyGameObject> struct CommonGameObject {
 			* Matrix::getTranslationMatrix(position);
 	}
 
+	bool isInteractable() { return (disableCount <= 0) && !(flags & fTerminated); }
+
 	CommonGameObject(uint32_t id, GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr) {}
 };
 
