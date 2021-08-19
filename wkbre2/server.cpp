@@ -536,6 +536,8 @@ void ServerGameObject::convertTo(GameObjBlueprint * postbp)
 	vec.erase(std::find(vec.begin(), vec.end(), this));
 	// add it back at the correct blueprint key
 	parent->children[postbp->getFullId()].push_back(this);
+	// backup of previous blueprint
+	GameObjBlueprint* prevbp = blueprint;
 	// now converted!
 	blueprint = postbp;
 	// inform the clients
@@ -543,6 +545,9 @@ void ServerGameObject::convertTo(GameObjBlueprint * postbp)
 	npw.writeUint32(this->id);
 	npw.writeUint32(postbp->getFullId());
 	Server::instance->sendToAll(npw);
+	// change subtype to matching one
+	int postsubtype = postbp->subtypeNames.getIndex(prevbp->subtypeNames.getString(this->subtype));
+	this->setSubtypeAndAppearance((postsubtype != -1) ? postsubtype : 0, 0); // TODO: random subtype as fallback?
 }
 
 void ServerGameObject::setScale(const Vector3& scale)

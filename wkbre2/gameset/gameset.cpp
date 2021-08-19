@@ -371,6 +371,13 @@ void GameSet::parseFile(const char * fn, int pass)
 				snd.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_GLOBAL_MAP_SOUND_TAG: {
+				int st = soundTags.readIndex(gsf);
+				int unk1 = gsf.nextInt();
+				auto unk2 = gsf.nextString();
+				globalSoundMap[st].push_back(gsf.nextString(true));
+				break;
+			}
 			}
 		}
 

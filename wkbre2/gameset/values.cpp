@@ -610,6 +610,42 @@ struct ValueIsDisabled : CommonEval<ValueIsDisabled, ValueDeterminer> {
 	}
 };
 
+struct ValueIsDiscovered : CommonEval<ValueIsDiscovered, ValueDeterminer> {
+	std::unique_ptr<ObjectFinder> fObjects, fPlayer;
+	template<typename CTX> float common_eval(CTX* ctx) {
+		// TODO
+		return 1.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		fObjects.reset(ReadFinder(gsf, gs));
+		fPlayer.reset(ReadFinder(gsf, gs));
+	}
+};
+struct ValueIsVisible : CommonEval<ValueIsDiscovered, ValueDeterminer> {
+	std::unique_ptr<ObjectFinder> fObjects, fPlayer;
+	template<typename CTX> float common_eval(CTX* ctx) {
+		// TODO
+		return 1.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		fObjects.reset(ReadFinder(gsf, gs));
+		fPlayer.reset(ReadFinder(gsf, gs));
+	}
+};
+struct ValueCouldReach : ValueDeterminer {
+	GameObjBlueprint* objtype;
+	std::unique_ptr<PositionDeterminer> pStart, pEnd;
+	virtual float eval(SrvScriptContext* ctx) override {
+		// TODO
+		return 1.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		objtype = gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].readPtr(gsf);
+		pStart.reset(PositionDeterminer::createFrom(gsf, gs));
+		pEnd.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -653,6 +689,9 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_MAP_WIDTH: vd = new ValueMapWidth; break;
 	case Tags::VALUE_MAP_DEPTH: vd = new ValueMapDepth; break;
 	case Tags::VALUE_IS_DISABLED: vd = new ValueIsDisabled; break;
+	case Tags::VALUE_IS_DISCOVERED: vd = new ValueIsDiscovered; break;
+	case Tags::VALUE_IS_VISIBLE: vd = new ValueIsVisible; break;
+	case Tags::VALUE_COULD_REACH: vd = new ValueCouldReach; break;
 	default: vd = new ValueUnknown(strtag); break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

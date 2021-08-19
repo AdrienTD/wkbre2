@@ -87,6 +87,7 @@ struct GameSet
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;
+	std::map<int, std::vector<GameObjBlueprint::SoundRef>> globalSoundMap;
 
 	ModelCache modelCache;
 

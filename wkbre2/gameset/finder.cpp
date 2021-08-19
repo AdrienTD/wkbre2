@@ -570,7 +570,9 @@ struct FinderGradeSelect : ObjectFinder {
 	std::unique_ptr<ValueDeterminer> vdCount;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
-		int count = (int)vdCount->eval(ctx);
+		int count = 0;
+		if (vdCount)
+			count = (int)vdCount->eval(ctx);
 		auto vec = finder->eval(ctx);
 		ValueDeterminer *vd = Server::instance->gameSet->equations[equation];
 
@@ -596,7 +598,8 @@ struct FinderGradeSelect : ObjectFinder {
 		else
 			ferr("Invalid grading %s", arg.c_str());
 		equation = gs.equations.readIndex(gsf);
-		vdCount.reset(ReadValueDeterminer(gsf, gs));
+		if (!gsf.eol)
+			vdCount.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinderNode(gsf, gs));
 	}
 };

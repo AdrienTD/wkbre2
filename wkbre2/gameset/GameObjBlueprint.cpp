@@ -209,6 +209,11 @@ std::tuple<std::string, float, float> GameObjBlueprint::getSound(int sndTag, int
 		if (it != pssm.end())
 			sndVars = &it->second;
 	}
+	if (!sndVars) {
+		it = gameSet->globalSoundMap.find(sndTag);
+		if (it != gameSet->globalSoundMap.end())
+			sndVars = &it->second;
+	}
 	if (sndVars) {
 		const std::string* path = nullptr;
 		float refDist = 30.0f; float maxDist = 300.0f;
