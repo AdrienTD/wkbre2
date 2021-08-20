@@ -1,6 +1,7 @@
 #include "NNSearch.h"
 #include "server.h"
 #include "terrain.h"
+#include <cassert>
 
 void NNSearch::start(Server *server, const Vector3 &center, float radius)
 {
@@ -17,13 +18,19 @@ void NNSearch::start(Server *server, const Vector3 &center, float radius)
 
 ServerGameObject * NNSearch::next()
 {
-	const std::vector<SrvGORef> &vec = server->tiles[tz * server->terrain->getNumPlayableTiles().first + tx].objList;
-	if(it < vec.size())
-		return vec[it++];
+	while (true) {
+		const std::vector<SrvGORef>& vec = server->tiles[tz * server->terrain->getNumPlayableTiles().first + tx].objList;
+		if (it < vec.size()) {
+			ServerGameObject* obj = vec[it++];
+			if (obj)
+				return obj;
+			else
+				continue;
+		}
 
-	tx += 1;
-	if (tx >= maxX) { tz += 1; tx = minX; }
-	if (tz >= maxZ) return nullptr;
-	it = 0;
-	return next();
+		tx += 1;
+		if (tx > maxX) { tz += 1; tx = minX; }
+		if (tz > maxZ) return nullptr;
+		it = 0;
+	}
 }

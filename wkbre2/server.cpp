@@ -511,19 +511,21 @@ void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 
 void ServerGameObject::associateObject(int category, ServerGameObject * associated)
 {
+	assert(this && associated && !this->deleted && !associated->deleted);
 	this->associates[category].insert(associated);
 	associated->associators[category].insert(this);
 }
 
 void ServerGameObject::dissociateObject(int category, ServerGameObject * associated)
 {
+	assert(this && associated && !this->deleted && !associated->deleted);
 	this->associates[category].erase(associated);
 	associated->associators[category].erase(this);
-
 }
 
 void ServerGameObject::clearAssociates(int category)
 {
+	assert(this && !this->deleted);
 	for (auto &obj : associates[category])
 		obj->associators[category].erase(this);
 	associates[category].clear();
@@ -639,28 +641,29 @@ void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 		else
 			newtileIndex = -1;
 		if (newtileIndex != tileIndex) {
-			if (tileIndex != -1) {
-				auto &vec = server->tiles[tileIndex].objList;
+			int prevtileIndex = tileIndex;
+			tileIndex = newtileIndex;
+			if (prevtileIndex != -1) {
+				auto &vec = server->tiles[prevtileIndex].objList;
 				vec.erase(std::find(vec.begin(), vec.end(), this));
 			}
 			if (newtileIndex != -1) {
+				server->tiles[newtileIndex].objList.push_back(this);
 				if (events) {
 					for (auto& no : server->tiles[newtileIndex].objList) {
 						if (no)
 							no->sendEvent(Tags::PDEVENT_ON_SHARE_TILE, this);
 					}
 				}
-				server->tiles[newtileIndex].objList.push_back(this);
 			}
-			if (events && tileIndex != -1 && newtileIndex != -1 && blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
-				if (server->tiles[tileIndex].zone != server->tiles[newtileIndex].zone) {
-					if (ServerGameObject* leavingZone = server->tiles[tileIndex].zone.get())
+			if (events && prevtileIndex != -1 && newtileIndex != -1 && blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+				if (server->tiles[prevtileIndex].zone != server->tiles[newtileIndex].zone) {
+					if (ServerGameObject* leavingZone = server->tiles[prevtileIndex].zone.get())
 						leavingZone->sendEvent(Tags::PDEVENT_ON_OBJECT_EXITS, this);
 					if (ServerGameObject* enteringZone = server->tiles[newtileIndex].zone.get())
 						enteringZone->sendEvent(Tags::PDEVENT_ON_OBJECT_ENTERS, this);
 				}
 			}
-			tileIndex = newtileIndex;
 		}
 	}
 }

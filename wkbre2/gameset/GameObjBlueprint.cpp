@@ -181,6 +181,9 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 		case Tags::CBLUEPRINT_STRIKE_WATER_SOUND: {
 			strikeWaterSound = gameSet->soundTags.readIndex(gsf); break;
 		}
+		case Tags::CBLUEPRINT_DO_NOT_COLLIDE_WITH: {
+			doNotCollideWith = ReadValueDeterminer(gsf, *gameSet); break;
+		}
 		}
 		gsf.advanceLine();
 	}

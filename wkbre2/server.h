@@ -123,7 +123,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	ServerGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 	void deleteObject(ServerGameObject *obj);
 
-	ServerGameObject *findObject(uint32_t id) { return idmap[id]; }
+	ServerGameObject* findObject(uint32_t id) { auto it = idmap.find(id); return (it != idmap.end()) ? it->second : nullptr; }
 
 	void addClient(NetLink* link);
 	void removeClient(NetLink* link);

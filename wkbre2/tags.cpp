@@ -82,11 +82,12 @@ TagDict<5> Tags::CCOMMAND_tagDict({
     "START_SEQUENCE",
 });
 
-TagDict<30> Tags::CBLUEPRINT_tagDict({
+TagDict<31> Tags::CBLUEPRINT_tagDict({
     "BLUEPRINT_TOOLTIP",
     "BUILDING_TYPE",
     "CAN_SPAWN",
     "DISPLAYS_ITEM",
+    "DO_NOT_COLLIDE_WITH",
     "FLOATS_ON_WATER",
     "GENERATE_SIGHT_RANGE_EVENTS",
     "HAS_DYNAMIC_SHADOW",

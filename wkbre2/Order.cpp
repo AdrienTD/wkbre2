@@ -8,6 +8,7 @@
 #include "gameset/ScriptContext.h"
 #include "gameset/gameset.h"
 #include "terrain.h"
+#include "NNSearch.h"
 
 void Order::init()
 {
@@ -400,11 +401,20 @@ void MissileTask::onStart()
 	SrvScriptContext ssc{ Server::instance, this->order->gameObject };
 	float speed = this->order->gameObject->blueprint->missileSpeed->eval(&ssc);
 
+	// missile destination to hit
+	Vector3 dest = this->target->position;
+	if (Model* model = this->target->blueprint->getModel(target->subtype, target->appearance, target->animationIndex, target->animationVariant)) {
+		Vector3 center = model->getSphereCenter().transform(target->getWorldMatrix());
+		if (center.y < dest.y)
+			center.y = dest.y;
+		dest = center;
+	}
+
 	// compute initial vertical velocity such that the missile hits the target in its trajectory
-	Vector3 hvec = (this->target->position - this->order->gameObject->position);
+	Vector3 hvec = (dest - this->order->gameObject->position);
 	hvec.y = 0.0f;
 	const Vector3& pos_i = this->order->gameObject->position;
-	float y_i = pos_i.y, y_b = this->target->position.y;
+	float y_i = pos_i.y, y_b = dest.y;
 	float b = hvec.len2xz() / speed; // time when missile hits target on XZ coordinates
 	float vy = (y_b - y_i - 0.5f * (-9.81f) * b * b) / b;
 
@@ -417,6 +427,29 @@ void MissileTask::onStart()
 void MissileTask::onUpdate()
 {
 	ServerGameObject* go = this->order->gameObject;
+
+	// unit collision
+	NNSearch nns;
+	nns.start(Server::instance, go->position, 15.0f);
+	while (ServerGameObject* col = nns.next()) {
+		if (col->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING || col->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+			if (col->getPlayer() != go->getPlayer() && col->isInteractable()) {
+				if (Model* model = col->blueprint->getModel(col->subtype, col->appearance, col->animationIndex, col->animationVariant)) {
+					Vector3 sCenter = model->getSphereCenter().transform(col->getWorldMatrix());
+					float sRadius = model->getSphereRadius();
+					float squareDistance = (go->position - sCenter).sqlen3();
+					if (squareDistance <= sRadius*sRadius) {
+						SrvScriptContext ctx(Server::instance, go);
+						auto _ = ctx.collisionSubject.change(col);
+						this->blueprint->collisionTrigger.run(&ctx);
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	// floor collision
 	float theight = Server::instance->terrain->getHeight(go->position.x, go->position.z);
 	if (go->position.y < theight) {
 		// TODO: we could play sound directly on client without sending packet

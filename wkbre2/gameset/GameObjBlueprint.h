@@ -52,6 +52,7 @@ struct GameObjBlueprint {
 	Model* representAs = nullptr;
 
 	ValueDeterminer* missileSpeed = nullptr;
+	ValueDeterminer* doNotCollideWith = nullptr;
 	int strikeFloorSound = -1;
 	int strikeWaterSound = -1;
 

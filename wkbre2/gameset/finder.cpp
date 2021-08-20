@@ -350,7 +350,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_REFERENCERS: finder = new FinderReferencers; break;
 	case Tags::FINDER_ORDER_GIVER: finder = new FinderOrderGiver; break;
 	case Tags::FINDER_BEING_TRANSFERRED_TO_ME: finder = new FinderBeingTransferredToMe; break;
-	case Tags::FINDER_COLLISION_SUBJECT: finder = new FinderOrderGiver; break;
+	case Tags::FINDER_COLLISION_SUBJECT: finder = new FinderCollisionSubject; break;
 	case Tags::FINDER_USER: finder = new FinderUser; break;
 	default: finder = new FinderUnknown(strtag); break;
 	}
