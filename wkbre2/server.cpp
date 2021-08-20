@@ -87,10 +87,7 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 	msg.writeUint32(obj->subtype);
 	sendToAll(msg);
 
-	if (blueprint->sightRangeEquation != -1) {
-		SrvScriptContext ctx{ this, obj };
-		obj->setItem(Tags::PDITEM_ACTUAL_SIGHT_RANGE, gameSet->equations[blueprint->sightRangeEquation]->eval(&ctx));
-	}
+	obj->updateSightRange();
 
 	return obj;
 }
@@ -550,6 +547,8 @@ void ServerGameObject::convertTo(GameObjBlueprint * postbp)
 	// change subtype to matching one
 	int postsubtype = postbp->subtypeNames.getIndex(prevbp->subtypeNames.getString(this->subtype));
 	this->setSubtypeAndAppearance((postsubtype != -1) ? postsubtype : 0, 0); // TODO: random subtype as fallback?
+	// update sight range
+	this->updateSightRange();
 }
 
 void ServerGameObject::setScale(const Vector3& scale)
@@ -710,6 +709,14 @@ void ServerGameObject::addZoneTile(int tx, int tz)
 	//auto& zl = server->tiles[tileIndex].zoneList;
 	//if (std::find(zl.begin(), zl.end(), this) == zl.end())
 	//	zl.emplace_back(this);
+}
+
+void ServerGameObject::updateSightRange()
+{
+	if (blueprint->sightRangeEquation != -1) {
+		SrvScriptContext ctx{ Server::instance, this };
+		setItem(Tags::PDITEM_ACTUAL_SIGHT_RANGE, Server::instance->gameSet->equations[blueprint->sightRangeEquation]->eval(&ctx));
+	}
 }
 
 void Server::sendToAll(const NetPacket & packet)

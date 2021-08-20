@@ -11,6 +11,7 @@
 #include "Trajectory.h"
 
 struct GameObjBlueprint;
+struct Model;
 
 template<class AnyGameObject> struct CommonGameObject {
 	uint32_t id;
@@ -75,6 +76,10 @@ template<class AnyGameObject> struct CommonGameObject {
 	}
 
 	bool isInteractable() { return (disableCount <= 0) && !(flags & fTerminated); }
+
+	Model* getModel() {
+		return blueprint->getModel(subtype, appearance, animationIndex, animationVariant);
+	}
 
 	CommonGameObject(uint32_t id, GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr) {}
 };

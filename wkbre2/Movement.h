@@ -9,7 +9,7 @@ struct Movement {
 public:
 	void startMovement(const Vector3 &source, const Vector3 &destination, float startTime, float speed);
 	void stopMovement();
-	Vector3 getNewPosition(float time);
+	Vector3 getNewPosition(float time) const;
 	bool isMoving() const { return m_started; }
 	Vector3 getDirection() const { return (m_destPoint - m_srcPoint).normal2xz(); }
 	Vector3 getDestination() const { return m_destPoint; }

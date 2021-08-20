@@ -67,6 +67,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void lookForSightRangeEvents();
 	void addZoneTile(int tx, int tz);
 	//void removeZoneTile(int tx, int tz);
+	void updateSightRange();
 };
 
 struct Server : CommonGameState<Server, ServerGameObject>

@@ -14,6 +14,7 @@
 #include "ScriptContext.h"
 #include "GameObjBlueprint.h"
 #include "../Model.h"
+#include "gameset.h"
 
 namespace {
 	OrientedPosition PosFromObjVec(const std::vector<ServerGameObject*> &vec) {
@@ -205,16 +206,38 @@ struct PDOffsetFrom : public PositionDeterminer {
 };
 
 struct PDNearestAttachmentPoint : public PositionDeterminer {
-	int attachTag;
+	//int attachTag;
+	std::string sAttachTag;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<PositionDeterminer> pos;
 	std::unique_ptr<ValueDeterminer> tochoose;
 	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
-		// TODO
-		return PosFromObjVec(finder->eval(ctx)) + OrientedPosition(Vector3(0.0f, 1.0f, 0.0f));
+		ServerGameObject* obj = finder->getFirst(ctx);
+		if (Model* model = obj->getModel()) {
+			auto target = pos->eval(ctx);
+			size_t numAPs = model->getNumAPs();
+			size_t bestAP = -1;
+			Vector3 bestPos;
+			float bestDist = std::numeric_limits<float>::infinity();
+			for (size_t i = 0; i < numAPs; i++) {
+				const auto& apinfo = model->getAPInfo(i);
+				if (apinfo.tag.substr(0, sAttachTag.size()) == sAttachTag) {
+					Vector3 appos = apinfo.staticState.position.transform(obj->getWorldMatrix());
+					float dist = (target.position - appos).sqlen3();
+					if (dist < bestDist) {
+						bestDist = dist;
+						bestAP = i;
+						bestPos = appos;
+					}
+				}
+			}
+			if (bestAP != -1)
+				return { bestPos };
+		}
+		return obj->position + Vector3(0.0f, 1.0f, 0.0f);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
-		gsf.nextString(true);
+		sAttachTag = gsf.nextString(true);
 		finder.reset(ReadFinder(gsf, gs));
 		pos.reset(PositionDeterminer::createFrom(gsf, gs));
 		const char* prevcur = gsf.cursor;

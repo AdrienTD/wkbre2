@@ -17,7 +17,7 @@ void Movement::stopMovement()
 	m_started = false;
 }
 
-Vector3 Movement::getNewPosition(float time)
+Vector3 Movement::getNewPosition(float time) const
 {
 	assert(isMoving());
 	float d = (time - m_startTime) * m_speed / m_distance;
