@@ -337,6 +337,8 @@ void ClientInterface::iter()
 	if (g_keyPressed[SDL_SCANCODE_KP_MINUS]) {
 		client->sendGameSpeedChange(client->timeManager.timeSpeed / 2.0f);
 	}
+	if (g_keyPressed[SDL_SCANCODE_DELETE] && selected)
+		client->sendTerminateObject(selected);
 
 	//----- ImGui -----//
 

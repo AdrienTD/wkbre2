@@ -128,10 +128,12 @@ void Client::tick()
 				uint32_t objid = br.readUint32();
 				uint32_t bpid = br.readUint32();
 				uint32_t subtype = br.readUint32();
+				uint32_t appear = br.readUint32();
 				GameObjBlueprint *blueprint = gameSet->getBlueprint(bpid);
 				info("Object %u of type %s is created.\n", objid, blueprint->getFullName().c_str());
 				ClientGameObject *obj = createObject(blueprint, objid);
 				obj->subtype = subtype;
+				obj->appearance = appear;
 				if (blueprint->bpClass == Tags::GAMEOBJCLASS_LEVEL)
 					level = obj;
 				break;
@@ -474,6 +476,13 @@ void Client::sendGameSpeedChange(float nextSpeed)
 {
 	NetPacketWriter msg{ NETSRVMSG_CHANGE_GAME_SPEED };
 	msg.writeFloat(nextSpeed);
+	serverLink->send(msg);
+}
+
+void Client::sendTerminateObject(ClientGameObject* obj)
+{
+	NetPacketWriter msg{ NETSRVMSG_TERMINATE_OBJECT };
+	msg.writeUint32(obj->id);
 	serverLink->send(msg);
 }
 

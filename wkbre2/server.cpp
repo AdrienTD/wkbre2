@@ -80,11 +80,17 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 	idmap[id] = obj;
 
 	obj->subtype = rand() % blueprint->subtypeNames.size();
+	auto& stappearances = blueprint->subtypes[obj->subtype].appearances;
+	if (stappearances.count(0))
+		obj->appearance = 0;
+	else if (!stappearances.empty())
+		obj->appearance = std::next(stappearances.begin(), rand() % stappearances.size())->first;
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_CREATED);
 	msg.writeUint32(id);
 	msg.writeUint32(blueprint->getFullId());
 	msg.writeUint32(obj->subtype);
+	msg.writeUint32(obj->appearance);
 	sendToAll(msg);
 
 	obj->updateSightRange();
@@ -436,8 +442,18 @@ void ServerGameObject::setOrientation(const Vector3 & orientation)
 
 void ServerGameObject::setSubtypeAndAppearance(int new_subtype, int new_appearance)
 {
-	if (this->blueprint->subtypes[new_subtype].appearances.count(new_appearance) == 0)
-		new_appearance = this->appearance;
+	if (this->blueprint->subtypes[new_subtype].appearances.count(new_appearance) == 0) {
+		if (new_appearance != 0)
+			new_appearance = this->appearance;
+		// If default or original appearance does not exist, use random one (needed for Death animations)
+		auto& stappearances = blueprint->subtypes[new_subtype].appearances;
+		if (stappearances.count(new_appearance) == 0) {
+			if (!stappearances.empty())
+				new_appearance = std::next(stappearances.begin(), rand() % stappearances.size())->first;
+			else
+				new_appearance = 0;
+		}
+	}
 
 	if (new_subtype == this->subtype && new_appearance == this->appearance)
 		return;
@@ -1060,6 +1076,12 @@ void Server::tick()
 			}
 			case NETSRVMSG_MUSIC_COMPLETED: {
 				player->isMusicPlaying = false;
+				break;
+			}
+			case NETSRVMSG_TERMINATE_OBJECT: {
+				if (ServerGameObject* obj = findObject(br.readUint32())) {
+					deleteObject(obj);
+				}
 				break;
 			}
 			}

@@ -107,8 +107,8 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 				}
 				gsf.advanceLine();
 			}
-			// If there is no Default appearance, make one
-			if (ps.appearances.count(0) == 0) {
+			// If there is no appearance, make a default one
+			if (ps.appearances.empty()) {
 				loadAnimations(ps.appearances[0], directory + modelPath + ps.dir);
 			}
 			break;
