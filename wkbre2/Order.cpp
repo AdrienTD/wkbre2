@@ -218,6 +218,19 @@ void Task::setTarget(ServerGameObject* newtarget)
 		newtarget->referencers.push_back(this->order->gameObject);
 }
 
+Task* Task::create(int id, TaskBlueprint* blueprint, Order* order)
+{
+	Task* task;
+	switch (blueprint->classType) {
+	default:
+	case Tags::ORDTSKTYPE_OBJECT_REFERENCE: task = new ObjectReferenceTask(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_MOVE: task = new MoveTask(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_MISSILE: task = new MissileTask(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_FACE_TOWARDS: task = new FaceTowardsTask(id, blueprint, order); break;
+	}
+	return task;
+}
+
 
 
 void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination)
@@ -245,15 +258,7 @@ void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMod
 	}
 	for (TaskBlueprint* taskBp : orderBlueprint->tasks) {
 		int id = neworder->nextTaskId++;
-		Task* task;
-		switch (taskBp->classType) {
-		default:
-		case Tags::ORDTSKTYPE_OBJECT_REFERENCE: task = new ObjectReferenceTask(id, taskBp, neworder); break;
-		case Tags::ORDTSKTYPE_MOVE: task = new MoveTask(id, taskBp, neworder); break;
-		case Tags::ORDTSKTYPE_MISSILE: task = new MissileTask(id, taskBp, neworder); break;
-		case Tags::ORDTSKTYPE_FACE_TOWARDS: task = new FaceTowardsTask(id, taskBp, neworder); break;
-		}
-		neworder->tasks.push_back(task);
+		neworder->tasks.push_back(Task::create(id, taskBp, neworder));
 	}
 	if (target) {
 		neworder->tasks.at(0)->setTarget(target);

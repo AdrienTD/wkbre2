@@ -228,7 +228,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 							int taskType = gameSet->tasks.names.getIndex(gsf.nextString(true)); assert(taskType != -1);
 							gsf.advanceLine();
 							TaskBlueprint &taskBp = gameSet->tasks[taskType];
-							Task *taskptr = new Task(0, &taskBp, &order);
+							Task *taskptr = Task::create(0, &taskBp, &order);
 							Task &task = *taskptr;
 							while (!gsf.eof) {
 								std::string tsktag = gsf.nextTag();

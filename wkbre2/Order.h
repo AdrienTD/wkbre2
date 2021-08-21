@@ -85,6 +85,8 @@ struct Task {
 
 	virtual void onStart() {}
 	virtual void onUpdate() {}
+
+	static Task* create(int id, TaskBlueprint* blueprint, Order* order);
 };
 
 struct MissileTask : Task {
