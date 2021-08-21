@@ -310,6 +310,12 @@ void Client::tick()
 				}
 				break;
 			}
+			case NETCLIMSG_SNAP_CAMERA_POSITION: {
+				camera.position = br.readVector3();
+				camera.orientation = br.readVector3();
+				cameraMode = 0;
+				cameraCurrentPath = nullptr;
+			}
 			case NETCLIMSG_STORE_CAMERA_POSITION: {
 				storedCameraPosition = camera.position;
 				storedCameraOrientation = camera.orientation;

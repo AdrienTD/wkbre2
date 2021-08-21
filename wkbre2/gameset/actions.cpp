@@ -1110,6 +1110,36 @@ struct ActionFaceTowards : Action {
 	}
 };
 
+struct ActionSnapCameraToPosition : Action {
+	std::unique_ptr<PositionDeterminer> posdet;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		auto posori = posdet->eval(ctx);
+		for (ServerGameObject* obj : finder->eval(ctx))
+			ctx->server->snapCameraPosition(obj, posori.position, posori.rotation);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		posdet.reset(PositionDeterminer::createFrom(gsf, gs));
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionReevaluateTaskTarget :Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (auto* obj : finder->eval(ctx)) {
+			if (auto* order = obj->orderConfig.getCurrentOrder()) {
+				if (auto* task = order->getCurrentTask()) {
+					task->reevaluateTarget();
+				}
+			}
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1183,6 +1213,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_SINK_AND_REMOVE: action = new ActionSinkAndRemove; break;
 	case Tags::ACTION_PLAY_SOUND_AT_POSITION: if (gs.version >= gs.GSVERSION_WKBATTLES) action = new ActionPlaySoundAtPosition_Battles; else action = new ActionPlaySoundAtPosition_WKO; break;
 	case Tags::ACTION_FACE_TOWARDS: action = new ActionFaceTowards; break;
+	case Tags::ACTION_SNAP_CAMERA_TO_POSITION: action = new ActionSnapCameraToPosition; break;
+	case Tags::ACTION_REEVALUATE_TASK_TARGET: action = new ActionReevaluateTaskTarget; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT:
@@ -1217,7 +1249,6 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_EXIT_TO_MAIN_MENU:
 	case Tags::ACTION_CONQUER_LEVEL:
 	case Tags::ACTION_DISPLAY_LOAD_GAME_MENU:
-	case Tags::ACTION_SNAP_CAMERA_TO_POSITION:
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION:
 	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK:
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION:

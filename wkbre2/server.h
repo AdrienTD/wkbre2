@@ -137,6 +137,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	void showGameTextWindow(ServerGameObject* player, int gtwIndex);
 	void hideGameTextWindow(ServerGameObject* player, int gtwIndex);
 	void hideCurrentGameTextWindow(ServerGameObject* player);
+	void snapCameraPosition(ServerGameObject* player, const Vector3& position, const Vector3& orientation);
 	void storeCameraPosition(ServerGameObject* player);
 	void restoreCameraPosition(ServerGameObject* player);
 	void playCameraPath(ServerGameObject* player, int camPathIndex);

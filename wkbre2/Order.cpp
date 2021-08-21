@@ -145,6 +145,7 @@ void Task::suspend()
 	ServerGameObject *go = this->order->gameObject;
 	if(go->movement.isMoving())
 		go->stopMovement();
+	go->setAnimation(0);
 	//this->blueprint->suspensionSequence.run(this->order->gameObject);
 }
 
@@ -162,6 +163,7 @@ void Task::cancel()
 	ServerGameObject *go = this->order->gameObject;
 	if (go->movement.isMoving())
 		go->stopMovement();
+	go->setAnimation(0);
 	this->blueprint->cancellationSequence.run(this->order->gameObject);
 }
 
@@ -173,6 +175,7 @@ void Task::terminate()
 	ServerGameObject *go = this->order->gameObject;
 	if (go->movement.isMoving())
 		go->stopMovement();
+	go->setAnimation(0);
 	this->blueprint->terminationSequence.run(this->order->gameObject);
 	this->order->advanceToNextTask();
 }
@@ -216,6 +219,15 @@ void Task::setTarget(ServerGameObject* newtarget)
 	target = newtarget;
 	if (newtarget)
 		newtarget->referencers.push_back(this->order->gameObject);
+}
+
+void Task::reevaluateTarget()
+{
+	suspend();
+	if (blueprint->taskTarget) {
+		SrvScriptContext ctx(Server::instance, this->order->gameObject);
+		this->setTarget(blueprint->taskTarget->getFirst(&ctx));
+	}
 }
 
 Task* Task::create(int id, TaskBlueprint* blueprint, Order* order)

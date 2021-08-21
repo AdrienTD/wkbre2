@@ -787,6 +787,13 @@ void Server::hideCurrentGameTextWindow(ServerGameObject* player)
 	sendTo(player, msg);
 }
 
+void Server::snapCameraPosition(ServerGameObject* player, const Vector3& position, const Vector3& orientation)
+{
+	NetPacketWriter msg{ NETCLIMSG_SNAP_CAMERA_POSITION };
+	msg.writeValues(position, orientation);
+	sendTo(player, msg);
+}
+
 void Server::storeCameraPosition(ServerGameObject* player)
 {
 	NetPacketWriter msg{ NETCLIMSG_STORE_CAMERA_POSITION };
@@ -918,6 +925,18 @@ void Server::tick()
 	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
 		if (!obj->orderConfig.orders.empty() || obj->blueprint->receiveSightRangeEvents)
 			toprocess.emplace_back(obj);
+		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_ARMY) {
+			Vector3 avg(0,0,0);
+			size_t cnt = 0;
+			for (auto& childtype : obj->children) {
+				for (ServerGameObject* child : childtype.second) {
+					avg += child->position;
+					cnt += 1;
+				}
+			}
+			avg /= cnt;
+			obj->updatePosition(avg, false);
+		}
 		for (auto &childtype : obj->children) {
 			for (ServerGameObject *child : childtype.second)
 				func(child, func);

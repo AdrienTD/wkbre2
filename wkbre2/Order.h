@@ -82,6 +82,7 @@ struct Task {
 	void stopTriggers();
 
 	void setTarget(ServerGameObject* obj);
+	void reevaluateTarget();
 
 	virtual void onStart() {}
 	virtual void onUpdate() {}
