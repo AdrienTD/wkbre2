@@ -123,6 +123,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	void loadSaveGame(const char *filename);
 	ServerGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 	void deleteObject(ServerGameObject *obj);
+	void destroyObject(ServerGameObject* obj);
 
 	ServerGameObject* findObject(uint32_t id) { auto it = idmap.find(id); return (it != idmap.end()) ? it->second : nullptr; }
 

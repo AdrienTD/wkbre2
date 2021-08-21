@@ -94,34 +94,39 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 
 void Server::deleteObject(ServerGameObject * obj)
 {
-	int id = obj->id;
-
 	if (obj->deleted) return;
 	obj->deleted = true;
 	obj->nextDeleted = objToDelete;
 	objToDelete = obj;
+}
 
+void Server::destroyObject(ServerGameObject* obj)
+{
 	// remove associations from/to this object
-	for (auto &ref : obj->associates)
-		for (const SrvGORef &ass : ref.second) {
+	for (auto& ref : obj->associates)
+		for (const SrvGORef& ass : ref.second) {
 			assert(ass.get());
 			ass->associators[ref.first].erase(obj);
 		}
-	for (auto &ref : obj->associators)
-		for (const SrvGORef &ass : ref.second) {
+	for (auto& ref : obj->associators)
+		for (const SrvGORef& ass : ref.second) {
 			assert(ass.get());
 			ass->associates[ref.first].erase(obj);
 		}
 
 	// remove from parent's children
-	auto &vec = obj->parent->children.at(obj->blueprint->getFullId());
+	auto& vec = obj->parent->children.at(obj->blueprint->getFullId());
 	vec.erase(std::find(vec.begin(), vec.end(), obj));
 	//std::swap(*std::find(vec.begin(), vec.end(), obj), vec.back());
 	//vec.pop_back();
+
 	// remove from ID map
 	idmap.erase(obj->id);
+
 	// delete the object, bye!
-	//delete obj;
+	int id = obj->id;
+	delete obj;
+
 	// report removal to the clients
 	NetPacketWriter msg(NETCLIMSG_OBJECT_REMOVED);
 	msg.writeUint32(id);
@@ -508,21 +513,21 @@ void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 
 void ServerGameObject::associateObject(int category, ServerGameObject * associated)
 {
-	assert(this && associated && !this->deleted && !associated->deleted);
+	assert(this && associated);
 	this->associates[category].insert(associated);
 	associated->associators[category].insert(this);
 }
 
 void ServerGameObject::dissociateObject(int category, ServerGameObject * associated)
 {
-	assert(this && associated && !this->deleted && !associated->deleted);
+	assert(this && associated);
 	this->associates[category].erase(associated);
 	associated->associators[category].erase(this);
 }
 
 void ServerGameObject::clearAssociates(int category)
 {
-	assert(this && !this->deleted);
+	assert(this);
 	for (auto &obj : associates[category])
 		obj->associators[category].erase(this);
 	associates[category].clear();
@@ -1043,9 +1048,11 @@ void Server::tick()
 	}
 
 	// Free up deleted objects
-	while (objToDelete) {
-		auto next = objToDelete->nextDeleted;
-		deleteObject(objToDelete);
-		objToDelete = next;
+	auto* obj = objToDelete;
+	while (obj) {
+		auto* next = obj->nextDeleted;
+		destroyObject(obj);
+		obj = next;
 	}
+	objToDelete = nullptr;
 }
