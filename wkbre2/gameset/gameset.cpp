@@ -204,6 +204,10 @@ void GameSet::parseFile(const char * fn, int pass)
 				musicTags.names.insertString(gsf.nextString(true));
 				break;
 			}
+			case Tags::GAMESET_SPECIAL_EFFECT_TAG: {
+				specialEffectTags.names.insertString(gsf.nextString(true));
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -378,6 +382,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				globalSoundMap[st].push_back(gsf.nextString(true));
 				break;
 			}
+			case Tags::GAMESET_GLOBAL_SPECIAL_EFFECT_MAPPING: {
+				auto& vec = specialEffectTags.readRef(gsf);
+				vec.push_back(modelCache.getModel("Warrior Kings Game Set\\" + gsf.nextString(true)));
+				break;
+			}
 			}
 		}
 
@@ -448,6 +457,7 @@ void GameSet::load(const char * fn)
 	soundTags.pass();
 	sounds.pass();
 	musicTags.pass();
+	specialEffectTags.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

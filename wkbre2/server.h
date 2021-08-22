@@ -62,6 +62,9 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void startTrajectory(const Vector3& initPos, const Vector3& initVel, float startTime);
 	void playSoundAtObject(int soundTag, ServerGameObject* target);
 	void playSoundAtPosition(int soundTag, const Vector3& target);
+	void playSpecialEffectAt(int sfxTag, const Vector3& position);
+	void playSpecialEffectBetween(int sfxTag, const Vector3& position1, const Vector3& position2);
+	void playAttachedSpecialEffect(int sfxTag, ServerGameObject* target);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();

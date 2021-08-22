@@ -82,6 +82,7 @@ void Client::tick()
 		}
 	}
 
+	// Sound & music
 	SoundPlayer* soundPlayer = SoundPlayer::getSoundPlayer();
 	soundPlayer->setListenerPosition(camera.position, camera.direction.normal());
 	if (isMusicPlaying) {
@@ -91,6 +92,9 @@ void Client::tick()
 			serverLink->send(msg);
 		}
 	}
+
+	// Special effects
+	specialEffects.remove_if([this](SpecialEffect& sfx) {return timeManager.currentTime >= sfx.startTime + sfx.entity.model->getDuration(); });
 
 	if (serverLink) {
 		int pcnt = 1000000; //100;
@@ -409,6 +413,57 @@ void Client::tick()
 						size_t var = (size_t)rand() % it->second.size();
 						SoundPlayer::getSoundPlayer()->playMusic("Warrior Kings Game Set\\Sounds\\" + it->second[var]);
 						isMusicPlaying = true;
+					}
+				}
+				break;
+			}
+			case NETCLIMSG_SPECIAL_EFFECT_PLAYED_AT_POS: {
+				uint32_t objid; int sfxTag; Vector3 pos;
+				br.readTo(objid, sfxTag, pos);
+				if (auto* obj = findObject(objid)) {
+					if (Model* sfxmodel = obj->blueprint->getSpecialEffect(sfxTag)) {
+						specialEffects.emplace_back();
+						auto& sfx = specialEffects.back();
+						sfx.entity.transform = Matrix::getTranslationMatrix(pos);
+						sfx.entity.model = sfxmodel;
+						sfx.entity.color = obj->color;
+						sfx.startTime = timeManager.currentTime; // problem: client might start at different time...
+					}
+				}
+				break;
+			}
+			case NETCLIMSG_SPECIAL_EFFECT_PLAYED_BETWEEN: {
+				uint32_t objid; int sfxTag; Vector3 pos1, pos2;
+				br.readTo(objid, sfxTag, pos1, pos2);
+				if (auto* obj = findObject(objid)) {
+					if (Model* sfxmodel = obj->blueprint->getSpecialEffect(sfxTag)) {
+						Vector3 dir = pos2 - pos1;
+						float dist = dir.len3();
+						float ang = std::atan2(dir.x, -dir.z);
+
+						specialEffects.emplace_back();
+						auto& sfx = specialEffects.back();
+						sfx.entity.transform = Matrix::getScaleMatrix({ dist,dist,dist }) * Matrix::getRotationYMatrix(-ang) * Matrix::getTranslationMatrix(pos1);
+						sfx.entity.model = sfxmodel;
+						sfx.entity.color = obj->color;
+						sfx.startTime = timeManager.currentTime; // problem: client might start at different time...
+					}
+				}
+				break;
+			}
+			case NETCLIMSG_ATTACHED_SPECIAL_EFFECT_PLAYED: {
+				uint32_t objid; int sfxTag; uint32_t targetid;
+				br.readTo(objid, sfxTag, targetid);
+				if (auto* obj = findObject(objid)) {
+					if (auto* target = findObject(targetid)) {
+						if (Model* sfxmodel = obj->blueprint->getSpecialEffect(sfxTag)) {
+							specialEffects.emplace_back();
+							auto& sfx = specialEffects.back();
+							sfx.entity.model = sfxmodel;
+							sfx.entity.color = obj->color;
+							sfx.attachedObj = target;
+							sfx.startTime = timeManager.currentTime; // problem: client might start at different time...
+						}
 					}
 				}
 				break;

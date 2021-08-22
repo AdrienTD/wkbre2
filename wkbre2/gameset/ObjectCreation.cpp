@@ -51,8 +51,13 @@ void ObjectCreation::run(ServerGameObject * creator, SrvScriptContext* ctx)
 		ferr("OBJECT_CREATION has no object type defined!");
 	if (!type)
 		return;
-	ServerGameObject *created = Server::instance->createObject(type);
-	created->setParent(controller->getFirst(ctx));
+	ServerGameObject* ctrl = controller->getFirst(ctx);
+	if (!ctrl) {
+		printf("WARNING: OBJECT_CREATION failed as no CONTROLLER found.\n");
+		return;
+	}
+	ServerGameObject* created = Server::instance->createObject(type);
+	created->setParent(ctrl);
 	OrientedPosition opos = createAt ? createAt->eval(ctx) : OrientedPosition({ creator->position, creator->orientation });
 	created->setPosition(opos.position);
 	created->setOrientation(opos.rotation);

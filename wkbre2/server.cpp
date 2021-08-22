@@ -647,6 +647,27 @@ void ServerGameObject::playSoundAtPosition(int soundTag, const Vector3& target)
 	Server::instance->sendToAll(npw);
 }
 
+void ServerGameObject::playSpecialEffectAt(int sfxTag, const Vector3& position)
+{
+	NetPacketWriter npw{ NETCLIMSG_SPECIAL_EFFECT_PLAYED_AT_POS };
+	npw.writeValues(this->id, sfxTag, position);
+	Server::instance->sendToAll(npw);
+}
+
+void ServerGameObject::playSpecialEffectBetween(int sfxTag, const Vector3& position1, const Vector3& position2)
+{
+	NetPacketWriter npw{ NETCLIMSG_SPECIAL_EFFECT_PLAYED_BETWEEN };
+	npw.writeValues(this->id, sfxTag, position1, position2);
+	Server::instance->sendToAll(npw);
+}
+
+void ServerGameObject::playAttachedSpecialEffect(int sfxTag, ServerGameObject* target)
+{
+	NetPacketWriter npw{ NETCLIMSG_ATTACHED_SPECIAL_EFFECT_PLAYED };
+	npw.writeValues(this->id, sfxTag, target->id);
+	Server::instance->sendToAll(npw);
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;

@@ -84,6 +84,7 @@ struct GameSet
 	GSBlueprintList<void> soundTags;
 	GSBlueprintList<GSSound> sounds;
 	GSBlueprintList<void> musicTags;
+	GSBlueprintList<std::vector<Model*>> specialEffectTags;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

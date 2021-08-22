@@ -184,6 +184,11 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 		case Tags::CBLUEPRINT_DO_NOT_COLLIDE_WITH: {
 			doNotCollideWith = ReadValueDeterminer(gsf, *gameSet); break;
 		}
+		case Tags::CBLUEPRINT_MAP_SPECIAL_EFFECT_TAG: {
+			int tag = gameSet->specialEffectTags.readIndex(gsf);
+			specialEffectMap[tag].push_back(gameSet->modelCache.getModel("Warrior Kings Game Set\\" + gsf.nextString(true)));
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}
@@ -247,6 +252,20 @@ Model* GameObjBlueprint::getModel(int subtype, int appearance, int animationInde
 		const auto& anim = it->second;
 		if (!anim.empty())
 			return anim[animationVariant];
+	}
+	return nullptr;
+}
+
+Model* GameObjBlueprint::getSpecialEffect(int sfxTag)
+{
+	auto it = specialEffectMap.find(sfxTag);
+	std::vector<Model*>* vec;
+	if (it == specialEffectMap.end())
+		vec = &gameSet->specialEffectTags[sfxTag];
+	else
+		vec = &it->second;
+	if (!vec->empty()) {
+		return (*vec)[rand() % vec->size()];
 	}
 	return nullptr;
 }

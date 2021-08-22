@@ -1140,6 +1140,60 @@ struct ActionReevaluateTaskTarget :Action {
 	}
 };
 
+struct ActionPlaySpecialEffect :Action {
+	int sfxTag;
+	std::unique_ptr<ObjectFinder> fObject;
+	std::unique_ptr<PositionDeterminer> pPosition;
+	virtual void run(SrvScriptContext* ctx) override {
+		if (auto* obj = fObject->getFirst(ctx)) {
+			auto posori = pPosition->eval(ctx);
+			obj->playSpecialEffectAt(sfxTag, posori.position);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		sfxTag = gs.specialEffectTags.readIndex(gsf);
+		fObject.reset(ReadFinder(gsf, gs));
+		pPosition.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
+struct ActionPlaySpecialEffectBetween :Action {
+	int sfxTag;
+	std::unique_ptr<ObjectFinder> fObject;
+	std::unique_ptr<PositionDeterminer> pPosition1, pPosition2;
+	virtual void run(SrvScriptContext* ctx) override {
+		if (auto* obj = fObject->getFirst(ctx)) {
+			Vector3 pos1 = pPosition1->eval(ctx).position;
+			Vector3 pos2 = pPosition2->eval(ctx).position;
+			obj->playSpecialEffectBetween(sfxTag, pos1, pos2);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		sfxTag = gs.specialEffectTags.readIndex(gsf);
+		fObject.reset(ReadFinder(gsf, gs));
+		pPosition1.reset(PositionDeterminer::createFrom(gsf, gs));
+		pPosition2.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
+struct ActionAttachSpecialEffect :Action {
+	int sfxTag;
+	std::unique_ptr<ObjectFinder> fObject;
+	std::unique_ptr<ObjectFinder> fTarget;
+	virtual void run(SrvScriptContext* ctx) override {
+		if (auto* obj = fObject->getFirst(ctx)) {
+			for (auto* target : fTarget->eval(ctx)) {
+				obj->playAttachedSpecialEffect(sfxTag, target);
+			}
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		sfxTag = gs.specialEffectTags.readIndex(gsf);
+		fObject.reset(ReadFinder(gsf, gs));
+		fTarget.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1215,11 +1269,11 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_FACE_TOWARDS: action = new ActionFaceTowards; break;
 	case Tags::ACTION_SNAP_CAMERA_TO_POSITION: action = new ActionSnapCameraToPosition; break;
 	case Tags::ACTION_REEVALUATE_TASK_TARGET: action = new ActionReevaluateTaskTarget; break;
+	case Tags::ACTION_PLAY_SPECIAL_EFFECT: action = new ActionPlaySpecialEffect; break;
+	case Tags::ACTION_PLAY_SPECIAL_EFFECT_BETWEEN: action = new ActionPlaySpecialEffectBetween; break;
+	case Tags::ACTION_ATTACH_SPECIAL_EFFECT: action = new ActionAttachSpecialEffect; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
-	case Tags::ACTION_PLAY_SPECIAL_EFFECT:
-	case Tags::ACTION_PLAY_SPECIAL_EFFECT_BETWEEN:
-	case Tags::ACTION_ATTACH_SPECIAL_EFFECT:
 	case Tags::ACTION_ATTACH_LOOPING_SPECIAL_EFFECT:
 	case Tags::ACTION_DETACH_LOOPING_SPECIAL_EFFECT:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:

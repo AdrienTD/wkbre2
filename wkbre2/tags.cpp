@@ -1,5 +1,5 @@
 #include "tags.h" 
-TagDict<72> Tags::GAMESET_tagDict({
+TagDict<74> Tags::GAMESET_tagDict({
     "3D_CLIP",
     "ACTION_SEQUENCE",
     "ANIMATION_TAG",
@@ -35,6 +35,7 @@ TagDict<72> Tags::GAMESET_tagDict({
     "GAME_EVENT",
     "GAME_TEXT_WINDOW",
     "GLOBAL_MAP_SOUND_TAG",
+    "GLOBAL_SPECIAL_EFFECT_MAPPING",
     "INDEV_ACTION_SEQUENCE",
     "INDEV_EQUATION",
     "INDEV_OBJECT_FINDER_DEFINITION",
@@ -62,6 +63,7 @@ TagDict<72> Tags::GAMESET_tagDict({
     "REACTION",
     "SOUND",
     "SOUND_TAG",
+    "SPECIAL_EFFECT_TAG",
     "TASK",
     "TASK_CATEGORY",
     "TERRAIN_ZONE",
@@ -82,7 +84,7 @@ TagDict<5> Tags::CCOMMAND_tagDict({
     "START_SEQUENCE",
 });
 
-TagDict<31> Tags::CBLUEPRINT_tagDict({
+TagDict<32> Tags::CBLUEPRINT_tagDict({
     "BLUEPRINT_TOOLTIP",
     "BUILDING_TYPE",
     "CAN_SPAWN",
@@ -99,6 +101,7 @@ TagDict<31> Tags::CBLUEPRINT_tagDict({
     "MAP_MUSIC_TAG",
     "MAP_SOUND_TAG",
     "MAP_SOUND_TAG_TO",
+    "MAP_SPECIAL_EFFECT_TAG",
     "MAP_TYPE_TAG",
     "MISSILE_SPEED",
     "MOVEMENT_BAND",

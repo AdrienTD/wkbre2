@@ -58,6 +58,7 @@ struct GameObjBlueprint {
 
 	std::map<int, std::vector<SoundRef>> soundMap;
 	std::map<int, std::vector<std::string>> musicMap;
+	std::map<int, std::vector<Model*>> specialEffectMap;
 
 	bool generateSightRangeEvents = false;
 	bool receiveSightRangeEvents = false;
@@ -74,6 +75,7 @@ struct GameObjBlueprint {
 
 	std::tuple<std::string, float, float> getSound(int sndTag, int subtype);
 	Model* getModel(int subtype, int appear, int anim, int variant);
+	Model* getSpecialEffect(int sfxTag);
 
 	//GameObjBlueprint() {}
 	//GameObjBlueprint(GameSet *gameSet) : gameSet(gameSet) {}

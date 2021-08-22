@@ -57,11 +57,17 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	ClientInterface *cliInterface;
 
 	bool localServer;
+	CliGORef clientPlayer;
 
 	std::map<int, int> gtwStates;
 	bool isMusicPlaying = false;
 
-	CliGORef clientPlayer;
+	struct SpecialEffect {
+		SceneEntity entity;
+		CliGORef attachedObj;
+		float startTime;
+	};
+	std::list<SpecialEffect> specialEffects;
 
 	//void loadSaveGame(const char *filename);
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);

@@ -434,7 +434,12 @@ void ClientInterface::iter()
 				// nop
 			}
 		}
-		//
+		for (auto& sfx : client->specialEffects) {
+			if (sfx.attachedObj)
+				sfx.entity.transform = sfx.attachedObj->getWorldMatrix();
+			sfx.entity.animTime = (uint32_t)((client->timeManager.currentTime - sfx.startTime) * 1000.0f);
+			scene->add(&sfx.entity);
+		}
 		if (!sceneRenderer)
 			sceneRenderer = new DefaultSceneRenderer(gfx, scene);
 		sceneRenderer->render();
