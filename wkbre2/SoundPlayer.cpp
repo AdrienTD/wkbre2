@@ -17,7 +17,7 @@
 #include <mpg123.h>
 
 struct OALSoundPlayer : SoundPlayer {
-	static constexpr size_t MAX_SOURCES = 32;
+	static constexpr size_t MAX_SOURCES = 64;
 
 	bool initialised = false;
 	ALCdevice* device;

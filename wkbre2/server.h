@@ -119,7 +119,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 
 	std::vector<std::tuple<ServerGameObject*, int, int>> postAssociations;
 
-	ServerGameObject* objToDelete = nullptr;
+	ServerGameObject* objToDelete = nullptr, * objToDeleteLast = nullptr;
 
 	Server() : gameSet(nullptr), level(nullptr), terrain(nullptr) { instance = this; }
 

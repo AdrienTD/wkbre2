@@ -153,6 +153,7 @@ void Task::resume()
 {
 	this->state = OTS_PROCESSING;
 	this->blueprint->resumptionSequence.run(this->order->gameObject);
+	this->proximitySatisfied = false; // TODO: put this in "onResume"
 }
 
 void Task::cancel()
@@ -504,6 +505,7 @@ void MoveTask::onUpdate()
 
 void ObjectReferenceTask::onStart()
 {
+	this->proximitySatisfied = false; // might need to do this on resumption too
 }
 
 void ObjectReferenceTask::onUpdate()

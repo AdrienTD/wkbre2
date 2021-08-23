@@ -102,8 +102,20 @@ void Server::deleteObject(ServerGameObject * obj)
 {
 	if (obj->deleted) return;
 	obj->deleted = true;
-	obj->nextDeleted = objToDelete;
-	objToDelete = obj;
+	// delete subordinates first
+	for (auto& st : obj->children) {
+		for (ServerGameObject* child : st.second) {
+			deleteObject(child);
+		}
+	}
+	if (objToDeleteLast) {
+		objToDeleteLast->nextDeleted = obj;
+		objToDeleteLast = obj;
+	}
+	else {
+		objToDelete = obj;
+		objToDeleteLast = obj;
+	}
 }
 
 void Server::destroyObject(ServerGameObject* obj)
@@ -423,10 +435,12 @@ void ServerGameObject::setParent(ServerGameObject * newParent)
 void ServerGameObject::setPosition(const Vector3 & position)
 {
 	updatePosition(position);
+	if (blueprint->bpClass != Tags::GAMEOBJCLASS_MISSILE)
+		this->position.y = Server::instance->terrain->getHeight(position.x, position.z);
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_POSITION_SET);
 	msg.writeUint32(this->id);
-	msg.writeVector3(position);
+	msg.writeVector3(this->position);
 	Server::instance->sendToAll(msg);
 }
 
@@ -1117,4 +1131,5 @@ void Server::tick()
 		obj = next;
 	}
 	objToDelete = nullptr;
+	objToDeleteLast = nullptr;
 }

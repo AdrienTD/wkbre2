@@ -133,6 +133,7 @@ struct PDOutAtAngle : public PositionDeterminer
 		float l = v->eval(ctx);
 		po.position.x += l * sin(po.rotation.y);
 		po.position.z -= l * cos(po.rotation.y);
+		po.rotation.y += M_PI;
 		return po;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
