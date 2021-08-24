@@ -23,6 +23,8 @@ void Order::start()
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
 	this->currentTask = 0;
+	this->getCurrentTask()->start();
+	this->blueprint->startSequence.run(this->gameObject);
 }
 
 void Order::suspend()
@@ -36,6 +38,7 @@ void Order::suspend()
 void Order::resume()
 {
 	this->state = OTS_PROCESSING;
+	this->tasks[this->currentTask]->resume();
 	this->blueprint->resumptionSequence.run(this->gameObject);
 }
 

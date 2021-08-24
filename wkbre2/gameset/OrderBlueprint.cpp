@@ -25,6 +25,8 @@ void OrderBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			else if (flag == "CANNOT_INTERRUPT_ORDER")
 				cannotInterruptOrder = true;
 		}
+		else if (tag == "PRE_CONDITION")
+			preConditions.push_back(gs.equations.readIndex(gsf));
 		else if (tag == "INITIALISATION_SEQUENCE")
 			this->initSequence.init(gsf, gs, "END_INITIALISATION_SEQUENCE");
 		else if (tag == "START_SEQUENCE")
