@@ -65,8 +65,11 @@ void ClientDebugger::draw()
 	ImGui::Begin("Client messages");
 
 	static char newmsg[256]; static int num = 0;
-	ImGui::InputText("##newmsg", newmsg, sizeof(newmsg));
-	if (ImGui::Button("Send"))
+	ImGui::PushItemWidth(-1.0f);
+	bool msgEntered = ImGui::InputText("##newmsg", newmsg, sizeof(newmsg), ImGuiInputTextFlags_EnterReturnsTrue);
+	ImGui::PopItemWidth();
+	msgEntered |= ImGui::Button("Send");
+	if (msgEntered)
 		client->sendMessage(newmsg);
 	ImGui::SameLine();
 	if (ImGui::Button("Send number"))
@@ -77,9 +80,15 @@ void ClientDebugger::draw()
 			client->sendMessage(itoa(num++, newmsg, 10));
 	}
 	ImGui::Separator();
-
+	ImGui::BeginChild("ChatMessages", ImVec2(0,0), false);
 	for (const std::string &str : client->chatMessages)
 		ImGui::Text("%s", str.c_str());
+	static size_t numMessages = client->chatMessages.size();
+	if (numMessages != client->chatMessages.size()) {
+		numMessages = client->chatMessages.size();
+		ImGui::SetScrollHere();
+	}
+	ImGui::EndChild();
 	ImGui::End();
 
 	ImGui::Begin("Client Object Tree");

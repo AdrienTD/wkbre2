@@ -7,16 +7,62 @@
 #include "file.h"
 #include <nlohmann/json.hpp>
 
+#include "interface/QuickStartMenu.h"
+#include "gfx/renderer.h"
+#include "window.h"
+#include "imguiimpl.h"
+#include "gfx/bitmap.h"
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#undef LoadBitmap
+
 void LaunchTest();
 
+void LaunchQSM() {
+	LoadBCP("data.bcp");
+	InitWindow();
+	ImGuiImpl_Init();
+	IRenderer* gfx = CreateD3D9Renderer();
+	gfx->Init();
+	SetRenderer(gfx);
+	ImGuiImpl_CreateFontsTexture(gfx);
+
+	Bitmap* bgbmp = LoadBitmap("Interface\\Startup Screen.tga");
+	texture bgtex = gfx->CreateTexture(bgbmp, 1);
+
+	QuickStartMenu qsm{ gfx };
+
+	while (!g_windowQuit) {
+		ImGuiImpl_NewFrame();
+		qsm.draw();
+
+		gfx->BeginDrawing();
+		gfx->InitRectDrawing();
+		gfx->SetTexture(0, bgtex);
+		gfx->DrawRect(0, 0, g_windowWidth, g_windowHeight);
+		gfx->InitImGuiDrawing();
+		ImGuiImpl_Render(gfx);
+		gfx->EndDrawing();
+		HandleWindow();
+
+		qsm.launchGame();
+	}
+}
+
 int main()
+//int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR cmdArgs, int showMode)
 {
 	printf("Hello! :)\n");
 
 	LoadSettings();
 	strcpy_s(gamedir, g_settings["game_path"].get<std::string>().c_str());
 
-	LaunchTest();
+	if (g_settings.value<bool>("test", false))
+		LaunchTest();
+	else
+		LaunchQSM();
 	
 	return 0;
 }
