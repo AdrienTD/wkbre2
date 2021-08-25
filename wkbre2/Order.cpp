@@ -243,17 +243,18 @@ Task* Task::create(int id, TaskBlueprint* blueprint, Order* order)
 	case Tags::ORDTSKTYPE_MOVE: task = new MoveTask(id, blueprint, order); break;
 	case Tags::ORDTSKTYPE_MISSILE: task = new MissileTask(id, blueprint, order); break;
 	case Tags::ORDTSKTYPE_FACE_TOWARDS: task = new FaceTowardsTask(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_SPAWN: task = new SpawnTask(id, blueprint, order); break;
 	}
 	return task;
 }
 
 
 
-void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination)
+Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination)
 {
 	if (Order* currentOrder = getCurrentOrder()) {
 		if (currentOrder->blueprint->cannotInterruptOrder && assignMode != Tags::ORDERASSIGNMODE_DO_LAST)
-			return;
+			return nullptr;
 	}
 	Order* neworder;
 	switch (assignMode) {
@@ -283,6 +284,7 @@ void OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMod
 		neworder->tasks.at(0)->destination = destination;
 	}
 	neworder->init();
+	return neworder;
 }
 
 void OrderConfiguration::cancelAllOrders()
@@ -589,4 +591,29 @@ void FaceTowardsTask::onUpdate()
 		obj->setOrientation(Vector3(0.0f, std::atan2(dir.x, -dir.z), 0.0f));
 	}
 	terminate();
+}
+
+void SpawnTask::onStart()
+{
+	ServerGameObject* obj = order->gameObject;
+	obj->setItem(Tags::PDITEM_HIT_POINTS_OF_OBJECT_BEING_SPAWNED, 0.0f);
+	obj->setItem(Tags::PDITEM_HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED, toSpawn->startItemValues.at(Tags::PDITEM_HIT_POINT_CAPACITY));
+}
+
+void SpawnTask::onUpdate()
+{
+	this->startTriggers();
+	if (this->triggersStarted) {
+		for (Trigger* trigger : this->triggers)
+			trigger->update();
+	}
+	if (this->isDone()) {
+		ServerGameObject* obj = order->gameObject;
+		if (obj->getItem(Tags::PDITEM_HIT_POINTS_OF_OBJECT_BEING_SPAWNED) >= obj->getItem(Tags::PDITEM_HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED)) {
+			ServerGameObject* spawned = Server::instance->createObject(toSpawn);
+			spawned->setParent(obj->getPlayer());
+			spawned->setPosition(obj->position);
+			spawned->sendEvent(Tags::PDEVENT_ON_SPAWN, obj);
+		}
+	}
 }

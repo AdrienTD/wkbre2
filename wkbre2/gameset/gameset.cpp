@@ -467,5 +467,6 @@ void GameSet::load(const char * fn)
 GameObjBlueprint * GameSet::readObjBlueprintPtr(GSFileParser & gsf)
 {
 	int bpclass = Tags::GAMEOBJCLASS_tagDict.getTagID(gsf.nextString().c_str());
+	if (bpclass == -1) return nullptr;
 	return objBlueprints[bpclass].readPtr(gsf);
 }

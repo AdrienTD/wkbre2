@@ -307,6 +307,24 @@ struct PDFiringAttachmentPoint : PositionDeterminer {
 	}
 };
 
+struct PDNearestValidStampdownPos : PositionDeterminer {
+	GameObjBlueprint* objbp;
+	std::unique_ptr<PositionDeterminer> p;
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		// TODO
+		return p->eval(ctx);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		auto cursor = gsf.cursor;
+		objbp = gs.readObjBlueprintPtr(gsf);
+		if (!objbp) {
+			gsf.cursor = cursor;
+			objbp = gs.objBlueprints[Tags::GAMEOBJCLASS_BUILDING].readPtr(gsf);
+		}
+		p.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
 PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet & gs)
 {
 	PositionDeterminer *pos;
@@ -327,6 +345,7 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet 
 	case Tags::POSITION_SPAWN_TILE_POSITION: pos = new PDSpawnTilePosition; break;
 	case Tags::POSITION_MATCHING_OFFSET: pos = new PDMatchingOffset; break;
 	case Tags::POSITION_FIRING_ATTACHMENT_POINT: pos = new PDFiringAttachmentPoint; break;
+	case Tags::POSITION_NEAREST_VALID_STAMPDOWN_POS: pos = new PDNearestValidStampdownPos; break;
 	default: pos = new PDUnknown; break;
 	}
 	pos->parse(gsf, gs);

@@ -40,6 +40,18 @@ void Command::execute(ServerGameObject *self, ServerGameObject *target, int assi
 	this->startSequence.run(&ctx);
 	// TODO: order (what to do first?)
 	if (this->order) {
-		self->orderConfig.addOrder(this->order, assignmentMode, target, destination);
+		Order* neworder = self->orderConfig.addOrder(this->order, assignmentMode, target, destination);
+		// Give blueprint for spawn tasks
+		if (this->order->classType == Tags::ORDTSKTYPE_SPAWN) {
+			auto& gs = *ctx.server->gameSet;
+			auto name = gs.commands.getString(this);
+			if (name.substr(0, 6) == "Spawn ") {
+				int x = gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].names.getIndex(name.substr(6));
+				if (x != -1) {
+					GameObjBlueprint* bp = &gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
+					((SpawnTask*)neworder->tasks[0])->toSpawn = bp;
+				}
+			}
+		}
 	}
 }

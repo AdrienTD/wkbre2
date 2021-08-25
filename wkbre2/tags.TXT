@@ -660,10 +660,10 @@ PDITEM_ | char* {
 	WOOD "Wood"
 	GOLD "Gold"
 	STONE "Stone"
-	HP "Hit Points"
-	HPC "Hit Point Capacity"
-	HP_OF_OBJ_BEING_SPAWNED "Hit Points Of Object Being Spawned"
-	HPC_OF_OBJ_BEING_SPAWNED "Hit Point Capacity Of Object Being Spawned"
+	HIT_POINTS "Hit Points"
+	HIT_POINT_CAPACITY "Hit Point Capacity"
+	HIT_POINTS_OF_OBJECT_BEING_SPAWNED "Hit Points Of Object Being Spawned"
+	HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED "Hit Point Capacity Of Object Being Spawned"
 	ACTUAL_SIGHT_RANGE "Actual Sight Range"
 }
 

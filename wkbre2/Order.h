@@ -18,6 +18,7 @@ struct Trigger;
 struct ServerGameObject;
 struct GameSet;
 struct GSFileParser;
+struct GameObjBlueprint;
 
 enum OrderTaskState {
 	OTS_UNINITIALISED = 0,
@@ -115,6 +116,13 @@ struct FaceTowardsTask : Task {
 	virtual void onUpdate() override;
 };
 
+struct SpawnTask : Task {
+	GameObjBlueprint* toSpawn = nullptr;
+	using Task::Task;
+	virtual void onStart() override;
+	virtual void onUpdate() override;
+};
+
 
 struct Trigger {
 	Task *task;
@@ -157,7 +165,7 @@ struct OrderConfiguration {
 
 	OrderConfiguration(ServerGameObject *gameobj) : gameobj(gameobj) {}
 	void process();
-	void addOrder(OrderBlueprint *orderBlueprint, int assignMode = 0, ServerGameObject *target = nullptr, const Vector3 &destination = Vector3(-1.0f,-1.0f,-1.0f));
+	Order* addOrder(OrderBlueprint *orderBlueprint, int assignMode = 0, ServerGameObject *target = nullptr, const Vector3 &destination = Vector3(-1.0f,-1.0f,-1.0f));
 	void cancelAllOrders();
 
 	Order *getCurrentOrder() { return orders.empty() ? nullptr : &orders[0]; }

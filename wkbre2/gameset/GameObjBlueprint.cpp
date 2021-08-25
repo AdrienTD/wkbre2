@@ -189,6 +189,22 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			specialEffectMap[tag].push_back(gameSet->modelCache.getModel("Warrior Kings Game Set\\" + gsf.nextString(true)));
 			break;
 		}
+		case Tags::CBLUEPRINT_CAN_SPAWN: {
+			auto name = gsf.nextString(true);
+			int x = gameSet->commands.names.getIndex("Spawn " + name);
+			if (x != -1)
+				offeredCommands.push_back(&gameSet->commands[x]);
+			break;
+		}
+		case Tags::CBLUEPRINT_INHERITS_FROM: {
+			GameObjBlueprint* base = gameSet->objBlueprints[bpClass].readPtr(gsf);
+			auto backup_bpId = bpId;
+			auto backup_name = name;
+			*this = *base;
+			bpId = backup_bpId;
+			name = backup_name;
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

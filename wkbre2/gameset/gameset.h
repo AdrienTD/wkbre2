@@ -43,6 +43,10 @@ template<typename T> struct GSBlueprintList {
 	const T & readRef(GSFileParser &gsf) const { return blueprints[readIndex(gsf)]; }
 	T* readPtr(GSFileParser& gsf) { int x = readIndex(gsf); return (x != -1) ? &blueprints[x] : nullptr; }
 	const T * readPtr(GSFileParser &gsf) const { return &blueprints[readIndex(gsf)]; }
+
+	int getIndex(const T* ptr) { return (int)(ptr - blueprints.data()); }
+	const std::string& getString(int index) { return names.getString(index); }
+	const std::string& getString(T* ptr) { return getString(getIndex(ptr)); }
 };
 
 template<> struct GSBlueprintList<void> {
