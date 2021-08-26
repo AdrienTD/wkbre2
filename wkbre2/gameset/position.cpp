@@ -310,9 +310,63 @@ struct PDFiringAttachmentPoint : PositionDeterminer {
 struct PDNearestValidStampdownPos : PositionDeterminer {
 	GameObjBlueprint* objbp;
 	std::unique_ptr<PositionDeterminer> p;
+	bool isTileFree(Server* server, int tx, int tz) {
+		int sx, sz;
+		std::tie(sx, sz) = server->terrain->getNumPlayableTiles();
+		if (tx >= 0 && tx < sx && tz >= 0 && tz < sz)
+			return !server->tiles[tz * sx + tx].building;
+		return false;
+	}
+	bool canBuildOn(Server* server, int tx, int tz) {
+		for (auto& to : objbp->footprint->tiles) {
+			if (!to.mode) {
+				int px = tx + to.offsetX, pz = tz + to.offsetZ;
+				if (!isTileFree(server, px, pz))
+					return false;
+			}
+		}
+		return true;
+	}
+	std::pair<int, int> findPos(Server* server, int ox, int oz) {
+		if (canBuildOn(server, ox, oz))
+			return { ox, oz };
+		auto area = server->terrain->getNumPlayableTiles();
+		int maxr = std::max(area.first, area.second);
+		for (int r = 1; r < maxr; r++) {
+			int x = ox + r;
+			int z = oz;
+			for (int i = 0; i < r; i++) {
+				if (canBuildOn(server, x, z))
+					return { x, z };
+				x--; z++;
+			}
+			for (int i = 0; i < r; i++) {
+				if (canBuildOn(server, x, z))
+					return { x, z };
+				x--; z--;
+			}
+			for (int i = 0; i < r; i++) {
+				if (canBuildOn(server, x, z))
+					return { x, z };
+				x++; z--;
+			}
+			for (int i = 0; i < r; i++) {
+				if (canBuildOn(server, x, z))
+					return { x, z };
+				x++; z++;
+			}
+		}
+	}
 	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
-		// TODO
-		return p->eval(ctx);
+		auto po = p->eval(ctx);
+		if (!objbp->footprint)
+			return po;
+		int ox = (int)((po.position.x - objbp->footprint->originX) / 5.0f);
+		int oz = (int)((po.position.z - objbp->footprint->originZ) / 5.0f);
+		std::tie(ox, oz) = findPos(ctx->server, ox, oz);
+		float fx = ox * 5 + objbp->footprint->originX + 2.5f;
+		float fz = oz * 5 + objbp->footprint->originZ + 2.5f;
+		return { Vector3(fx, ctx->server->terrain->getHeight(fx, fz), fz) };
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		auto cursor = gsf.cursor;

@@ -446,6 +446,7 @@ void ServerGameObject::setPosition(const Vector3 & position)
 
 void ServerGameObject::setOrientation(const Vector3 & orientation)
 {
+	updateOccupiedTiles(position, this->orientation, position, orientation);
 	this->orientation = orientation;
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_ORIENTATION_SET);
@@ -685,6 +686,7 @@ void ServerGameObject::playAttachedSpecialEffect(int sfxTag, ServerGameObject* t
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;
+	Vector3 oldposition = position;
 	position = newposition;
 	if (server->tiles) {
 		int trnNumX, trnNumZ;
@@ -719,6 +721,7 @@ void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 						enteringZone->sendEvent(Tags::PDEVENT_ON_OBJECT_ENTERS, this);
 				}
 			}
+			updateOccupiedTiles(oldposition, orientation, newposition, orientation);
 		}
 	}
 }
@@ -772,6 +775,39 @@ void ServerGameObject::updateSightRange()
 	if (blueprint->sightRangeEquation != -1) {
 		SrvScriptContext ctx{ Server::instance, this };
 		setItem(Tags::PDITEM_ACTUAL_SIGHT_RANGE, Server::instance->gameSet->equations[blueprint->sightRangeEquation]->eval(&ctx));
+	}
+}
+
+void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation)
+{
+	Server* server = Server::instance;
+	int trnNumX, trnNumZ;
+	std::tie(trnNumX, trnNumZ) = server->terrain->getNumPlayableTiles();
+	if (blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING && blueprint->footprint) {
+		// free tiles from old position
+		auto rotOrigin = blueprint->footprint->rotateOrigin(oldorientation.y);
+		int ox = (int)((oldposition.x - rotOrigin.first) / 5.0f);
+		int oz = (int)((oldposition.z - rotOrigin.second) / 5.0f);
+		for (auto& to : blueprint->footprint->tiles) {
+			if (!to.mode) {
+				auto ro = to.rotate(oldorientation.y);
+				int px = ox + ro.first, pz = oz + ro.second;
+				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ)
+					server->tiles[pz * trnNumX + px].building = nullptr;
+			}
+		}
+		// take tiles from new position
+		rotOrigin = blueprint->footprint->rotateOrigin(neworientation.y);
+		ox = (int)((newposition.x - rotOrigin.first) / 5.0f);
+		oz = (int)((newposition.z - rotOrigin.second) / 5.0f);
+		for (auto& to : blueprint->footprint->tiles) {
+			if (!to.mode) {
+				auto ro = to.rotate(neworientation.y);
+				int px = ox + ro.first, pz = oz + ro.second;
+				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ)
+					server->tiles[pz * trnNumX + px].building = this;
+			}
+		}
 	}
 }
 

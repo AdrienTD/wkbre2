@@ -100,5 +100,32 @@ void ServerDebugger::draw() {
 		ImGui::Text("No object selected.");
 	ImGui::End();
 
+	static bool showTilesWnd = false;
+	ImGui::Begin("Additional windows");
+	ImGui::Checkbox("Tiles", &showTilesWnd);
+	ImGui::End();
+
+	if (showTilesWnd && server->tiles) {
+		ImGui::Begin("Tiles", &showTilesWnd, ImGuiWindowFlags_HorizontalScrollbar);
+		int X, Z;
+		std::tie(X, Z) = server->terrain->getNumPlayableTiles();
+		static constexpr int rectsize = 8;
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		ImVec2 scr = ImGui::GetCursorScreenPos();
+		//drawList->PrimReserve(6 * X * Z, 4 * X * Z);
+		for (int z = Z-1; z >= 0; z--) {
+			int y = Z - 1 - z;
+			for (int x = 0; x < X; x++) {
+				uint32_t color = server->tiles[z * X + x].building ? 0xFFFF00FF : 0xFF00FFFF;
+				auto p1 = ImVec2(scr.x + x * rectsize, scr.y + y * rectsize);
+				auto p2 = ImVec2(scr.x + (x + 1) * rectsize - 1, scr.y + (y + 1) * rectsize - 1);
+				if (ImGui::IsRectVisible(p1, p2))
+					drawList->AddRectFilled(p1, p2, color);
+			}
+		}
+		ImGui::Dummy(ImVec2(X* rectsize, Z* rectsize));
+		ImGui::End();
+	}
+
 	server->timeManager.imgui();
 }

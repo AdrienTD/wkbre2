@@ -205,6 +205,10 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			name = backup_name;
 			break;
 		}
+		case Tags::CBLUEPRINT_USE_FOOTPRINT: {
+			footprint = gameSet->footprints.readPtr(gsf);
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

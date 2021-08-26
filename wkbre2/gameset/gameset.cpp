@@ -208,6 +208,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				specialEffectTags.names.insertString(gsf.nextString(true));
 				break;
 			}
+			case Tags::GAMESET_FOOTPRINT: {
+				footprints.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -387,6 +392,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				vec.push_back(modelCache.getModel("Warrior Kings Game Set\\" + gsf.nextString(true)));
 				break;
 			}
+			case Tags::GAMESET_FOOTPRINT: {
+				Footprint& fp = footprints.readRef(gsf);
+				fp.parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -458,6 +468,7 @@ void GameSet::load(const char * fn)
 	sounds.pass();
 	musicTags.pass();
 	specialEffectTags.pass();
+	footprints.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

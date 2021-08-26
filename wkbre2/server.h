@@ -71,6 +71,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void addZoneTile(int tx, int tz);
 	//void removeZoneTile(int tx, int tz);
 	void updateSightRange();
+	void updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
 };
 
 struct Server : CommonGameState<Server, ServerGameObject>
@@ -91,6 +92,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 		std::vector<SrvGORef> objList;
 		//std::vector<SrvGORef> zoneList;
 		SrvGORef zone;
+		SrvGORef building;
 	};
 	std::unique_ptr<Tile[]> tiles;
 

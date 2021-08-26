@@ -1194,6 +1194,23 @@ struct ActionAttachSpecialEffect :Action {
 	}
 };
 
+struct ActionCreateObject : Action {
+	GameObjBlueprint* objbp;
+	std::unique_ptr<PositionDeterminer> pPosition;
+	virtual void run(SrvScriptContext* ctx) override {
+		ServerGameObject* obj = ctx->server->createObject(objbp);
+		obj->setParent(ctx->self.get()->getPlayer());
+		auto posori = pPosition->eval(ctx);
+		obj->setPosition(posori.position);
+		obj->setOrientation(posori.rotation);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		objbp = gs.readObjBlueprintPtr(gsf);
+		pPosition.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1272,6 +1289,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT: action = new ActionPlaySpecialEffect; break;
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT_BETWEEN: action = new ActionPlaySpecialEffectBetween; break;
 	case Tags::ACTION_ATTACH_SPECIAL_EFFECT: action = new ActionAttachSpecialEffect; break;
+	case Tags::ACTION_CREATE_OBJECT: action = new ActionCreateObject; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_ATTACH_LOOPING_SPECIAL_EFFECT:

@@ -22,6 +22,7 @@
 #include "3DClip.h"
 #include "cameraPath.h"
 #include "Sound.h"
+#include "Footprint.h"
 
 struct GameObjBlueprint;
 
@@ -89,6 +90,7 @@ struct GameSet
 	GSBlueprintList<GSSound> sounds;
 	GSBlueprintList<void> musicTags;
 	GSBlueprintList<std::vector<Model*>> specialEffectTags;
+	GSBlueprintList<Footprint> footprints;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

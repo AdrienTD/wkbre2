@@ -12,6 +12,7 @@ struct Command;
 struct Model;
 struct Reaction;
 struct ValueDeterminer;
+struct Footprint;
 
 struct GameObjBlueprint {
 	struct BPAppearance {
@@ -64,6 +65,8 @@ struct GameObjBlueprint {
 	bool receiveSightRangeEvents = false;
 	ValueDeterminer* shouldProcessSightRange = nullptr;
 	int sightRangeEquation = -1;
+
+	Footprint* footprint = nullptr;
 
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {
