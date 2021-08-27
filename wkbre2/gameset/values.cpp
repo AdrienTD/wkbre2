@@ -458,7 +458,19 @@ struct ValueTileItem : CommonEval<ValueTileItem, ValueDeterminer> {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX* ctx) {
-		// TODO
+		if (auto* obj = finder->getFirst(ctx)) {
+			int tx = (int)(obj->position.x / 5.0f), tz = (int)(obj->position.z / 5.0f);
+			if (auto* tile = ctx->program->terrain->getPlayableTile(tx, tz)) {
+				auto& attg = ctx->program->gameSet->associatedTileTexGroups;
+				auto it = attg.find(tile->texture->grp->name);
+				if (it != attg.end()) {
+					auto& vals = it->second->itemValues;
+					auto vt = vals.find(item);
+					if (vt != vals.end())
+						return vt->second;
+				}
+			}
+		}
 		return 0.0f;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {

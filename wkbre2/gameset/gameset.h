@@ -23,6 +23,7 @@
 #include "cameraPath.h"
 #include "Sound.h"
 #include "Footprint.h"
+#include "GSTerrain.h"
 
 struct GameObjBlueprint;
 
@@ -91,10 +92,12 @@ struct GameSet
 	GSBlueprintList<void> musicTags;
 	GSBlueprintList<std::vector<Model*>> specialEffectTags;
 	GSBlueprintList<Footprint> footprints;
+	GSBlueprintList<GSTerrain> terrains;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;
 	std::map<int, std::vector<GameObjBlueprint::SoundRef>> globalSoundMap;
+	std::map<std::string, GSTerrain*> associatedTileTexGroups;
 
 	ModelCache modelCache;
 

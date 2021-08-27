@@ -1,5 +1,5 @@
 #include "tags.h" 
-TagDict<74> Tags::GAMESET_tagDict({
+TagDict<77> Tags::GAMESET_tagDict({
     "3D_CLIP",
     "ACTION_SEQUENCE",
     "ANIMATION_TAG",
@@ -55,6 +55,7 @@ TagDict<74> Tags::GAMESET_tagDict({
     "ORDER_CATEGORY",
     "PACKAGE",
     "PACKAGE_RECEIPT_TRIGGER",
+    "PASSABILITY_FIELDS",
     "PLAN",
     "PLAYER",
     "PLAYER_EXTENSION",
@@ -66,6 +67,8 @@ TagDict<74> Tags::GAMESET_tagDict({
     "SPECIAL_EFFECT_TAG",
     "TASK",
     "TASK_CATEGORY",
+    "TERRAIN",
+    "TERRAIN_BLUEPRINT_LIST",
     "TERRAIN_ZONE",
     "TOWN",
     "TOWN_EXTENSION",

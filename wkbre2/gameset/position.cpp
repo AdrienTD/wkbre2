@@ -21,7 +21,7 @@ namespace {
 		OrientedPosition sum;
 		for (ServerGameObject *obj : vec)
 			sum += {obj->position, obj->orientation};
-		return sum / vec.size();
+		return vec.empty() ? OrientedPosition() : (sum / vec.size());
 	}
 }
 
