@@ -358,7 +358,7 @@ void ClientInterface::iter()
 		auto& gtw = client->gameSet->gameTextWindows[activeGtw.first];
 		auto& page = gtw.pages[activeGtw.second];
 		std::string title = "[GTW] " + client->gameSet->gameTextWindows.names[activeGtw.first];
-		ImGui::SetNextWindowPosCenter();
+		ImGui::SetNextWindowPos(ImVec2((float)g_windowWidth/2, (float)g_windowHeight/2), 0, ImVec2(0.5f, 0.5f));
 		ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoSavedSettings);
 		auto loctext = lang.getText(page.textBody);
 		std::string ptext;

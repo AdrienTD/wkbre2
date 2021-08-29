@@ -86,7 +86,7 @@ void ClientDebugger::draw()
 	static size_t numMessages = client->chatMessages.size();
 	if (numMessages != client->chatMessages.size()) {
 		numMessages = client->chatMessages.size();
-		ImGui::SetScrollHere();
+		ImGui::SetScrollHereY();
 	}
 	ImGui::EndChild();
 	ImGui::End();
