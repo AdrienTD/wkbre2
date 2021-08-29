@@ -17,6 +17,8 @@ void DefaultSceneRenderer::render()
 	gfx->DisableAlphaTest();
 	gfx->NoTexture(0);
 
+	Vector3 sunNormal = scene->sunDirection.normal();
+
 	for (const auto &it : scene->matInsts) {
 		const Material &mat = scene->modelCache->getMaterial(it.first);
 		bool next_alphatest = mat.alphaTest;
@@ -41,6 +43,7 @@ void DefaultSceneRenderer::render()
 			int color = ent->color % mesh.uvLists.size();
 
 			const float* verts = ent->model->interpolate(ent->animTime);
+			const Vector3* norms = ent->model->interpolateNormals(ent->animTime);
 
 			for (int g = 0; g < polylist.groups.size(); g++) {
 				if (model->matIds[g] != it.first)
@@ -56,7 +59,10 @@ void DefaultSceneRenderer::render()
 					bver[i].x = postver.x;
 					bver[i].y = postver.y;
 					bver[i].z = postver.z;
-					bver[i].color = -1;
+					if (ent->flags & ent->SEFLAG_NOLIGHTNING)
+						bver[i].color = 0xFFFFFFFF;
+					else
+						bver[i].color = (int)(std::max(160.0f, std::min(255.0f, (norms[tind.normal].transformNormal(ent->transform).dot(sunNormal) + 1.0f) * 255 / 2))) * 0x010101 + 0xFF000000;
 					bver[i].u = mesh.uvLists[color][2 * tind.uv];
 					bver[i].v = mesh.uvLists[color][2 * tind.uv + 1];
 				}

@@ -15,6 +15,11 @@ struct SceneEntity {
 	Model *model = nullptr;
 	int color = 0;
 	uint32_t animTime = 0;
+	uint32_t flags = 0;
+
+	enum Flags {
+		SEFLAG_NOLIGHTNING = 1,
+	};
 };
 
 struct Scene {
@@ -34,6 +39,8 @@ struct Scene {
 	std::map<uint32_t, MaterialInst> matInsts;
 	TextureCache texCache;
 	ModelCache *modelCache;
+
+	Vector3 sunDirection = Vector3(1,1,1);
 
 	void add(SceneEntity *ent);
 	void clear();

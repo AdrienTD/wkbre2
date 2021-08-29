@@ -49,6 +49,38 @@ void Anim::load(const char *filename) {
 			st.on = br.readUint8() != 0;
 		}
 	}
+	normalFrames.numFrames = br.readUint32();
+	normalFrames.frameTimes.resize(normalFrames.numFrames);
+	normalFrames.norms.resize(normalFrames.numFrames);
+	for (uint32_t& ft : normalFrames.frameTimes)
+		ft = br.readUint32();
+	normalFrames.numNormals = br.readUint32();
+	for (auto& frame : normalFrames.norms) {
+		frame.resize(normalFrames.numNormals);
+		for (uint8_t& n : frame)
+			n = br.readUint8();
+	}
+}
+
+const Vector3* Anim::interpolateNormals(uint32_t animTime, const Mesh& mesh)
+{
+	static std::vector<Vector3> animnorms;
+	animnorms.resize(normalFrames.numNormals);
+	if ((int32_t)animTime < 0) animTime = 0;
+	int animtime = animTime % this->duration;
+	auto& ac = normalFrames;
+	int cf = 0;
+	for (; cf < ac.numFrames - 1; cf++)
+		if (ac.frameTimes[cf + 1] >= animtime)
+			break;
+	int frame = cf;
+	for (uint32_t i = 0; i < ac.numNormals; i++) {
+		const auto& v1 = Mesh::s_normalTable[ac.norms[frame][i]];
+		const auto& v2 = Mesh::s_normalTable[ac.norms[frame+1][i]];
+		Vector3 vi = v1 + (v2 - v1) * (animtime - ac.frameTimes[frame]) / (ac.frameTimes[frame + 1] - ac.frameTimes[frame]);
+		animnorms[mesh.normalRemapper[i]] = vi.normal();
+	}
+	return animnorms.data();
 }
 
 const float* Anim::interpolate(uint32_t animTime, const Mesh& mesh)

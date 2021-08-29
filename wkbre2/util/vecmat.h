@@ -113,6 +113,7 @@ struct /*alignas(16)*/ Vector3
 	float dot2xz(const Vector3 &a) const {return a.x * x + a.z * z;}
 	Vector3 cross(const Vector3 &v) const {return Vector3(y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x);}
 	Vector3 transform(const Matrix &m) const;
+	Vector3 transformNormal(const Matrix &m) const;
 	Vector3 transformScreenCoords(const Matrix &m) const;
 
 	float *begin() { return coord; }

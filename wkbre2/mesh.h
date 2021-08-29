@@ -46,7 +46,7 @@ struct PolygonList
 
 struct Mesh
 {
-	uint16_t numVertices, numUvs, numAttachPoints;
+	uint16_t numVertices, numNormals, numUvs, numAttachPoints;
 	DynArray<AttachmentPoint> attachPoints;
 	DynArray<float> vertices;
 	Vector3 sphereCenter; float sphereRadius;
@@ -55,9 +55,14 @@ struct Mesh
 	DynArray<DynArray<float>> uvLists;
 	DynArray<DynArray<IndexTuple>> groupIndices;
 	DynArray<PolygonList> polyLists;
+	DynArray<uint8_t> normals;
+	DynArray<uint16_t> normalRemapper;
 
 	void load(const char *filename);
+	const Vector3* decodeNormals();
 
 	Mesh() {}
 	Mesh(const char *filename) { load(filename); }
+
+	static const std::array<Vector3, 256> s_normalTable;
 };

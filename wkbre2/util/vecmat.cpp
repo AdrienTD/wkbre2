@@ -181,6 +181,16 @@ Vector3 Vector3::transform(const Matrix & m) const
 	return v;
 }
 
+Vector3 Vector3::transformNormal(const Matrix& m) const
+{
+	const Vector3& a = *this;
+	Vector3 v;
+	v.x = a.x * m.m[0][0] + a.y * m.m[1][0] + a.z * m.m[2][0];
+	v.y = a.x * m.m[0][1] + a.y * m.m[1][1] + a.z * m.m[2][1];
+	v.z = a.x * m.m[0][2] + a.y * m.m[1][2] + a.z * m.m[2][2];
+	return v;
+}
+
 Vector3 Vector3::transformScreenCoords(const Matrix &m) const
 {
 	const Vector3 &a = *this;
