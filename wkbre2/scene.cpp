@@ -11,6 +11,11 @@ void Scene::add(SceneEntity * ent)
 		if (!matinst.tex)
 			matinst.tex = texCache.getTexture(modelCache->getMaterial(mat[i]).textureFilename.c_str());
 	}
+	if (ent->flags & SceneEntity::SEFLAG_ANIM_CLAMP_END) {
+		uint32_t lastMs = (uint32_t)(ent->model->getDuration() * 1000.0f) - 1;
+		if (ent->animTime > lastMs)
+			ent->animTime = lastMs; // note: precision loss???
+	}
 }
 
 void Scene::clear()

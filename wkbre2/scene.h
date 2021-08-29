@@ -18,7 +18,8 @@ struct SceneEntity {
 	uint32_t flags = 0;
 
 	enum Flags {
-		SEFLAG_NOLIGHTNING = 1,
+		SEFLAG_NOLIGHTNING = 1, // disable light shading on entity
+		SEFLAG_ANIM_CLAMP_END = 2, // clamp to last anim frame instead of repeating animation from the beginning
 	};
 };
 

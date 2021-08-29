@@ -224,6 +224,7 @@ void Client::tick()
 					obj->animationIndex = br.readUint32();
 					obj->animationVariant = br.readUint32();
 					obj->animStartTime = br.readFloat();
+					obj->animClamped = br.readUint8();
 				}
 				break;
 			}

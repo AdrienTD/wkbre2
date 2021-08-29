@@ -32,6 +32,7 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	float animStartTime = 0.0f; // should be game_time_t?
 	int animationIndex = 0, animationVariant = 0;
+	bool animClamped = false;
 
 	Movement movement;
 	Trajectory trajectory;

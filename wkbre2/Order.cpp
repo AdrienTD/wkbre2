@@ -554,7 +554,7 @@ void ObjectReferenceTask::onUpdate()
 				if (animtoplay == -1)
 					animtoplay = blueprint->defaultAnim;
 				if (animtoplay != -1)
-					go->setAnimation(animtoplay);
+					go->setAnimation(animtoplay, blueprint->playAnimationOnce);
 			}
 		}
 		else {

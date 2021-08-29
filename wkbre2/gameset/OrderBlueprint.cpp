@@ -86,7 +86,7 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			auto animtype = gsf.nextString();
 			if (animtype == "TAG")
 				this->defaultAnim = gs.animations.readIndex(gsf);
-			else if(animtype == "FROM_SELECTION") {
+			else if (animtype == "FROM_SELECTION") {
 				gsf.advanceLine();
 				while (!gsf.eof) {
 					auto tag = gsf.nextTag();
@@ -109,6 +109,8 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			terminateEntireOrderIfNoTarget = true;
 		else if (tag == "REJECT_TARGET_IF_IT_IS_TERMINATED")
 			rejectTargetIfItIsTerminated = true;
+		else if (tag == "PLAY_ANIMATION_ONCE")
+			playAnimationOnce = true;
 		gsf.advanceLine();
 	}
 }

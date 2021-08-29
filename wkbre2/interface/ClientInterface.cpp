@@ -164,7 +164,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				obj->sceneEntity.transform = obj->getWorldMatrix();
 				obj->sceneEntity.color = obj->getPlayer()->color;
 				obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
-				obj->sceneEntity.flags = 0;
+				obj->sceneEntity.flags = obj->animClamped ? SceneEntity::SEFLAG_ANIM_CLAMP_END : 0;
 				scene->add(&obj->sceneEntity);
 				numObjectsDrawn++;
 				// Attachment points

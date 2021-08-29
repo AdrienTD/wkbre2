@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include "../util/IndexedStringList.h"
+#include "../util/vecmat.h"
 
 struct GameSet;
 struct Command;
@@ -67,6 +68,10 @@ struct GameObjBlueprint {
 	int sightRangeEquation = -1;
 
 	Footprint* footprint = nullptr;
+
+	Vector3 scaleAppearance = Vector3(1, 1, 1);
+	Vector3 minScaleVary = Vector3(1, 1, 1);
+	Vector3 maxScaleVary = Vector3(1, 1, 1);
 
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {

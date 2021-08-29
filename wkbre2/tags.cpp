@@ -87,7 +87,7 @@ TagDict<5> Tags::CCOMMAND_tagDict({
     "START_SEQUENCE",
 });
 
-TagDict<32> Tags::CBLUEPRINT_tagDict({
+TagDict<35> Tags::CBLUEPRINT_tagDict({
     "BLUEPRINT_TOOLTIP",
     "BUILDING_TYPE",
     "CAN_SPAWN",
@@ -120,6 +120,9 @@ TagDict<32> Tags::CBLUEPRINT_tagDict({
     "STRIKE_FLOOR_SOUND",
     "STRIKE_WATER_SOUND",
     "USE_FOOTPRINT",
+    "VARY_X_SCALE",
+    "VARY_Y_SCALE",
+    "VARY_Z_SCALE",
 });
 
 TagDict<47> Tags::VALUE_tagDict({

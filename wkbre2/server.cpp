@@ -95,6 +95,10 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 
 	obj->updateSightRange();
 
+	Vector3 randVec{ (float)rand() / (float)(RAND_MAX), (float)rand() / (float)(RAND_MAX), (float)rand() / (float)(RAND_MAX) };
+	Vector3 varyScale = blueprint->minScaleVary + randVec * (blueprint->maxScaleVary - blueprint->minScaleVary);
+	obj->setScale(blueprint->scaleAppearance * varyScale);
+
 	return obj;
 }
 
@@ -492,16 +496,18 @@ void ServerGameObject::setColor(int color)
 	Server::instance->sendToAll(msg);
 }
 
-void ServerGameObject::setAnimation(int animationIndex)
+void ServerGameObject::setAnimation(int animationIndex, bool isClamped)
 {
 	this->animationIndex = animationIndex;
 	this->animationVariant = animationVariant;
 	this->animStartTime = Server::instance->timeManager.currentTime;
+	this->animClamped = isClamped;
 	NetPacketWriter msg(NETCLIMSG_OBJECT_ANIM_SET);
 	msg.writeUint32(this->id);
 	msg.writeUint32(this->animationIndex);
 	msg.writeUint32(this->animationVariant);
 	msg.writeFloat(this->animStartTime);
+	msg.writeUint8(this->animClamped);
 	Server::instance->sendToAll(msg);
 }
 

@@ -62,7 +62,7 @@ void DefaultSceneRenderer::render()
 					if (ent->flags & ent->SEFLAG_NOLIGHTNING)
 						bver[i].color = 0xFFFFFFFF;
 					else
-						bver[i].color = (int)(std::max(160.0f, std::min(255.0f, (norms[tind.normal].transformNormal(ent->transform).dot(sunNormal) + 1.0f) * 255 / 2))) * 0x010101 + 0xFF000000;
+						bver[i].color = (int)(std::max(160.0f, std::min(255.0f, (norms[tind.normal].transformNormal(ent->transform).normal().dot(sunNormal) + 1.0f) * 255 / 2))) * 0x010101 + 0xFF000000;
 					bver[i].u = mesh.uvLists[color][2 * tind.uv];
 					bver[i].v = mesh.uvLists[color][2 * tind.uv + 1];
 				}

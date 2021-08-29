@@ -209,6 +209,26 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			footprint = gameSet->footprints.readPtr(gsf);
 			break;
 		}
+		case Tags::CBLUEPRINT_SCALE_APPEARANCE: {
+			for (auto& f : scaleAppearance)
+				f = gsf.nextFloat();
+			break;
+		}
+		case Tags::CBLUEPRINT_VARY_X_SCALE: {
+			minScaleVary.x = gsf.nextFloat();
+			maxScaleVary.x = gsf.nextFloat();
+			break;
+		}
+		case Tags::CBLUEPRINT_VARY_Y_SCALE: {
+			minScaleVary.y = gsf.nextFloat();
+			maxScaleVary.y = gsf.nextFloat();
+			break;
+		}
+		case Tags::CBLUEPRINT_VARY_Z_SCALE: {
+			minScaleVary.z = gsf.nextFloat();
+			maxScaleVary.z = gsf.nextFloat();
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

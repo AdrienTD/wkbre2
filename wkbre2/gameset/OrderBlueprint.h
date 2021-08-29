@@ -46,6 +46,7 @@ struct TaskBlueprint {
 
 	std::vector<std::pair<int, int>> equAnims;
 	int defaultAnim = -1;
+	bool playAnimationOnce = false;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
 };
