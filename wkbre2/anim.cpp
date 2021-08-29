@@ -65,6 +65,12 @@ void Anim::load(const char *filename) {
 const Vector3* Anim::interpolateNormals(uint32_t animTime, const Mesh& mesh)
 {
 	static std::vector<Vector3> animnorms;
+	static std::pair<Anim*, uint32_t> prevcall = { nullptr, 0 };
+	auto curcall = std::make_pair(this, animTime);
+	if (curcall == prevcall)
+		return animnorms.data();
+	prevcall = curcall;
+
 	animnorms.resize(normalFrames.numNormals);
 	if ((int32_t)animTime < 0) animTime = 0;
 	int animtime = animTime % this->duration;
@@ -86,6 +92,12 @@ const Vector3* Anim::interpolateNormals(uint32_t animTime, const Mesh& mesh)
 const float* Anim::interpolate(uint32_t animTime, const Mesh& mesh)
 {
 	static std::vector<float> animverts;
+	static std::pair<Anim*, uint32_t> prevcall = { nullptr, 0 };
+	auto curcall = std::make_pair(this, animTime);
+	if (curcall == prevcall)
+		return animverts.data();
+	prevcall = curcall;
+
 	animverts.resize(3 * this->numVertices);
 	if ((int32_t)animTime < 0) animTime = 0;
 	int animtime = animTime % this->duration;

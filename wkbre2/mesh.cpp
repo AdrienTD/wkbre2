@@ -161,6 +161,11 @@ void Mesh::load(const char * filename)
 const Vector3* Mesh::decodeNormals()
 {
 	static std::vector<Vector3> decodedNorms;
+	static Mesh* prevcall = nullptr;
+	if (this == prevcall)
+		return decodedNorms.data();
+	prevcall = this;
+
 	decodedNorms.resize(normals.size());
 	for (size_t i = 0; i < normals.size(); i++)
 		decodedNorms[i] = s_normalTable[normals[i]];

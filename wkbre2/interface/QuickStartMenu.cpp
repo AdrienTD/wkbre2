@@ -188,6 +188,7 @@ void QuickStartMenu::launchGame()
 				server->tick();
 				ImGuiImpl_NewFrame();
 				srvdbg.draw();
+				gfx->ClearFrame();
 				gfx->BeginDrawing();
 				gfx->InitImGuiDrawing();
 				ImGuiImpl_Render(gfx);
