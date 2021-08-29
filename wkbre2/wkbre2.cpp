@@ -38,6 +38,7 @@ void LaunchQSM() {
 		ImGuiImpl_NewFrame();
 		qsm.draw();
 
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->InitRectDrawing();
 		gfx->SetTexture(0, bgtex);

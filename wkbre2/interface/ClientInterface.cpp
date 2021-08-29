@@ -399,10 +399,13 @@ void ClientInterface::iter()
 
 	//----- Rendering -----//
 
+	gfx->ClearFrame(true, true, client->terrain ? client->terrain->fogColor : 0);
 	gfx->BeginDrawing();
 
 	client->camera.updateMatrix();
 	gfx->SetTransformMatrix(&client->camera.sceneMatrix);
+
+	gfx->SetFog(client->terrain ? client->terrain->fogColor : 0, client->camera.farDist);
 
 	// Get ray
 	rayDirection = getRay(client->camera).normal();

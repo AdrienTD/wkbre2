@@ -74,6 +74,7 @@ struct IRenderer
 	// Frame begin/end
 	virtual void BeginDrawing() = 0;
 	virtual void EndDrawing() = 0;
+	virtual void ClearFrame(bool clearColors = true, bool clearDepth = true, uint32_t color = 0) = 0;
 
 	// Textures management
 	virtual texture CreateTexture(Bitmap *bm, int mipmaps) = 0;
@@ -84,7 +85,7 @@ struct IRenderer
 	virtual void SetTransformMatrix(Matrix *m) = 0;
 	virtual void SetTexture(uint32_t x, texture t) = 0;
 	virtual void NoTexture(uint32_t x) = 0;
-	virtual void SetFog() = 0;
+	virtual void SetFog(uint32_t color = 0, float farz = 250.0f) = 0;
 	virtual void DisableFog() = 0;
 	virtual void EnableAlphaTest() = 0;
 	virtual void DisableAlphaTest() = 0;

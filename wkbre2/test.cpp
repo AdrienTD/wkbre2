@@ -115,6 +115,7 @@ void Test_SDL()
 	IRenderer *gfx = CreateD3D9Renderer();
 	gfx->Init();
 	while (!g_windowQuit) {
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->InitRectDrawing();
 		gfx->DrawFrame(64, 64, 128, 128, -1);
@@ -141,6 +142,7 @@ void Test_ImGui()
 		ImGui::Text("Hello guys and gals! :)");
 		ImGui::Image(mytex, ImVec2(64, 64));
 
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->InitImGuiDrawing();
 		ImGuiImpl_Render(gfx);
@@ -172,6 +174,7 @@ void Test_ServerExplorer()
 		//	ImGui::Text("%i: %s \"%s\"", ole.first, Tags::GAMEOBJCLASS_tagDict.getStringFromID(ole.second->blueprint->bpClass), ole.second->blueprint->name.c_str());
 		serverdbg.draw();
 
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->InitImGuiDrawing();
 		ImGuiImpl_Render(gfx);
@@ -217,6 +220,7 @@ void Test_Terrain() {
 		ImGui::DragFloat3("Sun Vector", &trn.sunVector.x);
 		camera.updateMatrix();
 
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->SetTransformMatrix(&camera.sceneMatrix);
 
@@ -363,6 +367,7 @@ void Test_Mesh()
 		ImGui::InputInt("UV List", &requvlist);
 		requvlist %= mesh.uvLists.size();
 
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		//gfx->InitRectDrawing();
 		//gfx->DrawFrame(64, 64, 128, 128, -1);
@@ -450,6 +455,7 @@ void Test_Network()
 			savchosen = true;
 		ImGui::End();
 
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->InitImGuiDrawing();
 		ImGuiImpl_Render(gfx);
@@ -489,6 +495,7 @@ void Test_Network()
 			server.tick();
 			ImGuiImpl_NewFrame();
 			srvdbg.draw();
+			gfx->ClearFrame();
 			gfx->BeginDrawing();
 			gfx->InitImGuiDrawing();
 			ImGuiImpl_Render(gfx);
@@ -553,6 +560,7 @@ void Test_EnetServer() {
 		ImGuiImpl_NewFrame();
 		serverdbg.draw();
 
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->InitImGuiDrawing();
 		ImGuiImpl_Render(gfx);
@@ -701,6 +709,7 @@ void Test_Scene()
 			se.animTime = ticks;
 		}
 
+		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->SetTransformMatrix(&camera.sceneMatrix);
 		for(SceneEntity &se : scents)

@@ -305,7 +305,6 @@ struct D3D9Renderer : public IRenderer
 	void BeginDrawing()
 	{
 		static D3DMATRIX idmx = { 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1 };
-		ddev->Clear(NULL, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, mapfogcolor, 1.0f, 0);
 		ddev->BeginScene();
 		ddev->SetTransform(D3DTS_WORLD, (D3DMATRIX*)&idmx);
 		ddev->SetTransform(D3DTS_VIEW, (D3DMATRIX*)&idmx);
@@ -324,6 +323,13 @@ struct D3D9Renderer : public IRenderer
 			else
 				Sleep(50);
 		}
+	}
+
+	void ClearFrame(bool clearColors, bool clearDepth, uint32_t color) {
+		DWORD flags = 0;
+		if (clearColors) flags |= D3DCLEAR_TARGET;
+		if (clearDepth) flags |= D3DCLEAR_ZBUFFER;
+		ddev->Clear(NULL, NULL, flags, color, 1.0f, 0);
 	}
 
 	void InitRectDrawing()
@@ -420,14 +426,14 @@ struct D3D9Renderer : public IRenderer
 
 	//***********************************//
 
-	void SetFog()
+	void SetFog(uint32_t color, float farz)
 	{
 		float f;
 		ddev->SetRenderState(D3DRS_FOGENABLE, TRUE);
-		ddev->SetRenderState(D3DRS_FOGCOLOR, mapfogcolor);
+		ddev->SetRenderState(D3DRS_FOGCOLOR, color);
 		ddev->SetRenderState(D3DRS_FOGTABLEMODE, D3DFOG_LINEAR);
-		f = farzvalue/2 /*0.9999998f*/; ddev->SetRenderState(D3DRS_FOGSTART, *(int*)&f);
-		f = farzvalue-8 /*0.9999999f*/; ddev->SetRenderState(D3DRS_FOGEND, *(int*)&f);
+		f = farz/2; ddev->SetRenderState(D3DRS_FOGSTART, *(int*)&f);
+		f = farz-8; ddev->SetRenderState(D3DRS_FOGEND, *(int*)&f);
 	}
 
 	void DisableFog()
