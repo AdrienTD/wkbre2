@@ -20,7 +20,7 @@ void DefaultSceneRenderer::render()
 	Vector3 sunNormal = scene->sunDirection.normal();
 
 	for (const auto &it : scene->matInsts) {
-		const Material &mat = scene->modelCache->getMaterial(it.first);
+		const Material &mat = scene->modelCache->getMaterial(it.first.first);
 		bool next_alphatest = mat.alphaTest;
 		texture next_texture = it.second.tex;
 		if (cur_alphatest != next_alphatest || cur_texture != next_texture)
@@ -46,7 +46,7 @@ void DefaultSceneRenderer::render()
 			const Vector3* norms = ent->model->interpolateNormals(ent->animTime);
 
 			for (int g = 0; g < polylist.groups.size(); g++) {
-				if (model->matIds[g] != it.first)
+				if (model->matIds[g] != it.first.first)
 					continue;
 				batchVertex *bver; uint16_t *bind; uint32_t bstart;
 				PolyListGroup &group = polylist.groups[g];

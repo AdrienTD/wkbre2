@@ -37,7 +37,7 @@ struct Scene {
 		texture tex;
 	};
 
-	std::map<uint32_t, MaterialInst> matInsts;
+	std::map<std::pair<uint32_t, Model*>, MaterialInst> matInsts;
 	TextureCache texCache;
 	ModelCache *modelCache;
 

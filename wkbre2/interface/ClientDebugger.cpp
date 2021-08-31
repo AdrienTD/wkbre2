@@ -7,6 +7,8 @@
 #include "../window.h"
 #include "ClientInterface.h"
 
+extern int g_diag_animHits, g_diag_animMisses;
+
 namespace {
 	const ImVec4 ivcolortable[8] = {
 		ImVec4(0.5f, 0.25f, 0.25f, 1), ImVec4(0, 0, 1, 1), ImVec4(1, 1, 0, 1), ImVec4(1, 0, 0, 1),
@@ -157,6 +159,13 @@ void ClientDebugger::draw()
 		ImGui::EndChild();
 		ImGui::End();
 	}
+
+	ImGui::Begin("Diagnostics");
+	ImGui::Text("animHits = %i", g_diag_animHits);
+	ImGui::Text("animMisses = %i", g_diag_animMisses);
+	ImGui::End();
+	g_diag_animHits = 0;
+	g_diag_animMisses = 0;
 
 	client->timeManager.imgui();
 

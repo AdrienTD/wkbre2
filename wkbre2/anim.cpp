@@ -3,6 +3,8 @@
 #include "file.h"
 #include "mesh.h"
 
+int g_diag_animHits = 0, g_diag_animMisses = 0;
+
 void Anim::load(const char *filename) {
 	char *fcnt; int fsize;
 	LoadFile(filename, &fcnt, &fsize);
@@ -94,9 +96,11 @@ const float* Anim::interpolate(uint32_t animTime, const Mesh& mesh)
 	static std::vector<float> animverts;
 	static std::pair<Anim*, uint32_t> prevcall = { nullptr, 0 };
 	auto curcall = std::make_pair(this, animTime);
-	if (curcall == prevcall)
-		return animverts.data();
+	if (curcall == prevcall) {
+		g_diag_animHits++; return animverts.data();
+	}
 	prevcall = curcall;
+	g_diag_animMisses++;
 
 	animverts.resize(3 * this->numVertices);
 	if ((int32_t)animTime < 0) animTime = 0;

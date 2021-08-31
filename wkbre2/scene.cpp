@@ -6,7 +6,7 @@ void Scene::add(SceneEntity * ent)
 	const uint32_t *mat = ent->model->getMaterialIds();
 	size_t numMats = ent->model->getNumMaterials();
 	for (size_t i = 0; i < numMats; i++) {
-		MaterialInst &matinst = matInsts[mat[i]];
+		MaterialInst& matinst = matInsts[{ mat[i], ent->model }];
 		matinst.list.push_back(ent);
 		if (!matinst.tex)
 			matinst.tex = texCache.getTexture(modelCache->getMaterial(mat[i]).textureFilename.c_str());
