@@ -72,6 +72,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	//void removeZoneTile(int tx, int tz);
 	void updateSightRange();
 	void updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
+	void removeIfNotReferenced();
 };
 
 struct Server : CommonGameState<Server, ServerGameObject>

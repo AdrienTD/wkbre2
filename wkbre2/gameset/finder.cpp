@@ -276,6 +276,7 @@ struct FinderReferencers : ObjectFinder {
 				Task* task = order->getCurrentTask();
 				if (!task) continue;
 				//assert(task->target.get() == ctx->self.get());
+				if (task->target != ctx->self.get()) continue;
 				if (task->blueprint->category == category)
 					vec.insert(obj);
 			}

@@ -817,6 +817,22 @@ void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 	}
 }
 
+void ServerGameObject::removeIfNotReferenced()
+{
+	if (blueprint->removeWhenNotReferenced) {
+		bool cond = std::all_of(referencers.begin(), referencers.end(), [this](const SrvGORef& ref) {
+			if (ref)
+				for (auto& order : ref->orderConfig.orders)
+					if (order.getCurrentTask()->target == this)
+						return false;
+			return true;
+		});
+		cond = cond && std::all_of(associators.begin(), associators.end(), [](const auto& set) {return set.second.empty(); });
+		if (cond)
+			Server::instance->deleteObject(this);
+	}
+}
+
 void Server::sendToAll(const NetPacket & packet)
 {
 	for (NetLink *cli : clientLinks)
@@ -1016,7 +1032,7 @@ void Server::tick()
 	static std::vector<SrvGORef> toprocess;
 	toprocess.clear();
 	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
-		if (!obj->orderConfig.orders.empty() || obj->blueprint->receiveSightRangeEvents)
+		if (!obj->orderConfig.orders.empty() || obj->blueprint->receiveSightRangeEvents || obj->blueprint->removeWhenNotReferenced)
 			toprocess.emplace_back(obj);
 		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_ARMY) {
 			Vector3 avg(0,0,0);
@@ -1057,6 +1073,8 @@ void Server::tick()
 			obj->lookForSightRangeEvents();
 			if (!ref) continue;
 		}
+		if (obj->blueprint->removeWhenNotReferenced)
+			obj->removeIfNotReferenced();
 	}
 
 	time_t curtime = time(NULL);

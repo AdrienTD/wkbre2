@@ -18,6 +18,7 @@ template<typename Program, typename AnyGameObject> struct GameObjectRef {
 	GameObjectRef &operator=(AnyGameObject *obj) { set(obj); return *this; }
 	GameObjectRef &operator=(uint32_t id) { set(id); return *this; }
 	GameObjectRef &operator=(const GameObjectRef &ref) { set(ref.objid); return *this; }
+	GameObjectRef &operator=(GameObjectRef&& ref) { objid = ref.objid; ref.objid = NULL_GOREF; return *this; }
 
 	bool operator<(const GameObjectRef &other) const { return objid < other.objid; }
 	bool operator==(const GameObjectRef &other) const { return objid == other.objid; }
@@ -26,8 +27,8 @@ template<typename Program, typename AnyGameObject> struct GameObjectRef {
 	GameObjectRef() { objid = NULL_GOREF; }
 	GameObjectRef(AnyGameObject *obj) { set(obj); }
 	GameObjectRef(uint32_t id) { set(id); }
-	GameObjectRef(const GameObjectRef &other) { objid = other.objid; }
-	GameObjectRef(GameObjectRef &&other) { objid = other.objid; }
+	GameObjectRef(const GameObjectRef &other) { set(other.objid); }
+	GameObjectRef(GameObjectRef&& other) { objid = other.objid; other.objid = NULL_GOREF; }
 };
 
 template<typename S, typename T> struct std::hash<GameObjectRef<S, T>> {

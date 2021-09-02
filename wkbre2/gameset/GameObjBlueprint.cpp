@@ -233,6 +233,10 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			floatsOnWater = true;
 			break;
 		}
+		case Tags::CBLUEPRINT_REMOVE_WHEN_NOT_REFERENCED: {
+			removeWhenNotReferenced = true;
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}
