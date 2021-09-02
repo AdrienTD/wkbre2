@@ -64,6 +64,7 @@ struct Terrain
 	}
 
 	float getHeight(float x, float z) const;
+	float getHeightEx(float x, float z, bool floatOnWater) const;
 
 	Vector3 getNormal(int x, int z) const;
 
@@ -83,5 +84,7 @@ struct Terrain
 	void readBCM(const char *filename);
 	void readSNR(const char* filename);
 	void readTRN(const char* filename);
+
+	void floodfillWater();
 };
 		

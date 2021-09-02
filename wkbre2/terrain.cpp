@@ -3,6 +3,7 @@
 #include "util/util.h"
 #include "util/GSFileParser.h"
 #include "gfx/bitmap.h"
+#include <algorithm>
 
 float Terrain::getHeight(float ipx, float ipy) const {
 	//int tx = floorf(x / 5) + edge, tz = floorf(z / 5) + edge;
@@ -20,6 +21,22 @@ float Terrain::getHeight(float ipx, float ipy) const {
 	float h6 = h3 * (1.0f - qx) + h4 * qx;
 	float hr = h5 * (1.0f - qy) + h6 * qy;
 	return hr;
+}
+
+float Terrain::getHeightEx(float x, float z, bool floatOnWater) const
+{
+	float h = getHeight(x, z);
+	if (floatOnWater) {
+		int ix = (int)(edge + x / 5.0f);
+		int iz = (int)(edge + z / 5.0f);
+		if (ix >= 0 && ix < width && iz >= 0 && iz < height) {
+			if (const Tile* tile = getTile(ix, iz)) {
+				if (tile->fullOfWater && tile->waterLevel > h)
+					h = tile->waterLevel;
+			}
+		}
+	}
+	return h;
 }
 
 Vector3 Terrain::getNormal(int x, int z) const {
@@ -172,6 +189,8 @@ void Terrain::readBCM(const char * filename) {
 		vertices[i] = (uint8_t)br.readnb(8);
 
 	free(fcnt);
+
+	floodfillWater();
 }
 
 void Terrain::readSNR(const char* filename)
@@ -232,12 +251,17 @@ void Terrain::readSNR(const char* filename)
 		else if (tag == "SCENARIO_MINIMAP") {
 		}
 		else if (tag == "SCENARIO_LAKE") {
+			Vector3 vec;
+			for (float& f : vec) f = gsf.nextFloat();
+			lakes.push_back(vec);
 		}
 
 		gsf.advanceLine();
 	}
 
 	free(text);
+
+	floodfillWater();
 }
 
 void Terrain::readTRN(const char* filename)
@@ -283,4 +307,48 @@ void Terrain::readTRN(const char* filename)
 	}
 
 	free(text);
+}
+
+void Terrain::floodfillWater()
+{
+	auto fillTile = [this](int tx, int tz, float lvl) -> bool {
+		Tile& tile = tiles[tz * width + tx];
+		if (tile.fullOfWater && lvl <= tile.waterLevel)
+			return false;
+
+		float h00 = getVertex(tx, tz);
+		float h01 = getVertex(tx, tz+1);
+		float h10 = getVertex(tx+1, tz);
+		float h11 = getVertex(tx+1, tz+1);
+		if (std::min({ h00,h01,h10,h11 }) < lvl) {
+			tile.waterLevel = lvl;
+			tile.fullOfWater = true;
+			return true;
+		}
+		return false;
+	};
+	auto floodfill = [this, &fillTile](int tx, int tz, float lvl, const auto& rec) -> void {
+		bool done = fillTile(tx, tz, lvl);
+		if (!done) return;
+		int x, xmin, xmax;
+		for (x = tx - 1; x >= 0; x--) {
+			bool done = fillTile(x, tz, lvl);
+			if (!done) break;
+		}
+		xmin = x+1;
+		for (x = tx + 1; x < width; x++) {
+			bool done = fillTile(x, tz, lvl);
+			if (!done) break;
+		}
+		xmax = x-1;
+		for (x = xmin; x <= xmax; x++) {
+			if (tz - 1 >= 0)
+				rec(x, tz - 1, lvl, rec);
+			if (tz + 1 < height)
+				rec(x, tz + 1, lvl, rec);
+		}
+	};
+	for (Vector3& lake : lakes) {
+		floodfill((int)(lake.x / 5.0f), height - 1 - (int)(lake.z / 5.0f), lake.y, floodfill);
+	}
 }

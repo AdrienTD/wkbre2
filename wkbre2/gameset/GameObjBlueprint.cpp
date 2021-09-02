@@ -229,6 +229,10 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			maxScaleVary.z = gsf.nextFloat();
 			break;
 		}
+		case Tags::CBLUEPRINT_FLOATS_ON_WATER: {
+			floatsOnWater = true;
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}
@@ -309,3 +313,5 @@ Model* GameObjBlueprint::getSpecialEffect(int sfxTag)
 	}
 	return nullptr;
 }
+
+bool GameObjBlueprint::canWalkOnWater() const { return floatsOnWater || bpClass != Tags::GAMEOBJCLASS_CHARACTER; }

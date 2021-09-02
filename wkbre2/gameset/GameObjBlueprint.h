@@ -73,6 +73,8 @@ struct GameObjBlueprint {
 	Vector3 minScaleVary = Vector3(1, 1, 1);
 	Vector3 maxScaleVary = Vector3(1, 1, 1);
 
+	bool floatsOnWater = false;
+
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {
 		bpClass = i_bpClass; bpId = i_bpId; name = i_name; gameSet = i_gameSet;
@@ -84,6 +86,8 @@ struct GameObjBlueprint {
 	std::tuple<std::string, float, float> getSound(int sndTag, int subtype);
 	Model* getModel(int subtype, int appear, int anim, int variant);
 	Model* getSpecialEffect(int sfxTag);
+
+	bool canWalkOnWater() const;
 
 	//GameObjBlueprint() {}
 	//GameObjBlueprint(GameSet *gameSet) : gameSet(gameSet) {}

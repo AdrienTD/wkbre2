@@ -132,7 +132,50 @@ void DefaultTerrainRenderer::render() {
 				*(oix++) = firstindex + c;
 		}
 		batch->flush();
-		pack.second.clear();
+		//pack.second.clear();
 	}
 	batch->end();
+
+	// ----- Lakes -----
+	gfx->NoTexture(0);
+	batch->begin();
+	gfx->BeginLakeDrawing();
+	const uint32_t color = (terrain->fogColor & 0xFFFFFF) | 0x80000000;
+	for (int z = tlsz; z <= tlez; z++) {
+		for (int x = tlsx; x <= tlex; x++) {
+			const TerrainTile* tile = terrain->getTile(x, z);
+			if (tile && tile->fullOfWater) {
+				unsigned int x = tile->x;
+				unsigned int z = terrain->height - 1 - tile->z;
+				int lx = x - terrain->edge, lz = z - terrain->edge;
+
+				// is water tile visible on screen?
+				Vector3 pp((lx + 0.5f) * tilesize, tile->waterLevel, (lz + 0.5f) * tilesize);
+				Vector3 camcenter = camera->position + camera->direction * 125.0f;
+				pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
+				Vector3 ttpp = pp.transformScreenCoords(camera->sceneMatrix);
+				if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
+					continue;
+
+				batchVertex* outvert; uint16_t* outindices; unsigned int firstindex;
+				batch->next(4, 6, &outvert, &outindices, &firstindex);
+				outvert[0].x = lx * tilesize; outvert[0].y = tile->waterLevel ; outvert[0].z = lz * tilesize;
+				outvert[0].color = color; outvert[0].u = 0.0f; outvert[0].v = 0.0f;
+				outvert[1].x = (lx + 1) * tilesize; outvert[1].y = tile->waterLevel; outvert[1].z = lz * tilesize;
+				outvert[1].color = color; outvert[1].u = 0.0f; outvert[1].v = 0.0f;
+				outvert[2].x = (lx + 1) * tilesize; outvert[2].y = tile->waterLevel; outvert[2].z = (lz + 1) * tilesize;
+				outvert[2].color = color; outvert[2].u = 0.0f; outvert[2].v = 0.0f;
+				outvert[3].x = lx * tilesize; outvert[3].y = tile->waterLevel; outvert[3].z = (lz + 1) * tilesize;
+				outvert[3].color = color; outvert[3].u = 0.0f; outvert[3].v = 0.0f;
+				uint16_t* oix = outindices;
+				for (const int& c : { 0,1,3,1,2,3 })
+					*(oix++) = firstindex + c;
+			}
+		}
+	}
+	batch->flush();
+	batch->end();
+
+	for (auto& pack : tilesPerTex)
+		pack.second.clear();
 }

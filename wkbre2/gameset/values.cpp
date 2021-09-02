@@ -387,7 +387,12 @@ struct ValueHasDirectLineOfSightTo : ValueDeterminer {
 struct ValueWaterBeneath : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual float eval(SrvScriptContext* ctx) override {
-		// TODO
+		ServerGameObject* obj = finder->getFirst(ctx);
+		int tx = (int)(obj->position.x / 5.0f), tz = (int)(obj->position.z / 5.0f);
+		if (auto* tile = ctx->program->terrain->getPlayableTile(tx, tz)) {
+			if (tile->fullOfWater)
+				return 1.0f;
+		}
 		return 0.0f;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {

@@ -24,7 +24,7 @@ void Client::tick()
 	const auto walkObj = [this](ClientGameObject *obj, auto &rec) -> void {
 		if (obj->movement.isMoving()) {
 			obj->position = obj->movement.getNewPosition(timeManager.currentTime);
-			obj->position.y = terrain->getHeight(obj->position.x, obj->position.z);
+			obj->position.y = terrain->getHeightEx(obj->position.x, obj->position.z, obj->blueprint->canWalkOnWater());
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
 		}

@@ -440,7 +440,7 @@ void ServerGameObject::setPosition(const Vector3 & position)
 {
 	updatePosition(position);
 	if (blueprint->bpClass != Tags::GAMEOBJCLASS_MISSILE)
-		this->position.y = Server::instance->terrain->getHeight(position.x, position.z);
+		this->position.y = Server::instance->terrain->getHeightEx(position.x, position.z, blueprint->canWalkOnWater());
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_POSITION_SET);
 	msg.writeUint32(this->id);
@@ -539,11 +539,11 @@ void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 	// Problem: reaction can be executed twice if it is in both intrinsics and individuals, but is it worth checking that?
 	SrvScriptContext ctx(Server::instance, this);
 	auto _ = ctx.packageSender.change(sender);
-	for (Reaction *r : blueprint->intrinsicReactions)
+	const auto ircopy = individualReactions;
+	for (Reaction* r : ircopy)
 		if (r->canBeTriggeredBy(evt, this, sender))
 			r->actions.run(&ctx);
-	const auto ircopy = individualReactions;
-	for (Reaction *r : ircopy)
+	for (Reaction *r : blueprint->intrinsicReactions)
 		if (r->canBeTriggeredBy(evt, this, sender))
 			r->actions.run(&ctx);
 }
@@ -1044,7 +1044,7 @@ void Server::tick()
 		if (!ref) continue;
 		if (obj->movement.isMoving()) {
 			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
-			newpos.y = terrain->getHeight(obj->position.x, obj->position.z);
+			newpos.y = terrain->getHeightEx(obj->position.x, obj->position.z, obj->blueprint->canWalkOnWater());
 			obj->updatePosition(newpos, true);
 			if (!ref) continue;
 			Vector3 dir = obj->movement.getDirection();

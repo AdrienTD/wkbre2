@@ -444,7 +444,8 @@ void ClientInterface::iter()
 			sfx.entity.animTime = (uint32_t)((client->timeManager.currentTime - sfx.startTime) * 1000.0f);
 			scene->add(&sfx.entity);
 		}
-		scene->sunDirection = client->terrain->sunVector;
+		if (client->terrain)
+			scene->sunDirection = client->terrain->sunVector;
 		if (!sceneRenderer)
 			sceneRenderer = new DefaultSceneRenderer(gfx, scene);
 		sceneRenderer->render();
