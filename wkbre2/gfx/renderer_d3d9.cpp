@@ -413,7 +413,7 @@ struct D3D9Renderer : public IRenderer
 	void BeginMapDrawing()
 	{
 		ddev->SetRenderState(D3DRS_LIGHTING, FALSE);
-		ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_CW);
+		ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
 		ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 		ddev->SetRenderState(D3DRS_ZENABLE, TRUE);
 		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);

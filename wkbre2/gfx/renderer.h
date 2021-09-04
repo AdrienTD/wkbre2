@@ -129,6 +129,8 @@ struct IRenderer
 	virtual void InitImGuiDrawing() = 0;
 };
 
+IRenderer *CreateRenderer();
 IRenderer *CreateNULLRenderer();
 IRenderer *CreateD3D9Renderer();
+IRenderer *CreateD3D11Renderer();
 IRenderer *CreateOGL1Renderer();

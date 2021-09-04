@@ -128,7 +128,7 @@ void DefaultTerrainRenderer::render() {
 				outvert[i].v = uvs[i].second;
 			}
 			uint16_t *oix = outindices;
-			for (const int &c : { 0,1,3,1,2,3 })
+			for (const int &c : { 0,3,1,1,3,2 })
 				*(oix++) = firstindex + c;
 		}
 		batch->flush();
@@ -168,7 +168,7 @@ void DefaultTerrainRenderer::render() {
 				outvert[3].x = lx * tilesize; outvert[3].y = tile->waterLevel; outvert[3].z = (lz + 1) * tilesize;
 				outvert[3].color = color; outvert[3].u = 0.0f; outvert[3].v = 0.0f;
 				uint16_t* oix = outindices;
-				for (const int& c : { 0,1,3,1,2,3 })
+				for (const int& c : { 0,3,1,1,3,2 })
 					*(oix++) = firstindex + c;
 			}
 		}

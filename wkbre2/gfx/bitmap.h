@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#pragma once
+
 #define BMFORMAT_P8 1
 #define BMFORMAT_R8G8B8 2
 #define BMFORMAT_B8G8R8 3
@@ -41,3 +43,4 @@ Bitmap *ConvertBitmapToB8G8R8A8(Bitmap *sb);
 void FreeBitmap(Bitmap *bm);
 void BitmapBlit32(Bitmap *db, int dx, int dy, Bitmap *sb, int sx, int sy, int sw, int sh);
 void SaveBitmapPCX(Bitmap *bm, const char *fname);
+Bitmap* ResizeBitmap(const Bitmap& original, int nwidth, int nheight);

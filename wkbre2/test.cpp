@@ -112,7 +112,7 @@ void Test_Actions()
 void Test_SDL()
 {
 	InitWindow();
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	while (!g_windowQuit) {
 		gfx->ClearFrame();
@@ -130,7 +130,7 @@ void Test_ImGui()
 	InitWindow();
 	ImGuiImpl_Init();
 
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	ImGuiImpl_CreateFontsTexture(gfx);
 
@@ -162,7 +162,7 @@ void Test_ServerExplorer()
 	InitWindow();
 	ImGuiImpl_Init();
 
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	ImGuiImpl_CreateFontsTexture(gfx);
 
@@ -202,7 +202,7 @@ void Test_Terrain() {
 
 	InitWindow();
 	ImGuiImpl_Init();
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);
@@ -333,7 +333,7 @@ void Test_Mesh()
 
 	InitWindow();
 	ImGuiImpl_Init();
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);
@@ -434,7 +434,7 @@ void Test_Network()
 
 	InitWindow();
 	ImGuiImpl_Init();
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);
@@ -524,7 +524,7 @@ void Test_EnetServer() {
 
 	InitWindow();
 	ImGuiImpl_Init();
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);
@@ -588,7 +588,7 @@ void Test_EnetClient() {
 
 	InitWindow();
 	ImGuiImpl_Init();
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);
@@ -660,7 +660,7 @@ void Test_Scene()
 
 	InitWindow();
 	ImGuiImpl_Init();
-	IRenderer *gfx = CreateD3D9Renderer();
+	IRenderer *gfx = CreateRenderer();
 	gfx->Init();
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);

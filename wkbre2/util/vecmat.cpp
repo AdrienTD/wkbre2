@@ -171,6 +171,15 @@ Matrix Matrix::getInverse4x3() const
 	return Matrix::getTranslationMatrix(-getTranslationVector()) * inv;
 }
 
+Matrix Matrix::getTranspose() const
+{
+	Matrix t;
+	for (int r = 0; r < 4; r++)
+		for (int c = 0; c < 4; c++)
+			t.m[c][r] = m[r][c];
+	return t;
+}
+
 Vector3 Vector3::transform(const Matrix & m) const
 {
 	const Vector3 &a = *this;

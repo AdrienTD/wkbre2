@@ -24,7 +24,7 @@ void LaunchQSM() {
 	LoadBCP("data.bcp");
 	InitWindow();
 	ImGuiImpl_Init();
-	IRenderer* gfx = CreateD3D9Renderer();
+	IRenderer* gfx = CreateRenderer();
 	gfx->Init();
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);

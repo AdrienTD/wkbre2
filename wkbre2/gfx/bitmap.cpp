@@ -19,6 +19,10 @@
 #include "../util/util.h"
 #include <cstdint>
 
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#define STBIR_DEFAULT_FILTER_DOWNSAMPLE  STBIR_FILTER_BOX
+#include <stb_image_resize.h>
+
 Bitmap *LoadBitmap(const char *fn)
 {
 	char *d; int s;
@@ -336,4 +340,18 @@ void SaveBitmapPCX(Bitmap *bm, const char *fname)
 			ferr("SaveBitmapPCX doesn't support format %i.", bm->format);
 	}
 	fclose(f);
+}
+
+Bitmap* ResizeBitmap(const Bitmap& original, int nwidth, int nheight) {
+	Bitmap* _res = new Bitmap;
+	Bitmap& res = *_res;
+	res.width = nwidth;
+	res.height = nheight;
+	res.format = original.format;
+	int npitch = nwidth * 4;
+	int totalSize = npitch * nheight;
+	res.pixels = (uint8_t*)malloc(totalSize);
+	res.palette = nullptr;
+	stbir_resize_uint8(original.pixels, original.width, original.height, original.width * 4, res.pixels, res.width, res.height, npitch, 4);
+	return _res;
 }
