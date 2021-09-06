@@ -40,6 +40,8 @@ struct VS_OUTPUT
 	float Fog : FOG;
 };
 
+static const float ALPHA_REF = 0.94;
+
 [maxvertexcount(3)]
 void GS( triangle VS_OUTPUT input[3], inout TriangleStream<VS_OUTPUT> TriStream )
 {
@@ -54,6 +56,7 @@ VS_OUTPUT VS(float4 Pos : POSITION, float4 Color : COLOR, float2 Texcoord : TEXC
 	output.Pos = mul(Pos, Transform);
 	output.Color = Color.bgra;
 	output.Texcoord = Texcoord;
+	output.Fog = 0.0;
 	return output;
 };
 
@@ -70,15 +73,30 @@ VS_OUTPUT VS_Fog(float4 Pos : POSITION, float4 Color : COLOR, float2 Texcoord : 
 float4 PS(VS_OUTPUT input) : SV_Target
 {
 	float4 tex = inpTexture.Sample(inpSampler, input.Texcoord);
-	return input.Color * tex;
+	return lerp(input.Color * tex, FogColor, input.Fog);
 };
 
 float4 PS_AlphaTest(VS_OUTPUT input) : SV_Target
 {
 	float4 tex = inpTexture.Sample(inpSampler, input.Texcoord);
-	if(tex.a < 0.8) discard;
+	if(tex.a < ALPHA_REF) discard;
 	return lerp(input.Color * tex, FogColor, input.Fog);
 };
+
+float4 PS_Map(VS_OUTPUT input) : SV_Target
+{
+	// Compute the length of a half pixel in the current mipmap
+	float lod = inpTexture.CalculateLevelOfDetail(inpSampler, input.Texcoord);
+	float ha = 0.5 / (256 >> (int)ceil(lod));
+
+	float2 stc = clamp(input.Texcoord, float2(ha,ha), float2(1.0-ha,1.0-ha));
+	float2 tile = floor(stc / float2(0.25,0.25)); // tile index in the 4x4 atlas
+	float2 subuv = fmod(stc, float2(0.25,0.25)); // coords inside the used tile
+
+	float2 fuv = clamp(subuv, float2(ha,ha), float2(0.25-ha,0.25-ha)) + tile*0.25;
+	float4 tex = inpTexture.Sample(inpSampler, fuv);
+	return lerp(input.Color * tex, FogColor, input.Fog);
+}
 
 float4 PS_Lake(VS_OUTPUT input) : SV_Target
 {
@@ -194,7 +212,7 @@ struct D3D11Renderer : IRenderer {
 
 	ID3D11InputLayout* ddInputLayout;
 	ID3D11VertexShader* ddVertexShader, *ddFogVertexShader;
-	ID3D11PixelShader* ddPixelShader, *ddAlphaTestPixelShader, *ddLakePixelShader;
+	ID3D11PixelShader* ddPixelShader, *ddAlphaTestPixelShader, *ddMapPixelShader, *ddLakePixelShader;
 	ID3D11GeometryShader* ddGeometryShader;
 
 	// Shapes
@@ -219,7 +237,10 @@ struct D3D11Renderer : IRenderer {
 		D3DCompile(shaderCode, sizeof(shaderCode), nullptr, nullptr, nullptr, func, model, D3DCOMPILE_ENABLE_STRICTNESS, 0, &blob, &errorBlob);
 		if (errorBlob) {
 			std::string err((const char*)errorBlob->GetBufferPointer(), errorBlob->GetBufferSize());
-			ferr("Failed to compile shader for %s (%s):\n%s", func, model, err.c_str());
+			char title[80];
+			sprintf_s(title, "Shader %s (%s) compilation failed!", func, model);
+			MessageBoxA(nullptr, err.c_str(), title, 16);
+			ferr("Failed to compile shader for %s (%s)", func, model);
 		}
 		return blob;
 	};
@@ -244,7 +265,7 @@ struct D3D11Renderer : IRenderer {
 		SDL_GetWindowWMInfo(g_sdlWindow, &syswm);
 		HWND hWindow = syswm.info.win.window;
 
-		D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_10_0 };
+		D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_10_1 };
 		DXGI_SWAP_CHAIN_DESC swapChainDesc;
 		ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
 		swapChainDesc.BufferCount = 1;
@@ -262,12 +283,13 @@ struct D3D11Renderer : IRenderer {
 		assert(!FAILED(hres));
 
 		ID3DBlob* vsBlob, *vsFogBlob;
-		ID3DBlob* psBlob, *psAlphaTestBlob, *psLakeBlob;
+		ID3DBlob* psBlob, *psAlphaTestBlob, *psMapBlob, *psLakeBlob;
 		ID3DBlob* gsBlob;
 		vsBlob = compileShader("VS", "vs_4_0");
 		vsFogBlob = compileShader("VS_Fog", "vs_4_0");
 		psBlob = compileShader("PS", "ps_4_0");
 		psAlphaTestBlob = compileShader("PS_AlphaTest", "ps_4_0");
+		psMapBlob = compileShader("PS_Map", "ps_4_1");
 		psLakeBlob = compileShader("PS_Lake", "ps_4_0");
 		gsBlob = compileShader("GS", "gs_4_0");
 
@@ -285,6 +307,8 @@ struct D3D11Renderer : IRenderer {
 		hres = ddDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &ddPixelShader);
 		assert(!FAILED(hres));
 		hres = ddDevice->CreatePixelShader(psAlphaTestBlob->GetBufferPointer(), psAlphaTestBlob->GetBufferSize(), nullptr, &ddAlphaTestPixelShader);
+		assert(!FAILED(hres));
+		hres = ddDevice->CreatePixelShader(psMapBlob->GetBufferPointer(), psMapBlob->GetBufferSize(), nullptr, &ddMapPixelShader);
 		assert(!FAILED(hres));
 		hres = ddDevice->CreatePixelShader(psLakeBlob->GetBufferPointer(), psLakeBlob->GetBufferSize(), nullptr, &ddLakePixelShader);
 		assert(!FAILED(hres));
@@ -481,6 +505,7 @@ struct D3D11Renderer : IRenderer {
 		ddDevice->CreateShaderResourceView(tex, &rvd, &srview);
 		assert(srview);
 
+		tex->Release();
 		return (texture)srview;
 	}
 	virtual void FreeTexture(texture t) override {}
@@ -496,7 +521,10 @@ struct D3D11Renderer : IRenderer {
 		ddImmediateContext->VSSetConstantBuffers(0, 1, &transformBuffer);
 	}
 	virtual void SetTexture(uint32_t x, texture t) override {
-		ddImmediateContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&t);
+		if (t == nullptr)
+			NoTexture(x);
+		else
+			ddImmediateContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&t);
 	}
 	virtual void NoTexture(uint32_t x) override {
 		ddImmediateContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&whiteTexture);
@@ -522,8 +550,12 @@ struct D3D11Renderer : IRenderer {
 	virtual void DisableFog() override {
 		ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
 	}
-	virtual void EnableAlphaTest() override {}
-	virtual void DisableAlphaTest() override {}
+	virtual void EnableAlphaTest() override {
+		ddImmediateContext->PSSetShader(ddAlphaTestPixelShader, nullptr, 0);
+	}
+	virtual void DisableAlphaTest() override {
+		ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
+	}
 	virtual void EnableColorBlend() override {}
 	virtual void DisableColorBlend() override {}
 	virtual void SetBlendColor(int c) override {}
@@ -604,7 +636,10 @@ struct D3D11Renderer : IRenderer {
 	}
 
 	// 3D Landscape/Heightmap drawing
-	virtual void BeginMapDrawing() override {}
+	virtual void BeginMapDrawing() override {
+		ddImmediateContext->PSSetShader(ddMapPixelShader, nullptr, 0);
+		ddImmediateContext->OMSetBlendState(nullptr, {}, 0xFFFFFFFF);
+	}
 	virtual void BeginLakeDrawing() override {
 		ddImmediateContext->PSSetShader(ddLakePixelShader, nullptr, 0);
 		ddImmediateContext->OMSetBlendState(alphaBlendState, {}, 0xFFFFFFFF);
