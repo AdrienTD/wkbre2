@@ -2,6 +2,7 @@
 #include "../window.h"
 #include "../util/util.h"
 #include "bitmap.h"
+#include "../settings.h"
 
 #include <array>
 #include <cassert>
@@ -10,11 +11,15 @@
 #define WIN32_LEAN_AND_MEAN
 #include <d3d11.h>
 #include <d3dcompiler.h>
+#include <wrl/client.h>
+using Microsoft::WRL::ComPtr;
 
 #include <SDL.h>
 #include <SDL_syswm.h>
 #include <SDL_system.h>
 extern SDL_Window* g_sdlWindow;
+
+#include <nlohmann/json.hpp>
 
 const char shaderCode[] = R"---(
 Texture2D inpTexture : register(t0);
@@ -231,9 +236,10 @@ struct D3D11Renderer : IRenderer {
 
 	ID3D11RasterizerState* scissorRasterizerState = nullptr;
 	texture whiteTexture;
+	int msaaNumSamples = 1;
 
-	static ID3DBlob* compileShader(const char* func, const char* model) {
-		ID3DBlob* blob; ID3DBlob* errorBlob = nullptr;
+	static ComPtr<ID3DBlob> compileShader(const char* func, const char* model) {
+		ComPtr<ID3DBlob> blob, errorBlob;
 		D3DCompile(shaderCode, sizeof(shaderCode), nullptr, nullptr, nullptr, func, model, D3DCOMPILE_ENABLE_STRICTNESS, 0, &blob, &errorBlob);
 		if (errorBlob) {
 			std::string err((const char*)errorBlob->GetBufferPointer(), errorBlob->GetBufferSize());
@@ -265,6 +271,8 @@ struct D3D11Renderer : IRenderer {
 		SDL_GetWindowWMInfo(g_sdlWindow, &syswm);
 		HWND hWindow = syswm.info.win.window;
 
+		msaaNumSamples = g_settings.value<int>("msaaNumSamples", 1);
+
 		D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_10_1 };
 		DXGI_SWAP_CHAIN_DESC swapChainDesc;
 		ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
@@ -276,22 +284,19 @@ struct D3D11Renderer : IRenderer {
 		swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swapChainDesc.OutputWindow = hWindow;
-		swapChainDesc.SampleDesc.Count = 1;
+		swapChainDesc.SampleDesc.Count = msaaNumSamples;
 		swapChainDesc.SampleDesc.Quality = 0;
 		swapChainDesc.Windowed = TRUE;
 		HRESULT hres = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, featureLevels, std::size(featureLevels), D3D11_SDK_VERSION, &swapChainDesc, &dxgiSwapChain, &ddDevice, &featureLevel, &ddImmediateContext);
 		assert(!FAILED(hres));
 
-		ID3DBlob* vsBlob, *vsFogBlob;
-		ID3DBlob* psBlob, *psAlphaTestBlob, *psMapBlob, *psLakeBlob;
-		ID3DBlob* gsBlob;
-		vsBlob = compileShader("VS", "vs_4_0");
-		vsFogBlob = compileShader("VS_Fog", "vs_4_0");
-		psBlob = compileShader("PS", "ps_4_0");
-		psAlphaTestBlob = compileShader("PS_AlphaTest", "ps_4_0");
-		psMapBlob = compileShader("PS_Map", "ps_4_1");
-		psLakeBlob = compileShader("PS_Lake", "ps_4_0");
-		gsBlob = compileShader("GS", "gs_4_0");
+		ComPtr<ID3DBlob> vsBlob = compileShader("VS", "vs_4_0");
+		ComPtr<ID3DBlob> vsFogBlob = compileShader("VS_Fog", "vs_4_0");
+		ComPtr<ID3DBlob> psBlob = compileShader("PS", "ps_4_0");
+		ComPtr<ID3DBlob> psAlphaTestBlob = compileShader("PS_AlphaTest", "ps_4_0");
+		ComPtr<ID3DBlob> psMapBlob = compileShader("PS_Map", "ps_4_1");
+		ComPtr<ID3DBlob> psLakeBlob = compileShader("PS_Lake", "ps_4_0");
+		ComPtr<ID3DBlob> gsBlob = compileShader("GS", "gs_4_0");
 
 		static const D3D11_INPUT_ELEMENT_DESC iadesc[] = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -398,7 +403,7 @@ struct D3D11Renderer : IRenderer {
 		dsdesc.MipLevels = 1;
 		dsdesc.ArraySize = 1;
 		dsdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		dsdesc.SampleDesc.Count = 1;
+		dsdesc.SampleDesc.Count = msaaNumSamples;
 		dsdesc.SampleDesc.Quality = 0;
 		dsdesc.Usage = D3D11_USAGE_DEFAULT;
 		dsdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
@@ -409,7 +414,7 @@ struct D3D11Renderer : IRenderer {
 
 		D3D11_DEPTH_STENCIL_VIEW_DESC dsviewdesc;
 		dsviewdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		dsviewdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		dsviewdesc.ViewDimension = (msaaNumSamples > 1) ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsviewdesc.Flags = 0;
 		dsviewdesc.Texture2D.MipSlice = 0;
 		hres = ddDevice->CreateDepthStencilView(depthBuffer, &dsviewdesc, &depthView);
