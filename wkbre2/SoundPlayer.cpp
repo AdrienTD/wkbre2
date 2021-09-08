@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <thread>
+#include <atomic>
 
 #include "WavDocument.h"
 #include "file.h"
@@ -32,6 +34,9 @@ struct OALSoundPlayer : SoundPlayer {
 	char* streamBytes; int streamSize;
 	char* streamPtr;
 	mpg123_handle* mHandle;
+
+	std::thread musicLoadingThread;
+	std::atomic<bool> isMusicLoading = false;
 
 	std::pair<bool, ALuint> getSoundBuf(const std::string& filePath) {
 		auto it = sndBufCache.find(filePath);
@@ -63,6 +68,8 @@ struct OALSoundPlayer : SoundPlayer {
 	}
 
 	~OALSoundPlayer() {
+		if (musicLoadingThread.joinable())
+			musicLoadingThread.join();
 		deinit();
 	}
 
@@ -153,7 +160,7 @@ struct OALSoundPlayer : SoundPlayer {
 		listenerPosition = pos;
 	}
 
-	virtual void playMusic(const std::string& filePath) override {
+	void playMusicImp(const std::string& filePath) {
 		if (!FileExists(filePath.c_str()))
 			return;
 		LoadFile(filePath.c_str(), &streamBytes, &streamSize);
@@ -215,10 +222,20 @@ struct OALSoundPlayer : SoundPlayer {
 		alSourcePlay(musicSource);
 	}
 
+	virtual void playMusic(const std::string& filePath) override {
+		if (musicLoadingThread.joinable())
+			musicLoadingThread.join();
+		isMusicLoading = true;
+		musicLoadingThread = std::thread([this,filePath]() {
+			playMusicImp(filePath);
+			isMusicLoading = false;
+		});
+	}
+
 	virtual bool isMusicPlaying() override {
 		ALint val;
 		alGetSourcei(musicSource, AL_SOURCE_STATE, &val);
-		return val == AL_PLAYING;
+		return val == AL_PLAYING || isMusicLoading;
 	}
 };
 
