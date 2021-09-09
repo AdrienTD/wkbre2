@@ -6,6 +6,7 @@
 #include "../GameObjectRef.h"
 #include "../Language.h"
 #include <deque>
+#include <unordered_set>
 
 struct Client;
 struct TerrainRenderer;
@@ -47,4 +48,8 @@ private:
 	float nextSelObjDistance = 0.0f;
 	Language lang;
 	std::deque<SceneEntity> attachSceneEntities;
+	std::unordered_set<CliGORef> selection;
+	bool selBoxOn = false;
+	int selBoxStartX, selBoxStartY, selBoxEndX, selBoxEndY;
+	std::vector<CliGORef> nextSelFromBox;
 };

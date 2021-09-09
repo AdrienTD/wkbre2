@@ -164,7 +164,9 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				obj->sceneEntity.transform = obj->getWorldMatrix();
 				obj->sceneEntity.color = obj->getPlayer()->color;
 				obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
-				obj->sceneEntity.flags = obj->animClamped ? SceneEntity::SEFLAG_ANIM_CLAMP_END : 0;
+				obj->sceneEntity.flags = 0;
+				if (obj->animClamped) obj->sceneEntity.flags |= SceneEntity::SEFLAG_ANIM_CLAMP_END;
+				if (selection.count(obj) >= 1) obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTNING;
 				scene->add(&obj->sceneEntity);
 				numObjectsDrawn++;
 				// Attachment points
@@ -210,6 +212,16 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 						}
 					}
 				}
+				// Box selection check
+				if (selBoxOn) {
+					int bx = (ttpp.x + 1.0f) * g_windowWidth / 2.0f;
+					int by = (-ttpp.y + 1.0f) * g_windowHeight / 2.0f;
+					bool inBox = ((selBoxStartX < bx) && (bx < selBoxEndX)) || ((selBoxEndX < bx) && (bx < selBoxStartX));
+					inBox = inBox && (((selBoxStartY < by) && (by < selBoxEndY)) || ((selBoxEndY < by) && (by < selBoxStartY)));
+					if (inBox) {
+						nextSelFromBox.push_back(obj);
+					}
+				}
 			}
 		}
 	}
@@ -238,19 +250,17 @@ void ClientInterface::iter()
 		lang.load("Languages\\Language.txt");
 	}
 
-	static CliGORef selected;
-
 	//----- Command cursors -----//
 
 	Cursor *nextCursor = nullptr;
 	Command *rightClickCommand = nullptr;
-	if (ClientGameObject *sel = selected.get()) {
-		if (true || nextSelectedObject) {
+	for (ClientGameObject *sel : selection) {
+		if (sel) {
 			CliScriptContext ctx(client, sel);
 			auto _ = ctx.target.change(nextSelectedObject);
-			for (Command *cmd : sel->blueprint->offeredCommands) {
-				Cursor *cmdCursor = nullptr;
-				for (auto &avcond : cmd->cursorAvailable) {
+			for (Command* cmd : sel->blueprint->offeredCommands) {
+				Cursor* cmdCursor = nullptr;
+				for (auto& avcond : cmd->cursorAvailable) {
 					if (avcond.first->test->eval(&ctx)) {
 						cmdCursor = avcond.second;
 						break;
@@ -266,6 +276,8 @@ void ClientInterface::iter()
 					}
 				}
 			}
+			if (rightClickCommand)
+				break;
 		}
 	}
 	if (!nextCursor)
@@ -311,8 +323,27 @@ void ClientInterface::iter()
 
 	if (g_mousePressed[SDL_BUTTON_LEFT]) {
 		debugger.selectObject(nextSelectedObject);
-		selected = nextSelectedObject;
+		if (!g_modShift)
+			selection.clear();
+		if (nextSelectedObject)
+			selection.insert(nextSelectedObject);
 		stampdownBlueprint = nullptr;
+		selBoxStartX = selBoxEndX = g_mouseX;
+		selBoxStartY = selBoxEndY = g_mouseY;
+		selBoxOn = true;
+	}
+
+	if (g_mouseDown[SDL_BUTTON_LEFT]) {
+		selBoxEndX = g_mouseX;
+		selBoxEndY = g_mouseY;
+	}
+	else {
+		if (selBoxOn) {
+			selBoxOn = false;
+			//if (!g_modShift)
+			//	selection.clear();
+			selection.insert(nextSelFromBox.begin(), nextSelFromBox.end());
+		}
 	}
 
 	if (g_mousePressed[SDL_BUTTON_RIGHT]) {
@@ -320,9 +351,27 @@ void ClientInterface::iter()
 			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos, sendStampdownEvent);
 		}
 		else if (rightClickCommand) {
-			if (ClientGameObject *sel = selected.get()) {
-				int assignmentMode = g_modCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (g_modShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
-				client->sendCommand(sel, rightClickCommand, assignmentMode, nextSelectedObject, peapos);
+			Vector3 destPos = peapos;
+			const int NUM_DIRECTIONS = 8;
+			const float SEPARATION = 3.0f;
+			const float TWOPI = 2.0f * 3.1415f;
+			float nextPosDir = 0.0f;
+			float nextPosRadius = SEPARATION;
+			for (ClientGameObject *sel : selection) {
+				if (sel) {
+					if (std::find(sel->blueprint->offeredCommands.begin(), sel->blueprint->offeredCommands.end(), rightClickCommand) != sel->blueprint->offeredCommands.end()) {
+						// if object offers this command, send the command
+						int assignmentMode = g_modCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (g_modShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
+						client->sendCommand(sel, rightClickCommand, assignmentMode, nextSelectedObject, destPos);
+						// calc destination pos for next selected object
+						destPos = peapos + Vector3(std::cos(nextPosDir), 0.0f, std::sin(nextPosDir)) * nextPosRadius;
+						nextPosDir += SEPARATION / nextPosRadius;
+						if (nextPosDir >= TWOPI) {
+							nextPosDir = 0.0f;
+							nextPosRadius += SEPARATION;
+						}
+					}
+				}
 			}
 		}
 	}
@@ -338,8 +387,11 @@ void ClientInterface::iter()
 	if (g_keyPressed[SDL_SCANCODE_KP_MINUS]) {
 		client->sendGameSpeedChange(client->timeManager.timeSpeed / 2.0f);
 	}
-	if (g_keyPressed[SDL_SCANCODE_DELETE] && selected)
-		client->sendTerminateObject(selected);
+	if (g_keyPressed[SDL_SCANCODE_DELETE]) {
+		for (ClientGameObject* sel : selection)
+			if (sel)
+				client->sendTerminateObject(sel);
+	}
 
 	//----- ImGui -----//
 
@@ -411,6 +463,7 @@ void ClientInterface::iter()
 	rayDirection = getRay(client->camera).normal();
 	nextSelectedObject = nullptr;
 	nextSelObjDistance = std::numeric_limits<float>::infinity();
+	nextSelFromBox.clear();
 
 	if (client->gameSet) {
 		if(!scene)
@@ -454,6 +507,12 @@ void ClientInterface::iter()
 
 	if (terrainRenderer)
 		terrainRenderer->render();
+
+	if (selBoxOn) {
+		gfx->InitRectDrawing();
+		gfx->NoTexture(0);
+		gfx->DrawFrame(selBoxStartX, selBoxStartY, selBoxEndX - selBoxStartX, selBoxEndY - selBoxStartY, -1);
+	}
 
 	gfx->InitImGuiDrawing();
 	ImGuiImpl_Render(gfx);
