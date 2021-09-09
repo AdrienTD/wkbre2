@@ -663,6 +663,28 @@ struct ValueCouldReach : ValueDeterminer {
 	}
 };
 
+struct ValueAiControlled : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> fPlayer;
+	virtual float eval(SrvScriptContext* ctx) override {
+		// TODO
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		fPlayer.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueGradientInFront : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> fObject;
+	virtual float eval(SrvScriptContext* ctx) override {
+		// TODO
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		fObject.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -709,6 +731,8 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_IS_DISCOVERED: vd = new ValueIsDiscovered; break;
 	case Tags::VALUE_IS_VISIBLE: vd = new ValueIsVisible; break;
 	case Tags::VALUE_COULD_REACH: vd = new ValueCouldReach; break;
+	case Tags::VALUE_AI_CONTROLLED: vd = new ValueAiControlled; break;
+	case Tags::VALUE_GRADIENT_IN_FRONT: vd = new ValueGradientInFront; break;
 	default: vd = new ValueUnknown(strtag); break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

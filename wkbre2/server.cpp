@@ -513,8 +513,9 @@ void ServerGameObject::setAnimation(int animationIndex, bool isClamped)
 
 void ServerGameObject::startMovement(const Vector3 & destination)
 {
-	constexpr float speed = 5.0f;
+	float speed = computeSpeed();
 	movement.startMovement(position, destination, Server::instance->timeManager.currentTime, speed);
+	currentSpeed = speed;
 	NetPacketWriter npw{ NETCLIMSG_OBJECT_MOVEMENT_STARTED };
 	npw.writeUint32(this->id);
 	npw.writeVector3(position);
@@ -522,12 +523,34 @@ void ServerGameObject::startMovement(const Vector3 & destination)
 	npw.writeFloat(Server::instance->timeManager.currentTime);
 	npw.writeFloat(speed);
 	Server::instance->sendToAll(npw);
-	setAnimation(Server::instance->gameSet->animations.names["Move"]);
+
+	// Find and play movement animation
+	int anim = -1;
+	if (!blueprint->movementBands.empty()) {
+		// take movement band with nearest natural speed
+		auto mbcmp = [speed](GameObjBlueprint::MovementBand& mb1, GameObjBlueprint::MovementBand& mb2) {
+			return std::abs(mb1.naturalMovementSpeed - speed) < std::abs(mb2.naturalMovementSpeed - speed);
+		};
+		auto it = std::min_element(blueprint->movementBands.begin(), blueprint->movementBands.end(), mbcmp);
+		auto& mb = *it;
+		anim = mb.defaultAnim;
+		auto& gs = Server::instance->gameSet;
+		SrvScriptContext ctx{ Server::instance, this };
+		for (auto& p : mb.onEquAnims) {
+			if (gs->equations[p.first]->booleval(&ctx)) {
+				anim = p.second;
+			}
+		}
+	}
+	if (anim == -1 || blueprint->subtypes[subtype].appearances[appearance].animations.count(anim) == 0)
+		anim = Server::instance->gameSet->animations.names["Move"];
+	setAnimation(anim);
 }
 
 void ServerGameObject::stopMovement()
 {
 	movement.stopMovement();
+	currentSpeed = 0.0f;
 	NetPacketWriter npw{ NETCLIMSG_OBJECT_MOVEMENT_STOPPED };
 	npw.writeUint32(this->id);
 	Server::instance->sendToAll(npw);
@@ -833,6 +856,16 @@ void ServerGameObject::removeIfNotReferenced()
 	}
 }
 
+float ServerGameObject::computeSpeed()
+{
+	float speed = 5.0f;
+	if (blueprint->movementSpeedEquation != -1) {
+		SrvScriptContext ctx{ Server::instance, this };
+		speed = Server::instance->gameSet->equations[blueprint->movementSpeedEquation]->eval(&ctx);
+	}
+	return speed;
+}
+
 void Server::sendToAll(const NetPacket & packet)
 {
 	for (NetLink *cli : clientLinks)
@@ -1065,6 +1098,11 @@ void Server::tick()
 			if (!ref) continue;
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
+			// restart movement is speed changes
+			float speed = obj->computeSpeed();
+			if (speed != obj->currentSpeed) {
+				obj->startMovement(obj->movement.getDestination());
+			}
 		}
 		else if (obj->trajectory.isMoving()) {
 			obj->updatePosition(obj->trajectory.getPosition(timeManager.currentTime));

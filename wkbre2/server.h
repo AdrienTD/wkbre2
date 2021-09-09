@@ -36,6 +36,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	std::set<std::pair<int, int>> zoneTiles;
 	int clientIndex = -1;
 	bool isMusicPlaying = false;
+	float currentSpeed = 0.0f;
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 
@@ -73,6 +74,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void updateSightRange();
 	void updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
 	void removeIfNotReferenced();
+	float computeSpeed();
 };
 
 struct Server : CommonGameState<Server, ServerGameObject>

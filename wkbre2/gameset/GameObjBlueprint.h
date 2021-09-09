@@ -34,6 +34,12 @@ struct GameObjBlueprint {
 		std::map<int, std::vector<SoundRef>> soundMap;
 	};
 
+	struct MovementBand {
+		float naturalMovementSpeed = 1.0f;
+		int defaultAnim = -1;
+		std::vector<std::pair<int, int>> onEquAnims;
+	};
+
 	int bpClass, bpId;
 	std::string name;
 	GameSet *gameSet;
@@ -76,6 +82,9 @@ struct GameObjBlueprint {
 	bool floatsOnWater = false;
 
 	bool removeWhenNotReferenced = false;
+
+	int movementSpeedEquation = -1;
+	std::vector<MovementBand> movementBands;
 
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {

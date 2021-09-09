@@ -347,7 +347,7 @@ void ClientInterface::iter()
 	}
 
 	if (g_mousePressed[SDL_BUTTON_RIGHT]) {
-		if (stampdownBlueprint) {
+		if (stampdownBlueprint && stampdownPlayer) {
 			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos, sendStampdownEvent);
 		}
 		else if (rightClickCommand) {

@@ -237,6 +237,47 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			removeWhenNotReferenced = true;
 			break;
 		}
+		case Tags::CBLUEPRINT_MOVEMENT_SPEED_EQUATION: {
+			movementSpeedEquation = gameSet->equations.readIndex(gsf);
+			break;
+		}
+		case Tags::CBLUEPRINT_MOVEMENT_BAND: {
+			movementBands.emplace_back();
+			MovementBand& mb = movementBands.back();
+			gsf.advanceLine();
+			while (!gsf.eof) {
+				auto btag = gsf.nextTag();
+				if (btag == "NATURAL_MOVEMENT_SPEED")
+					mb.naturalMovementSpeed = gsf.nextFloat();
+				else if (btag == "PLAY_ANIMATION") {
+					auto btype = gsf.nextString();
+					if (btype == "TAG") {
+						mb.defaultAnim = gameSet->animations.readIndex(gsf);
+					}
+					else if (btype == "FROM_SELECTION") {
+						gsf.advanceLine();
+						while (!gsf.eof) {
+							auto stag = gsf.nextTag();
+							if (stag == "ON_EQUATION_SUCCESS") {
+								int eq = gameSet->equations.readIndex(gsf);
+								int anim = gameSet->animations.readIndex(gsf);
+								mb.onEquAnims.emplace_back(eq, anim);
+							}
+							else if (stag == "DEFAULT_ANIMATION") {
+								mb.defaultAnim = gameSet->animations.readIndex(gsf);
+							}
+							else if (stag == "END_PLAY_ANIMATION")
+								break;
+							gsf.advanceLine();
+						}
+					}
+				}
+				else if (btag == "END_MOVEMENT_BAND")
+					break;
+				gsf.advanceLine();
+			}
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}
