@@ -13,6 +13,7 @@ struct NetLocalLink;
 
 struct QuickStartMenu {
 	QuickStartMenu(IRenderer* gfx);
+	~QuickStartMenu();
 	void draw();
 	void launchGame();
 private:

@@ -17,6 +17,10 @@ find_library(ENET_LIBRARY enet)
 message(${ENET_LIBRARY})
 message(${ENET_INCLUDE_DIR})
 
+# Find Discord-RPC
+find_path(DISCORDRPC_INCLUDE_DIR discord_rpc.h)
+find_library(DISCORDRPC_LIBRARY discord-rpc)
+
 # Ajoutez une source à l'exécutable de ce projet.
 add_executable (wkbre2 "wkbre2.cpp" "wkbre2.h" "file.cpp" "file.h" "lzrw3.c" "lzrw_headers.h" "util/util.cpp" "util/util.h" "util/GSFileParser.cpp" "util/GSFileParser.h"
   "gameset/gameset.cpp" "gameset/gameset.h" "tags.cpp" "tags.h" "util/TagDict.h" "gameset/GameObjBlueprint.cpp" "gameset/GameObjBlueprint.h"
@@ -32,7 +36,7 @@ add_executable (wkbre2 "wkbre2.cpp" "wkbre2.h" "file.cpp" "file.h" "lzrw3.c" "lz
 "gameset/Package.h" "gameset/Package.cpp" "gameset/3DClip.h" "gameset/3DClip.cpp" "settings.cpp" "settings.h" "gameset/cameraPath.h" "gameset/cameraPath.cpp" "Language.h" "Language.cpp"
 "Trajectory.h" "Trajectory.cpp" "interface/GameSetDebugger.h" "interface/GameSetDebugger.cpp" "SoundPlayer.h" "SoundPlayer.cpp" "WavDocument.h" "WavDocument.cpp" "gameset/Sound.h"
 "gameset/Sound.cpp" "interface/QuickStartMenu.h" "interface/QuickStartMenu.cpp" "resources.rc" "gameset/Footprint.h" "gameset/Footprint.cpp" "gameset/GSTerrain.h" "gameset/GSTerrain.cpp" "gfx/renderer_d3d11.cpp" "gfx/renderer.cpp")
-target_link_libraries (wkbre2 imgui SDL2::SDL2 d3d9 ${ENET_LIBRARY} ws2_32 BZip2::BZip2 nlohmann_json::nlohmann_json OpenAL::OpenAL winmm MPG123::libmpg123 d3d11 d3dcompiler)
-target_include_directories(wkbre2 PRIVATE ${ENET_INCLUDE_DIR})
+target_link_libraries (wkbre2 imgui SDL2::SDL2 d3d9 ${ENET_LIBRARY} ws2_32 BZip2::BZip2 nlohmann_json::nlohmann_json OpenAL::OpenAL winmm MPG123::libmpg123 d3d11 d3dcompiler ${DISCORDRPC_LIBRARY})
+target_include_directories(wkbre2 PRIVATE ${ENET_INCLUDE_DIR} ${DISCORDRPC_INCLUDE_DIR})
 
 # TODO: Ajoutez des tests et installez des cibles si nécessaire.

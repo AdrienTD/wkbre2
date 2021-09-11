@@ -14,6 +14,52 @@
 #include "../SoundPlayer.h"
 #include "../netenetlink.h"
 
+#include <discord_rpc.h>
+#include "../settings.h"
+#include <nlohmann/json.hpp>
+
+namespace {
+	bool g_discordRpcEnabled = false;
+	void initDiscordRPC() {
+		if (!g_settings.value<bool>("discord-rpc", false)) return;
+		static DiscordEventHandlers deh;
+		deh.ready = [](const DiscordUser* request) {
+			printf("Discord-RPC: Hello %s!\n", request->username);
+		};
+		deh.disconnected = [](int errorCode, const char* message) {
+			printf("Discord-RPC: Disconnected %i, %s\n", errorCode, message);
+		};
+		deh.errored = [](int errorCode, const char* message) {
+			printf("Discord-RPC: Error %i, %s\n", errorCode, message);
+		};
+		deh.joinGame = nullptr;
+		deh.spectateGame = nullptr;
+		deh.joinRequest = nullptr;
+
+		Discord_Initialize("885838737379045377", &deh, 0, nullptr);
+		g_discordRpcEnabled = true;
+	}
+
+	void updateDiscordRPC(const char* state, const char* details) {
+		if (!g_discordRpcEnabled) return;
+		DiscordRichPresence rp;
+		memset(&rp, 0, sizeof(DiscordRichPresence));
+		rp.state = state;
+		rp.details = details;
+		rp.largeImageKey = "peasont_color_0";
+		rp.largeImageText = details;
+		rp.smallImageKey = "peasont_color_0";
+		rp.smallImageText = "Player X";
+		rp.startTimestamp = time(nullptr);
+		Discord_UpdatePresence(&rp);
+	}
+
+	void closeDiscordRPC() {
+		if (!g_discordRpcEnabled) return;
+		Discord_Shutdown();
+	}
+}
+
 QuickStartMenu::QuickStartMenu(IRenderer* gfx) : gfx(gfx)
 {
 	auto* gsl = ListFiles("Save_Games");
@@ -29,6 +75,14 @@ QuickStartMenu::QuickStartMenu(IRenderer* gfx) : gfx(gfx)
 	cli2srv = new NetLocalLink(queue2, queue1);
 	server->addClient(srv2cli);
 	client->serverLink = cli2srv;
+
+	initDiscordRPC();
+	updateDiscordRPC("In menu", nullptr);
+}
+
+QuickStartMenu::~QuickStartMenu()
+{
+	closeDiscordRPC();
 }
 
 void QuickStartMenu::draw()
@@ -109,6 +163,7 @@ void QuickStartMenu::launchGame()
 		return;
 
 	if (modeChosen == MODE_MULTIPLAYER_JOIN) {
+		updateDiscordRPC("Multiplayer", "?");
 		netInit();
 		enet_initialize();
 		ENetHost* eclient;
@@ -155,6 +210,7 @@ void QuickStartMenu::launchGame()
 		netDeinit();
 	}
 	else {
+		updateDiscordRPC((modeChosen == MODE_MULTIPLAYER_HOST) ? "Multiplayer (Host)" : "Singleplayer", savegames.at(savselected).c_str());
 		std::string savfile = std::string("Save_Games\\") + savegames.at(savselected);
 		std::mutex srvMutex;
 		std::thread srvThread([this, savfile, &srvMutex]() {
