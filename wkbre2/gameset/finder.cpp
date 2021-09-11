@@ -653,6 +653,25 @@ struct FinderDiscoveredUnits : ObjectFinder {
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
 };
 
+struct FinderRandomSelection : ObjectFinder {
+	std::unique_ptr<ValueDeterminer> vCount;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
+		size_t cnt = std::min(vec.size(), (size_t)vCount->eval(ctx));
+		for (size_t i = 0; i < cnt; i++) {
+			size_t s = rand() % (vec.size() - i) + i;
+			std::swap(vec[i], vec[s]);
+		}
+		vec.resize(cnt);
+		return vec;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		vCount.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinderNode(gsf, gs));
+	}
+};
+
 ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	gsf.advanceLine();
@@ -677,6 +696,7 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::FINDER_NEAREST_CANDIDATE: finder = new FinderNearestCandidate; break;
 			case Tags::FINDER_TILE_RADIUS: finder = new FinderTileRadius; break;
 			case Tags::FINDER_DISCOVERED_UNITS: finder = new FinderDiscoveredUnits; break;
+			case Tags::FINDER_RANDOM_SELECTION: finder = new FinderRandomSelection; break;
 			default:
 				gsf.cursor = oldcur;
 				return ReadFinder(gsf, gs);

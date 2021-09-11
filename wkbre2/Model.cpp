@@ -85,7 +85,10 @@ std::pair<bool, bool> AnimatedModel::hasAPFlagSwitched(size_t index, uint32_t pr
 	if ((int32_t)nextAnimTime < 0) nextAnimTime = 0; else nextAnimTime %= anim.duration;
 	auto prevFrame = aap.getAPFrame(prevAnimTime);
 	auto nextFrame = aap.getAPFrame(nextAnimTime);
-	return { aap.states[prevFrame].on != aap.states[nextFrame].on, aap.states[nextFrame].on };
+	for (auto frame = prevFrame+1; frame <= nextFrame; frame++)
+		if (aap.states[frame].on != aap.states[prevFrame].on)
+			return { true, aap.states[frame].on };
+	return { false, false };
 }
 
 void AnimatedModel::prepare() {
