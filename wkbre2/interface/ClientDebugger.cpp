@@ -35,7 +35,7 @@ namespace {
 						ImGui::SameLine();
 						ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ivcolortable[player->color]);
 						ImGui::SameLine();
-						ImGui::Text("%S (%u)", L"TODO", player->id);
+						ImGui::Text("%s (%u)", player->name.c_str(), player->id);
 						ImGui::PopID();
 					}
 				}
@@ -49,7 +49,7 @@ namespace {
 		if (player) {
 			ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ivcolortable[player->color]);
 			ImGui::SameLine();
-			ImGui::Text("%S (%u)", L"TODO", player->id);
+			ImGui::Text("%s (%u)", player->name.c_str(), player->id);
 		}
 		else {
 			ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ImVec4(1, 1, 1, 1));

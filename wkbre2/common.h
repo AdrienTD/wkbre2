@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <map>
+#include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -46,6 +47,8 @@ template<class AnyGameObject> struct CommonGameObject {
 	};
 	int flags = fSelectable | fTargetable | fRenderable;
 	int disableCount = 0;
+
+	std::string name;
 
 	float getItem(int item)
 	{

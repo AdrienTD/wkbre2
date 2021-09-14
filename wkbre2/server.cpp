@@ -9,6 +9,7 @@
 #include "NNSearch.h"
 #include "settings.h"
 #include <nlohmann/json.hpp>
+#include <codecvt>
 
 Server *Server::instance = nullptr;
 
@@ -350,6 +351,20 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 				int x = gsf.nextInt();
 				int z = gsf.nextInt();
 				obj->addZoneTile(x, z);
+			}
+			break;
+		}
+		case Tags::GAMEOBJ_NAME: {
+			if (gameSet->version >= gameSet->GSVERSION_WKBATTLES && blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER) {
+				int numChars = gsf.nextInt() & 255;
+				std::wstring wname = std::wstring(numChars, 0);
+				for (int i = 0; i < numChars; i++)
+					wname [i] = (wchar_t)gsf.nextInt();
+				std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cvt;
+				obj->setName(cvt.to_bytes(wname));
+			}
+			else {
+				obj->setName(gsf.nextString(true));
 			}
 			break;
 		}
@@ -709,6 +724,16 @@ void ServerGameObject::playAttachedSpecialEffect(int sfxTag, ServerGameObject* t
 {
 	NetPacketWriter npw{ NETCLIMSG_ATTACHED_SPECIAL_EFFECT_PLAYED };
 	npw.writeValues(this->id, sfxTag, target->id);
+	Server::instance->sendToAll(npw);
+}
+
+void ServerGameObject::setName(const std::string& name)
+{
+	this->name = name;
+	NetPacketWriter npw{ NETCLIMSG_OBJECT_NAME_SET };
+	npw.writeUint32(this->id);
+	npw.writeUint8((uint8_t)name.size());
+	npw.writeString(name);
 	Server::instance->sendToAll(npw);
 }
 

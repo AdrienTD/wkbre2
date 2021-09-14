@@ -66,6 +66,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void playSpecialEffectAt(int sfxTag, const Vector3& position);
 	void playSpecialEffectBetween(int sfxTag, const Vector3& position1, const Vector3& position2);
 	void playAttachedSpecialEffect(int sfxTag, ServerGameObject* target);
+	void setName(const std::string& name);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();

@@ -469,6 +469,13 @@ void Client::tick()
 				}
 				break;
 			}
+			case NETCLIMSG_OBJECT_NAME_SET: {
+				uint32_t objid = br.readUint32();
+				int numChars = br.readUint8();
+				if (ClientGameObject* obj = findObject(objid))
+					obj->name = br.readString(numChars);
+				break;
+			}
 			}
 		}
 	}
