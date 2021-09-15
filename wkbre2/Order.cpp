@@ -293,6 +293,7 @@ void OrderConfiguration::cancelAllOrders()
 		orders.front().cancel();
 		orders.pop_front();
 	}
+	gameobj->reportCurrentOrder(nullptr);
 }
 
 void OrderConfiguration::process()
@@ -307,6 +308,9 @@ void OrderConfiguration::process()
 	if (busy && !nextBusy)
 		gameobj->sendEvent(Tags::PDEVENT_ON_IDLE);
 	busy = nextBusy;
+
+	Order* curorder = getCurrentOrder();
+	gameobj->reportCurrentOrder(curorder ? curorder->blueprint : nullptr);
 }
 
 void Trigger::parse(GSFileParser &gsf, GameSet &gs)

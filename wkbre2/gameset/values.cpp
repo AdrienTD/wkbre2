@@ -432,9 +432,17 @@ struct ValueCurrentlyDoingOrder : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual float eval(SrvScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
+		if (vec.empty()) return 0.0f;
 		return std::all_of(vec.begin(), vec.end(), [this](ServerGameObject* obj) {
-			auto order = obj->orderConfig.getCurrentOrder();
+			auto* order = obj->orderConfig.getCurrentOrder();
 			return order && (order->blueprint->category == category);
+		});
+	}
+	virtual float eval(CliScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
+		if (vec.empty()) return 0.0f;
+		return std::all_of(vec.begin(), vec.end(), [this,ctx](ClientGameObject* obj) {
+			return obj->reportedCurrentOrder != -1 && ctx->client->gameSet->orders[obj->reportedCurrentOrder].category == category;
 		});
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -448,6 +456,7 @@ struct ValueCurrentlyDoingTask : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual float eval(SrvScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
+		if (vec.empty()) return 0.0f;
 		return std::all_of(vec.begin(), vec.end(), [this](ServerGameObject* obj) {
 			auto order = obj->orderConfig.getCurrentOrder();
 			return order && (order->getCurrentTask()->blueprint->category == category);

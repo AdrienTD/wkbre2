@@ -67,6 +67,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void playSpecialEffectBetween(int sfxTag, const Vector3& position1, const Vector3& position2);
 	void playAttachedSpecialEffect(int sfxTag, ServerGameObject* target);
 	void setName(const std::string& name);
+	void reportCurrentOrder(OrderBlueprint* orderBp);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();

@@ -50,6 +50,8 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	std::string name;
 
+	int reportedCurrentOrder = -1;
+
 	float getItem(int item)
 	{
 		auto it = items.find(item);

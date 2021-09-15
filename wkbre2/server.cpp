@@ -737,6 +737,18 @@ void ServerGameObject::setName(const std::string& name)
 	Server::instance->sendToAll(npw);
 }
 
+void ServerGameObject::reportCurrentOrder(OrderBlueprint* orderBp)
+{
+	int orderIndex = orderBp ? Server::instance->gameSet->orders.getIndex(orderBp) : -1;
+	if (reportedCurrentOrder == orderIndex)
+		return;
+	reportedCurrentOrder = orderIndex;
+	NetPacketWriter npw{ NETCLIMSG_CURRENT_ORDER_REPORT };
+	npw.writeUint32(id);
+	npw.writeUint32(reportedCurrentOrder);
+	Server::instance->sendToAll(npw);
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;

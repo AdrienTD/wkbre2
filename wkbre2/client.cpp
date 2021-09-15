@@ -476,6 +476,12 @@ void Client::tick()
 					obj->name = br.readString(numChars);
 				break;
 			}
+			case NETCLIMSG_CURRENT_ORDER_REPORT: {
+				uint32_t objid = br.readUint32();
+				if (ClientGameObject* obj = findObject(objid))
+					obj->reportedCurrentOrder = (int)br.readUint32();
+				break;
+			}
 			}
 		}
 	}
