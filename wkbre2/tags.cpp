@@ -206,7 +206,7 @@ TagDict<27> Tags::ENODE_tagDict({
     "TRUNC",
 });
 
-TagDict<40> Tags::FINDER_tagDict({
+TagDict<41> Tags::FINDER_tagDict({
     "AG_SELECTION",
     "ALIAS",
     "ALTERNATIVE",
@@ -239,6 +239,7 @@ TagDict<40> Tags::FINDER_tagDict({
     "RANDOM_SELECTION",
     "REFERENCERS",
     "RESULTS",
+    "SELECTED_OBJECT",
     "SELF",
     "SEQUENCE_EXECUTOR",
     "SPECIFIC_ID",

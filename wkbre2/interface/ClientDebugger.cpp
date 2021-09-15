@@ -6,6 +6,7 @@
 #include "../tags.h"
 #include "../window.h"
 #include "ClientInterface.h"
+#include "../gameset/ScriptContext.h"
 
 extern int g_diag_animHits, g_diag_animMisses;
 
@@ -166,6 +167,64 @@ void ClientDebugger::draw()
 	ImGui::End();
 	g_diag_animHits = 0;
 	g_diag_animMisses = 0;
+
+	if (client->gameSet && cliUi) {
+		auto drawCmdIcons = [this](int assignmentMode, int count, bool whichButton) {
+			ClientGameObject* sel = nullptr; //selectedObject;
+			if (!sel && !cliUi->selection.empty()) sel = *cliUi->selection.begin();
+			if (sel) {
+				CliScriptContext ctx{ client, sel };
+				auto _tv = ctx.selectedObject.change(sel);
+				for (Command* cmd : sel->blueprint->offeredCommands) {
+					const std::string cmdname = client->gameSet->commands.names.getString(cmd->id);
+					if (whichButton != (cmdname.substr(0, 6) == "Spawn "))
+						continue;
+					auto iconPred = [this, &ctx](int eq) {return client->gameSet->equations[eq]->booleval(&ctx); };
+					auto condPred = [&ctx](GSCondition* cond) {return cond->test->booleval(&ctx); };
+					if (std::all_of(cmd->iconConditions.begin(), cmd->iconConditions.end(), iconPred)) {
+						const std::string* texpath = cmd->buttonEnabled.empty() ? &cmd->buttonAvailable : &cmd->buttonEnabled;
+						bool enabled = false;
+						if (!std::all_of(cmd->conditionsImpossible.begin(), cmd->conditionsImpossible.end(), condPred))
+							texpath = &cmd->buttonImpossible;
+						else if (!std::all_of(cmd->conditionsWait.begin(), cmd->conditionsWait.end(), condPred))
+							texpath = &cmd->buttonWait;
+						else
+							enabled = true;
+						if (!texpath->empty()) {
+							texture tex = cliUi->uiTexCache.getTexture(texpath->c_str(), false);
+							ImGui::BeginDisabled(!enabled);
+							if (ImGui::ImageButton(tex, ImVec2(48.0f, 48.0f)))
+								for (ClientGameObject* obj : cliUi->selection)
+									if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end())
+										for (int i = 0; i < count; i++)
+											client->sendCommand(obj, cmd, assignmentMode);
+							if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+								ImGui::SetTooltip("%s", cmdname.c_str());
+							ImGui::EndDisabled();
+							ImGui::SameLine();
+						}
+					}
+				}
+				ImGui::NewLine();
+			}
+		};
+		ImGui::Begin("Commands");
+		if (ImGui::BeginTabBar("CommandTabBar")) {
+			auto& io = ImGui::GetIO();
+			if (ImGui::BeginTabItem("Orders")) {
+				int assignmentMode = io.KeyCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (io.KeyShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
+				drawCmdIcons(assignmentMode, 1, false);
+				ImGui::EndTabItem();
+			}
+			if (ImGui::BeginTabItem("Spawn units")) {
+				int count = io.KeyShift ? 10 : 1;
+				drawCmdIcons(Tags::ORDERASSIGNMODE_DO_LAST, count, true);
+				ImGui::EndTabItem();
+			}
+			ImGui::EndTabBar();
+		}
+		ImGui::End();
+	}
 
 	client->timeManager.imgui();
 

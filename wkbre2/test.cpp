@@ -674,7 +674,7 @@ void Test_Scene()
 	models[0] = modcache.getModel("Warrior Kings Game Set\\Characters\\Peasant\\Male\\Dance1.ANIM3");
 	models[1] = modcache.getModel("Warrior Kings Game Set\\Characters\\Add On - Arch Druid\\Summon.ANIM3");
 
-	const int numents = 256;
+	const int numents = 1024;
 
 	DynArray<SceneEntity> scents(numents);
 	for (SceneEntity &se : scents) {
@@ -692,10 +692,19 @@ void Test_Scene()
 
 	SceneRenderer *sceneRenderer = new DefaultSceneRenderer(gfx, &scene);
 
+	int fps = 0, nextfps = 0;
+	uint32_t lastfpscheck = SDL_GetTicks();
 	while (!g_windowQuit)
 	{
 		uint32_t ticks = SDL_GetTicks();
+		if (ticks - lastfpscheck >= 1000) {
+			fps = nextfps;
+			nextfps = 0;
+			lastfpscheck = ticks;
+		}
+		nextfps++;
 		ImGuiImpl_NewFrame();
+		ImGui::Text("FPS: %i", fps);
 		ImGui::DragFloat3("Position", &camera.position.x);
 		ImGui::DragFloat2("Orientation", &camera.orientation.x, 0.1f);
 		camera.updateMatrix();

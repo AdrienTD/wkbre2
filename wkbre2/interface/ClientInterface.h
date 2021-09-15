@@ -31,11 +31,13 @@ struct ClientInterface {
 	void updateTerrain();
 
 	ClientInterface(Client *client, IRenderer *gfx) : client(client), gfx(gfx), terrainRenderer(nullptr),
-		sceneRenderer(nullptr), debugger(client, this), scene(nullptr) {}
+		sceneRenderer(nullptr), debugger(client, this), scene(nullptr), uiTexCache(gfx) {}
 
 	GameObjBlueprint *stampdownBlueprint = nullptr;
 	CliGORef stampdownPlayer;
 	bool sendStampdownEvent = false;
+	std::unordered_set<CliGORef> selection;
+	TextureCache uiTexCache;
 private:
 	int camrotoffx, camrotoffy;
 	float camrotorix, camrotoriy;
@@ -48,7 +50,6 @@ private:
 	float nextSelObjDistance = 0.0f;
 	Language lang;
 	std::deque<SceneEntity> attachSceneEntities;
-	std::unordered_set<CliGORef> selection;
 	bool selBoxOn = false;
 	int selBoxStartX, selBoxStartY, selBoxEndX, selBoxEndY;
 	std::vector<CliGORef> nextSelFromBox;

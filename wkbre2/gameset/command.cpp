@@ -22,11 +22,31 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 		}
 		else if (strtag == "CURSOR_CONDITION")
 			cursorConditions.push_back(gs.equations.readIndex(gsf));
+		else if (strtag == "ICON_CONDITION")
+			iconConditions.push_back(gs.equations.readIndex(gsf));
 		else if (strtag == "CURSOR_AVAILABLE") {
-			GSCondition *cond = gs.conditions.readPtr(gsf);
-			Cursor *cursor = WndCreateCursor(gsf.nextString(true).c_str());
+			GSCondition* cond = gs.conditions.readPtr(gsf);
+			Cursor* cursor = WndCreateCursor(gsf.nextString(true).c_str());
 			cursorAvailable.push_back({ cond, cursor });
 		}
+		else if (strtag == "BUTTON_ENABLED")
+			buttonEnabled = gsf.nextString(true);
+		else if (strtag == "BUTTON_WAIT")
+			buttonWait = gsf.nextString(true);
+		else if (strtag == "BUTTON_DEPRESSED")
+			buttonDepressed = gsf.nextString(true);
+		else if (strtag == "BUTTON_HIGHLIGHTED")
+			buttonHighlighted = gsf.nextString(true);
+		else if (strtag == "BUTTON_AVAILABLE")
+			buttonAvailable = gsf.nextString(true);
+		else if (strtag == "BUTTON_IMPOSSIBLE")
+			buttonImpossible = gsf.nextString(true);
+		else if (strtag == "CONDITION_IMPOSSIBLE")
+			conditionsImpossible.push_back(gs.conditions.readPtr(gsf));
+		else if (strtag == "CONDITION_WAIT")
+			conditionsWait.push_back(gs.conditions.readPtr(gsf));
+		else if (strtag == "CONDITION_WARNING")
+			conditionsWarning.push_back(gs.conditions.readPtr(gsf));
 		else if (strtag == "END_COMMAND")
 			return;
 		gsf.advanceLine();

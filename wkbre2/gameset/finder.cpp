@@ -323,6 +323,15 @@ struct FinderUser : CommonEval<FinderUser, ObjectFinder> {
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
 };
 
+struct FinderSelectedObject : CommonEval<FinderSelectedObject, ObjectFinder> {
+	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
+		auto obj = ctx->selectedObject.get();
+		if (obj) return { obj };
+		else return {};
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+};
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -353,6 +362,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_BEING_TRANSFERRED_TO_ME: finder = new FinderBeingTransferredToMe; break;
 	case Tags::FINDER_COLLISION_SUBJECT: finder = new FinderCollisionSubject; break;
 	case Tags::FINDER_USER: finder = new FinderUser; break;
+	case Tags::FINDER_SELECTED_OBJECT: finder = new FinderSelectedObject; break;
 	default: finder = new FinderUnknown(strtag); break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));
