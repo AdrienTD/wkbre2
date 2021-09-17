@@ -100,6 +100,7 @@ struct Server : CommonGameState<Server, ServerGameObject>
 		//std::vector<SrvGORef> zoneList;
 		SrvGORef zone;
 		SrvGORef building;
+		bool buildingPassable;
 	};
 	std::unique_ptr<Tile[]> tiles;
 

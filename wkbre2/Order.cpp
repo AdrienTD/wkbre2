@@ -509,12 +509,14 @@ void MoveTask::onUpdate()
 		terminate();
 	}
 	if (!go->movementController.isMoving())
-		go->movementController.startMovement(dest);
+		destination = go->movementController.startMovement(dest);
 }
 
 void ObjectReferenceTask::onStart()
 {
 	this->proximitySatisfied = false; // might need to do this on resumption too
+	if (target)
+		this->destination = target->position;
 }
 
 void ObjectReferenceTask::onUpdate()
@@ -539,7 +541,7 @@ void ObjectReferenceTask::onUpdate()
 	}
 	if (this->target) {
 		ServerGameObject* go = this->order->gameObject;
-		if (this->proximity < 0.0f || (go->position - this->target->position).sqlen2xz() < this->proximity * this->proximity) {
+		if (this->proximity < 0.0f || (go->position - destination).sqlen2xz() < this->proximity * this->proximity) {
 			this->startTriggers();
 			if (go->movementController.isMoving())
 				go->movementController.stopMovement();
@@ -564,11 +566,12 @@ void ObjectReferenceTask::onUpdate()
 		else {
 			this->stopTriggers();
 			if (!go->movementController.isMoving())
-				go->movementController.startMovement(this->target->position);
+				destination = go->movementController.startMovement(this->target->position);
 			// If target slightly moves during the movement, restart the movement
-			if (go->movementController.isMoving())
-				if ((this->target->position - go->movementController.getDestination()).sqlen2xz() > 0.1f)
-					go->movementController.startMovement(this->target->position);
+			if (target->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER)
+				if (go->movementController.isMoving())
+					if ((this->target->position - go->movementController.getDestination()).sqlen2xz() > 0.1f)
+						destination = go->movementController.startMovement(this->target->position);
 			if (proximitySatisfied) {
 				proximitySatisfied = false;
 				//if (blueprint->defaultAnim != -1)

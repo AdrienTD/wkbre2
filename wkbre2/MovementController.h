@@ -7,7 +7,7 @@
 struct ServerGameObject;
 
 struct MovementController {
-	void startMovement(const Vector3& destination);
+	Vector3 startMovement(const Vector3& destination);
 	void stopMovement();
 	void updateMovement();
 	//Vector3 getPosition(float time) const;

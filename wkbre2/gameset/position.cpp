@@ -319,7 +319,7 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 	}
 	bool canBuildOn(Server* server, int tx, int tz) {
 		for (auto& to : objbp->footprint->tiles) {
-			if (!to.mode) {
+			if (true /*!to.mode*/) {
 				int px = tx + to.offsetX, pz = tz + to.offsetZ;
 				if (!isTileFree(server, px, pz))
 					return false;

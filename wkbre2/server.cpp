@@ -855,7 +855,7 @@ void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 		int ox = (int)((oldposition.x - rotOrigin.first) / 5.0f);
 		int oz = (int)((oldposition.z - rotOrigin.second) / 5.0f);
 		for (auto& to : blueprint->footprint->tiles) {
-			if (!to.mode) {
+			if (true /*!to.mode*/) {
 				auto ro = to.rotate(oldorientation.y);
 				int px = ox + ro.first, pz = oz + ro.second;
 				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ)
@@ -867,11 +867,12 @@ void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 		ox = (int)((newposition.x - rotOrigin.first) / 5.0f);
 		oz = (int)((newposition.z - rotOrigin.second) / 5.0f);
 		for (auto& to : blueprint->footprint->tiles) {
-			if (!to.mode) {
+			if (true /*!to.mode*/) {
 				auto ro = to.rotate(neworientation.y);
 				int px = ox + ro.first, pz = oz + ro.second;
 				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ)
 					server->tiles[pz * trnNumX + px].building = this;
+					server->tiles[pz * trnNumX + px].buildingPassable = to.mode;
 			}
 		}
 	}
@@ -1140,6 +1141,8 @@ void Server::tick()
 			if (speed != obj->currentSpeed) {
 				obj->startMovement(obj->movement.getDestination());
 			}
+			// pf
+			obj->movementController.updateMovement();
 		}
 		else if (obj->trajectory.isMoving()) {
 			obj->updatePosition(obj->trajectory.getPosition(timeManager.currentTime));

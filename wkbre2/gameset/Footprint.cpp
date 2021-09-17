@@ -23,6 +23,7 @@ void Footprint::parse(GSFileParser& gsf, GameSet& gs)
 					auto word = gsf.nextTag();
 					//tile.mode = word == "CANNOT_BE_CONSTRUCTED_UPON" || word == "PASSABLE";
 					//tile.mode = 1;
+					tile.mode = 1;
 				}
 				else if (tag == "END_TILE_OFFSET")
 					break;

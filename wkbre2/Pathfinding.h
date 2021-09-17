@@ -14,7 +14,7 @@ namespace Pathfinding {
         bool operator<(const PFPos& p) const { return (x != p.x) ? (x < p.x) : (z < p.z); }
     };
 
-    int ManhattanDiagHeuristic(PFPos o, PFPos n) {
+    inline int ManhattanDiagHeuristic(PFPos o, PFPos n) {
         int dx = std::abs(n.x - o.x);
         int dz = std::abs(n.z - o.z);
         int ndiag = std::min(dx, dz);
@@ -22,7 +22,7 @@ namespace Pathfinding {
         return ndiag * 141 + nrect * 100;
     };
 
-    int EuclideanHeuristic(PFPos o, PFPos n) {
+    inline int EuclideanHeuristic(PFPos o, PFPos n) {
         return (int)(std::sqrt((float)(n.x - o.x) * (n.x - o.x) + (float)(n.z - o.z) * (n.z - o.z)) * 100.0f);
     }
 
