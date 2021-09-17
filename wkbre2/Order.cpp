@@ -146,8 +146,8 @@ void Task::suspend()
 	this->state = OTS_SUSPENDED;
 	this->stopTriggers();
 	ServerGameObject *go = this->order->gameObject;
-	if(go->movement.isMoving())
-		go->stopMovement();
+	if(go->movementController.isMoving())
+		go->movementController.stopMovement();
 	go->setAnimation(0);
 	//this->blueprint->suspensionSequence.run(this->order->gameObject);
 }
@@ -165,8 +165,8 @@ void Task::cancel()
 	this->state = OTS_CANCELLED;
 	this->stopTriggers();
 	ServerGameObject *go = this->order->gameObject;
-	if (go->movement.isMoving())
-		go->stopMovement();
+	if (go->movementController.isMoving())
+		go->movementController.stopMovement();
 	go->setAnimation(0);
 	this->blueprint->cancellationSequence.run(this->order->gameObject);
 }
@@ -177,8 +177,8 @@ void Task::terminate()
 	this->state = OTS_TERMINATED;
 	this->stopTriggers();
 	ServerGameObject *go = this->order->gameObject;
-	if (go->movement.isMoving())
-		go->stopMovement();
+	if (go->movementController.isMoving())
+		go->movementController.stopMovement();
 	go->setAnimation(0);
 	this->blueprint->terminationSequence.run(this->order->gameObject);
 	this->order->advanceToNextTask();
@@ -508,8 +508,8 @@ void MoveTask::onUpdate()
 	if ((go->position - dest).sqlen2xz() < 0.1f) {
 		terminate();
 	}
-	if (!go->movement.isMoving())
-		go->startMovement(dest);
+	if (!go->movementController.isMoving())
+		go->movementController.startMovement(dest);
 }
 
 void ObjectReferenceTask::onStart()
@@ -522,8 +522,8 @@ void ObjectReferenceTask::onUpdate()
 	if (!this->target) {
 		this->stopTriggers();
 		ServerGameObject* go = this->order->gameObject;
-		if (go->movement.isMoving())
-			go->stopMovement();
+		if (go->movementController.isMoving())
+			go->movementController.stopMovement();
 		if (blueprint->taskTarget) {
 			SrvScriptContext ctx(Server::instance, this->order->gameObject);
 			this->setTarget(blueprint->taskTarget->getFirst(&ctx));
@@ -533,16 +533,16 @@ void ObjectReferenceTask::onUpdate()
 		if (this->target && (this->target->flags & ServerGameObject::fTerminated)) {
 			this->setTarget(nullptr);
 			ServerGameObject* go = this->order->gameObject;
-			if (go->movement.isMoving())
-				go->stopMovement();
+			if (go->movementController.isMoving())
+				go->movementController.stopMovement();
 		}
 	}
 	if (this->target) {
 		ServerGameObject* go = this->order->gameObject;
 		if (this->proximity < 0.0f || (go->position - this->target->position).sqlen2xz() < this->proximity * this->proximity) {
 			this->startTriggers();
-			if (go->movement.isMoving())
-				go->stopMovement();
+			if (go->movementController.isMoving())
+				go->movementController.stopMovement();
 			if (!proximitySatisfied) {
 				proximitySatisfied = true;
 				blueprint->proximitySatisfiedSequence.run(order->gameObject);
@@ -563,12 +563,12 @@ void ObjectReferenceTask::onUpdate()
 		}
 		else {
 			this->stopTriggers();
-			if (!go->movement.isMoving())
-				go->startMovement(this->target->position);
+			if (!go->movementController.isMoving())
+				go->movementController.startMovement(this->target->position);
 			// If target slightly moves during the movement, restart the movement
-			if (go->movement.isMoving())
-				if ((this->target->position - go->movement.getDestination()).sqlen2xz() > 0.1f)
-					go->startMovement(this->target->position);
+			if (go->movementController.isMoving())
+				if ((this->target->position - go->movementController.getDestination()).sqlen2xz() > 0.1f)
+					go->movementController.startMovement(this->target->position);
 			if (proximitySatisfied) {
 				proximitySatisfied = false;
 				//if (blueprint->defaultAnim != -1)

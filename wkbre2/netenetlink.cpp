@@ -1,4 +1,5 @@
 #include "netenetlink.h"
+#include <enet/enet.h>
 
 bool NetEnetLink::available() {
 	return !packets.empty();

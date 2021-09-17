@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <set>
+#include "MovementController.h"
 
 struct GameSet;
 struct GSFileParser;
@@ -37,6 +38,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	int clientIndex = -1;
 	bool isMusicPlaying = false;
 	float currentSpeed = 0.0f;
+	MovementController movementController{ this };
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 

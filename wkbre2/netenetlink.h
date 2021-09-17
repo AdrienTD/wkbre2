@@ -1,16 +1,19 @@
 #pragma once
 
 #include "network.h"
-#include <enet/enet.h>
+
+struct _ENetHost;
+struct _ENetPeer;
+struct _ENetPacket;
 
 struct NetEnetLink : NetLink {
-	ENetHost *host;
-	ENetPeer *peer;
-	std::queue<ENetPacket *> packets;
+	_ENetHost *host;
+	_ENetPeer *peer;
+	std::queue<_ENetPacket *> packets;
 
 	bool available() override;
 	NetPacket receive() override;
 	void send(const NetPacket &packet) override;
 
-	NetEnetLink(ENetHost *host, ENetPeer *peer) : host(host), peer(peer) {}
+	NetEnetLink(_ENetHost *host, _ENetPeer *peer) : host(host), peer(peer) {}
 };

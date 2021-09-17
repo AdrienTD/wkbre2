@@ -13,6 +13,7 @@
 #include "ServerDebugger.h"
 #include "../SoundPlayer.h"
 #include "../netenetlink.h"
+#include <enet/enet.h>
 
 #include <discord_rpc.h>
 #include "../settings.h"

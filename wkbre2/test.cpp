@@ -33,6 +33,11 @@
 #include "scene.h"
 #include "SDL_timer.h"
 #include "SoundPlayer.h"
+#include "Pathfinding.h"
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <enet/enet.h>
 
 void Test_GameSet()
 {
@@ -763,6 +768,34 @@ void Test_SoundPlayer() {
 	getchar();
 }
 
+void Test_Pathfinding()
+{
+	using namespace Pathfinding;
+	static constexpr int WIDTH = 10, HEIGHT = 10;
+	static constexpr char map[HEIGHT][WIDTH] = {
+		{1,1,1,1,1,1,1,1,1,1},
+		{1,1,0,1,1,1,1,1,1,1},
+		{1,0,0,1,1,1,1,1,1,1},
+		{1,1,0,0,0,0,0,1,1,1},
+		{1,1,1,1,0,1,1,1,1,1},
+		{1,0,0,0,0,1,1,1,1,1},
+		{1,1,0,1,1,1,1,1,1,1},
+		{1,1,0,1,1,1,1,1,1,1},
+		{1,1,0,1,1,1,1,1,1,1},
+		{1,1,1,1,1,1,1,1,1,1}
+	};
+	auto pred = [](PFPos pos) -> bool {
+		if (pos.x >= 0 && pos.x < WIDTH && pos.z >= 0 && pos.z < HEIGHT)
+			return map[pos.z][pos.x] != 0;
+		return true;
+	};
+	auto vec = DoPathfinding({ 2,2 }, { 2,6 }, pred, EuclideanHeuristic);
+	printf("Results:\n");
+	for (const PFPos& pfp : vec)
+		printf("(%i, %i)\n", pfp.x, pfp.z);
+	getchar();
+}
+
 const std::vector<std::pair<void(*)(), const char*> > testList = {
 {Test_GameSet, "Game set loading"},
 {Test_GSFileParser, "GSF Parser"},
@@ -779,7 +812,8 @@ const std::vector<std::pair<void(*)(), const char*> > testList = {
 {Test_EnetClient, "Enet Client"},
 {Test_Anim, "Anim"},
 {Test_Scene, "Scene"},
-{Test_SoundPlayer, "Sound Player"}
+{Test_SoundPlayer, "Sound Player"},
+{Test_Pathfinding, "Pathfinding"},
 };
 
 void LaunchTest()
