@@ -46,7 +46,7 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 
 	auto tileList = DoPathfinding(posStart, posEnd, pred, EuclideanHeuristic);
 
-	if (tileList.size() >= 2) {
+	if (tileList.size() >= 1) {
 		m_pathNodes.clear();
 		m_pathNodes.emplace_back(realDestination);
 		for (PFPos& pfp : tileList) {

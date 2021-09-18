@@ -541,7 +541,9 @@ void ObjectReferenceTask::onUpdate()
 	}
 	if (this->target) {
 		ServerGameObject* go = this->order->gameObject;
-		if (this->proximity < 0.0f || (go->position - destination).sqlen2xz() < this->proximity * this->proximity) {
+		float prox = this->proximity;
+		if (prox > 0.0f) prox = std::max(prox - (destination - target->position).len2xz(), 0.1f);
+		if (prox < 0.0f || (go->position - destination).sqlen2xz() < prox * prox) {
 			this->startTriggers();
 			if (go->movementController.isMoving())
 				go->movementController.stopMovement();
