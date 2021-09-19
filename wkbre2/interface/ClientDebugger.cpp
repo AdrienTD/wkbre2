@@ -7,8 +7,11 @@
 #include "../window.h"
 #include "ClientInterface.h"
 #include "../gameset/ScriptContext.h"
+#include <atomic>
+#include <SDL2/SDL_timer.h>
 
 extern int g_diag_animHits, g_diag_animMisses;
+extern std::atomic_int g_diag_serverTicks;
 
 namespace {
 	const ImVec4 ivcolortable[8] = {
@@ -164,6 +167,15 @@ void ClientDebugger::draw()
 	ImGui::Begin("Diagnostics");
 	ImGui::Text("animHits = %i", g_diag_animHits);
 	ImGui::Text("animMisses = %i", g_diag_animMisses);
+	static uint32_t diagLastCheck = SDL_GetTicks();
+	static int serverTicks = 0;
+	uint32_t sdlTime = SDL_GetTicks();
+	if (sdlTime - diagLastCheck >= 1000u) {
+		serverTicks = g_diag_serverTicks;
+		g_diag_serverTicks = 0;
+		diagLastCheck = sdlTime;
+	}
+	ImGui::Text("serverTicks/s = %i", serverTicks);
 	ImGui::End();
 	g_diag_animHits = 0;
 	g_diag_animMisses = 0;

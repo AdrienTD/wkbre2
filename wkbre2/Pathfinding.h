@@ -12,6 +12,10 @@ namespace Pathfinding {
         bool operator==(const PFPos& p) const { return x == p.x && z == p.z; }
         bool operator!=(const PFPos& p) const { return !(*this == p); }
         bool operator<(const PFPos& p) const { return (x != p.x) ? (x < p.x) : (z < p.z); }
+        size_t hash() const { return (size_t)x + (size_t)(z * 3); }
+        struct Hasher {
+            size_t operator()(const PFPos& pfp) const noexcept { return pfp.hash(); }
+        };
     };
 
     inline int ManhattanDiagHeuristic(PFPos o, PFPos n) {
@@ -26,18 +30,38 @@ namespace Pathfinding {
         return (int)(std::sqrt((float)(n.x - o.x) * (n.x - o.x) + (float)(n.z - o.z) * (n.z - o.z)) * 100.0f);
     }
 
-    template<typename Predicate, typename Heuristic>
-    std::vector<PFPos> DoPathfinding(PFPos start, PFPos end, Predicate pred, Heuristic heuristic) {
+    struct AStarPathfinder {
         using score_t = int;
-        std::set<PFPos> nextTiles;
-        std::set<PFPos> visited;
-        std::map<PFPos, int> scores;
-        std::map<PFPos, PFPos> edges;
+        //using pfp_set = std::set<PFPos>;
+        //template<typename T> using pfp_map = std::map<PFPos, T>;
+        using pfp_set = std::unordered_set<PFPos, PFPos::Hasher>;
+        template<typename T> using pfp_map = std::unordered_map<PFPos, T, PFPos::Hasher>;
+        pfp_set nextTiles;
+        pfp_set visited;
+        pfp_map<int> scores;
+        pfp_map<PFPos> edges;
+        PFPos start, end;
+        bool finished = false;
+        bool nothingFound = false;
 
-        nextTiles.insert(start);
-        scores[start] = 0;
+        void begin(PFPos start, PFPos end) {
+            nextTiles.clear();
+            visited.clear();
+            scores.clear();
+            edges.clear();
+            this->start = start;
+            this->end = end;
+            finished = false;
+            nothingFound = false;
 
-        while (true) {
+            nextTiles.insert(start);
+            scores[start] = 0;
+        }
+
+        template<typename Predicate, typename Heuristic>
+        bool next(Predicate pred, Heuristic heuristic) {
+            if (finished) return true;
+
             // find tile with min score
             PFPos mt;
             score_t mscore = std::numeric_limits<score_t>::max();
@@ -52,16 +76,20 @@ namespace Pathfinding {
             }
             if (mscore == std::numeric_limits<score_t>::max()) {
                 //std::cout << "FUCK!\n";
-                return {};
+                finished = true;
+                nothingFound = true;
+                return true;
             }
             //printf("%i %i\n", mt.x, mt.z);
             if (mt == end) {
                 //std::cout << "END REACHED!\n";
-                break;
+                finished = true;
+                nothingFound = false;
+                return true;
             }
 
             // update neighbours
-            auto updateNeighbour = [mt, &nextTiles, &scores, &pred, &visited, &edges](int dx, int dz, score_t cost) {
+            auto updateNeighbour = [this, mt, &pred](int dx, int dz, score_t cost) {
                 PFPos pfp{ mt.x + dx, mt.z + dz };
                 if (!pred(pfp)) {
                     score_t newscore = scores.at(mt) + cost;
@@ -83,16 +111,44 @@ namespace Pathfinding {
             updateNeighbour(-1, -1, 141);
             visited.insert(mt);
             nextTiles.erase(mt);
+            return false;
         }
 
-        std::vector<PFPos> vec;
-        PFPos pfp = end;
-        while (pfp != start) {
-            vec.push_back(pfp);
-            pfp = edges.at(pfp);
+        std::vector<PFPos> get() {
+            if (nothingFound)
+                return {};
+            std::vector<PFPos> vec;
+            PFPos pfp = end;
+            while (pfp != start) {
+                vec.push_back(pfp);
+                pfp = edges.at(pfp);
+            }
+            vec.push_back(start);
+            return vec;
         }
-        vec.push_back(start);
-        return vec;
+    };
+
+    template<typename Predicate, typename Heuristic>
+    std::vector<PFPos> DoPathfinding(PFPos start, PFPos end, Predicate pred, Heuristic heuristic) {
+        //AStarPathfinder astar;
+        //astar.begin(start, end);
+
+        //while (!astar.next(pred, heuristic));
+
+        //return astar.get();
+
+        AStarPathfinder astar1, astar2;
+        astar1.begin(start, end);
+        astar2.begin(end, start);
+
+        bool stop = false;
+        while (true) {
+            if (astar1.next(pred, heuristic)) return astar1.get();
+            if (astar2.next(pred, heuristic)) {
+                auto vec = astar2.get();
+                std::reverse(vec.begin(), vec.end());
+                return vec;
+            }
+        }
     }
-
 };

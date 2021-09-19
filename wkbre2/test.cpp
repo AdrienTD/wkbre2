@@ -771,25 +771,26 @@ void Test_SoundPlayer() {
 void Test_Pathfinding()
 {
 	using namespace Pathfinding;
-	static constexpr int WIDTH = 10, HEIGHT = 10;
-	static constexpr char map[HEIGHT][WIDTH] = {
-		{1,1,1,1,1,1,1,1,1,1},
-		{1,1,0,1,1,1,1,1,1,1},
-		{1,0,0,1,1,1,1,1,1,1},
-		{1,1,0,0,0,0,0,1,1,1},
-		{1,1,1,1,0,1,1,1,1,1},
-		{1,0,0,0,0,1,1,1,1,1},
-		{1,1,0,1,1,1,1,1,1,1},
-		{1,1,0,1,1,1,1,1,1,1},
-		{1,1,0,1,1,1,1,1,1,1},
-		{1,1,1,1,1,1,1,1,1,1}
-	};
+	static constexpr int WIDTH = 1000, HEIGHT = 1000;
+	//static constexpr char map[HEIGHT][WIDTH] = {
+	//	{1,1,1,1,1,1,1,1,1,1},
+	//	{1,1,0,1,1,1,1,1,1,1},
+	//	{1,0,0,1,1,1,1,1,1,1},
+	//	{1,1,0,0,0,0,0,1,1,1},
+	//	{1,1,1,1,0,1,1,1,1,1},
+	//	{1,0,0,0,0,1,1,1,1,1},
+	//	{1,1,0,1,1,1,1,1,1,1},
+	//	{1,1,0,1,1,1,1,1,1,1},
+	//	{1,1,0,1,1,1,1,1,1,1},
+	//	{1,1,1,1,1,1,1,1,1,1}
+	//};
+	static constexpr char map[HEIGHT][WIDTH] = {};
 	auto pred = [](PFPos pos) -> bool {
 		if (pos.x >= 0 && pos.x < WIDTH && pos.z >= 0 && pos.z < HEIGHT)
 			return map[pos.z][pos.x] != 0;
 		return true;
 	};
-	auto vec = DoPathfinding({ 2,2 }, { 2,6 }, pred, EuclideanHeuristic);
+	auto vec = DoPathfinding({ 2,2 }, { 800,900 }, pred, EuclideanHeuristic);
 	printf("Results:\n");
 	for (const PFPos& pfp : vec)
 		printf("(%i, %i)\n", pfp.x, pfp.z);

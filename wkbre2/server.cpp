@@ -10,8 +10,11 @@
 #include "settings.h"
 #include <nlohmann/json.hpp>
 #include <codecvt>
+#include <atomic>
 
 Server *Server::instance = nullptr;
+
+std::atomic_int g_diag_serverTicks = 0;
 
 void Server::loadSaveGame(const char * filename)
 {
@@ -1114,8 +1117,10 @@ void Server::tick()
 					cnt += 1;
 				}
 			}
-			avg /= cnt;
-			obj->updatePosition(avg, false);
+			if (cnt > 0u) {
+				avg /= cnt;
+				obj->updatePosition(avg, false);
+			}
 		}
 		for (auto &childtype : obj->children) {
 			for (ServerGameObject *child : childtype.second)
@@ -1270,4 +1275,6 @@ void Server::tick()
 	}
 	objToDelete = nullptr;
 	objToDeleteLast = nullptr;
+
+	++g_diag_serverTicks;
 }

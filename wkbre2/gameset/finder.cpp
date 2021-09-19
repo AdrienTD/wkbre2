@@ -332,6 +332,33 @@ struct FinderSelectedObject : CommonEval<FinderSelectedObject, ObjectFinder> {
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
 };
 
+struct FinderAgAllOfType : ObjectFinder {
+	GameObjBlueprint* blueprint;
+	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+		uint32_t bpid = blueprint->getFullId();
+		std::vector<ServerGameObject*> vec;
+		auto walk = [this, bpid, &vec](ServerGameObject* obj, auto& rec) -> void {
+			for (const auto& subords : obj->children) {
+				if (subords.first == bpid) {
+					for (ServerGameObject* sub : subords.second) {
+						vec.push_back(sub);
+					}
+				}
+				else {
+					for (ServerGameObject* sub : subords.second) {
+						rec(sub, rec);
+					}
+				}
+			}
+		};
+		walk(Server::instance->level, walk);
+		return vec;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		blueprint = gs.readObjBlueprintPtr(gsf);
+	}
+};
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -363,7 +390,9 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_COLLISION_SUBJECT: finder = new FinderCollisionSubject; break;
 	case Tags::FINDER_USER: finder = new FinderUser; break;
 	case Tags::FINDER_SELECTED_OBJECT: finder = new FinderSelectedObject; break;
-	default: finder = new FinderUnknown(strtag); break;
+	default:
+		if (findername == "AG_ALL_OF_TYPE") { finder = new FinderAgAllOfType; break; }
+		finder = new FinderUnknown(strtag); break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));
 	return finder;

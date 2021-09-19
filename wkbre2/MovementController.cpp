@@ -27,6 +27,12 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 	PFPos posStart{ (int)(m_object->position.x / 5.0f), (int)(m_object->position.z / 5.0f) };
 	PFPos posEnd{ (int)(destination.x / 5.0f), (int)(destination.z / 5.0f) };
 
+	// if start is blocked...
+	if (pred(posStart)) {
+		stopMovement();
+		return destination;
+	}
+
 	// if destination if blocked, find non-blocked tile nearest to destination
 	Vector3 realDestination = destination;
 	if (pred(posEnd)) {
