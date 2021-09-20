@@ -790,7 +790,7 @@ void Test_Pathfinding()
 			return map[pos.z][pos.x] != 0;
 		return true;
 	};
-	auto vec = DoPathfinding({ 2,2 }, { 800,900 }, pred, EuclideanHeuristic);
+	auto vec = DoPathfinding({ 2,2 }, { 800,900 }, pred, ManhattanDiagHeuristic);
 	printf("Results:\n");
 	for (const PFPos& pfp : vec)
 		printf("(%i, %i)\n", pfp.x, pfp.z);

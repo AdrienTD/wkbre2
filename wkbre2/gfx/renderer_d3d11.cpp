@@ -476,6 +476,9 @@ struct D3D11Renderer : IRenderer {
 				mmbmp[numMipmaps++] = ResizeBitmap(*cvtbmp, mmwidth, mmheight);
 				mmwidth /= 2;
 				mmheight /= 2;
+				// no mipmaps of 8x8 or below (to prevent tiles from being merged in the terrain atlas!)
+				if (mmwidth <= 8 || mmheight <= 8)
+					break;
 			}
 		}
 

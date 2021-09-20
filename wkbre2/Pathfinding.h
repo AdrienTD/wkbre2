@@ -36,7 +36,7 @@ namespace Pathfinding {
         //template<typename T> using pfp_map = std::map<PFPos, T>;
         using pfp_set = std::unordered_set<PFPos, PFPos::Hasher>;
         template<typename T> using pfp_map = std::unordered_map<PFPos, T, PFPos::Hasher>;
-        pfp_set nextTiles;
+        std::vector<std::pair<PFPos, score_t>> nextTiles;
         pfp_set visited;
         pfp_map<int> scores;
         pfp_map<PFPos> edges;
@@ -45,7 +45,6 @@ namespace Pathfinding {
         bool nothingFound = false;
 
         void begin(PFPos start, PFPos end) {
-            nextTiles.clear();
             visited.clear();
             scores.clear();
             edges.clear();
@@ -54,25 +53,25 @@ namespace Pathfinding {
             finished = false;
             nothingFound = false;
 
-            nextTiles.insert(start);
             scores[start] = 0;
+            nextTiles = { {start, 0} };
         }
 
         template<typename Predicate, typename Heuristic>
         bool next(Predicate pred, Heuristic heuristic) {
             if (finished) return true;
 
+            static auto heapcmp = [](const auto& a, const auto& b) {return a.second > b.second; };
+
             // find tile with min score
             PFPos mt;
             score_t mscore = std::numeric_limits<score_t>::max();
-            for (auto& nt : nextTiles) {
-                if (!visited.count(nt)) {
-                    score_t tscore = scores[nt] + heuristic(nt, end);
-                    if (tscore < mscore) {
-                        mscore = tscore;
-                        mt = nt;
-                    }
-                }
+            while (!nextTiles.empty()) {
+                std::tie(mt, mscore) = nextTiles.front();
+                std::pop_heap(nextTiles.begin(), nextTiles.end(), heapcmp);
+                nextTiles.pop_back();
+                if (!visited.count(mt))
+                    break;
             }
             if (mscore == std::numeric_limits<score_t>::max()) {
                 //std::cout << "FUCK!\n";
@@ -89,15 +88,17 @@ namespace Pathfinding {
             }
 
             // update neighbours
-            auto updateNeighbour = [this, mt, &pred](int dx, int dz, score_t cost) {
+            auto updateNeighbour = [this, mt, &pred, &heuristic](int dx, int dz, score_t cost) {
                 PFPos pfp{ mt.x + dx, mt.z + dz };
                 if (!pred(pfp)) {
                     score_t newscore = scores.at(mt) + cost;
                     if (!scores.count(pfp) || newscore < scores.at(pfp)) {
                         scores[pfp] = newscore;
                         edges[pfp] = mt;
-                        if (!visited.count(pfp))
-                            nextTiles.insert(pfp);
+                        if (!visited.count(pfp)) {
+                            nextTiles.emplace_back(pfp, newscore + heuristic(pfp, end));
+                            std::push_heap(nextTiles.begin(), nextTiles.end(), heapcmp);
+                        }
                     }
                 }
             };
@@ -110,7 +111,6 @@ namespace Pathfinding {
             updateNeighbour(1, -1, 141);
             updateNeighbour(-1, -1, 141);
             visited.insert(mt);
-            nextTiles.erase(mt);
             return false;
         }
 

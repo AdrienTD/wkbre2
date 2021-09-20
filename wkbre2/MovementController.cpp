@@ -50,7 +50,7 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 		}
 	}
 
-	auto tileList = DoPathfinding(posStart, posEnd, pred, EuclideanHeuristic);
+	auto tileList = DoPathfinding(posStart, posEnd, pred, ManhattanDiagHeuristic);
 
 	if (tileList.size() >= 1) {
 		m_pathNodes.clear();
