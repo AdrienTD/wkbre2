@@ -55,6 +55,11 @@ namespace {
 		Discord_UpdatePresence(&rp);
 	}
 
+	void runDiscordCallbacks() {
+		if (!g_discordRpcEnabled) return;
+		Discord_RunCallbacks();
+	}
+
 	void closeDiscordRPC() {
 		if (!g_discordRpcEnabled) return;
 		Discord_Shutdown();
@@ -156,6 +161,7 @@ void QuickStartMenu::draw()
 
 	netHandle();
 	server->tick();
+	runDiscordCallbacks();
 }
 
 void QuickStartMenu::launchGame()
@@ -206,6 +212,7 @@ void QuickStartMenu::launchGame()
 			}
 
 			cliui.iter();
+			runDiscordCallbacks();
 		}
 		enet_host_destroy(eclient);
 		netDeinit();
@@ -254,6 +261,7 @@ void QuickStartMenu::launchGame()
 			}
 			else
 				cliui.iter();
+			runDiscordCallbacks();
 		}
 		if (onServerUi)
 			srvMutex.unlock();

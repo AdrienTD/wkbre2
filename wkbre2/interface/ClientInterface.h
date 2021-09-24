@@ -14,6 +14,9 @@ struct IRenderer;
 struct SceneRenderer;
 struct ClientGameObject;
 struct GameObjBlueprint;
+struct ParticleContainer;
+struct PSCache;
+struct ParticleRenderer;
 
 struct ClientInterface {
 	Client *client;
@@ -22,6 +25,9 @@ struct ClientInterface {
 	SceneRenderer *sceneRenderer;
 	ClientDebugger debugger;
 	Scene *scene;
+	ParticleContainer* particlesContainer;
+	PSCache* psCache;
+	ParticleRenderer* particleRenderer;
 
 	void drawObject(ClientGameObject * obj);
 
@@ -31,7 +37,8 @@ struct ClientInterface {
 	void updateTerrain();
 
 	ClientInterface(Client *client, IRenderer *gfx) : client(client), gfx(gfx), terrainRenderer(nullptr),
-		sceneRenderer(nullptr), debugger(client, this), scene(nullptr), uiTexCache(gfx) {}
+		sceneRenderer(nullptr), debugger(client, this), scene(nullptr), particlesContainer(nullptr), psCache(nullptr),
+		particleRenderer(nullptr), uiTexCache(gfx) {}
 
 	GameObjBlueprint *stampdownBlueprint = nullptr;
 	CliGORef stampdownPlayer;

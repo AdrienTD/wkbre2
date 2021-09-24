@@ -82,7 +82,7 @@ struct IRenderer
 	virtual void UpdateTexture(texture t, Bitmap *bmp) = 0;
 
 	// State changes
-	virtual void SetTransformMatrix(Matrix *m) = 0;
+	virtual void SetTransformMatrix(const Matrix *m) = 0;
 	virtual void SetTexture(uint32_t x, texture t) = 0;
 	virtual void NoTexture(uint32_t x) = 0;
 	virtual void SetFog(uint32_t color = 0, float farz = 250.0f) = 0;
@@ -127,6 +127,9 @@ struct IRenderer
 
 	// ImGui
 	virtual void InitImGuiDrawing() = 0;
+
+	// Particles
+	virtual void BeginParticles() {};
 };
 
 IRenderer *CreateRenderer();

@@ -286,10 +286,10 @@ struct D3D9Renderer : public IRenderer
 
 	//***********************************//
 
-	void SetTransformMatrix(Matrix *m)
+	void SetTransformMatrix(const Matrix *m)
 	{
 		//ddev->SetTransform(D3DTS_VIEW, (D3DMATRIX*)m);
-		ddev->SetTransform(D3DTS_PROJECTION, (D3DMATRIX*)m);
+		ddev->SetTransform(D3DTS_PROJECTION, (const D3DMATRIX*)m);
 	}
 
 	void SetTexture(uint x, texture t)

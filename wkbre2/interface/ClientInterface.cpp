@@ -18,6 +18,9 @@
 #include <SDL_timer.h>
 #include "../gameset/ScriptContext.h"
 #include <stdexcept>
+#include "../ParticleContainer.h"
+#include "../ParticleSystem.h"
+#include "../gfx/DefaultParticleRenderer.h"
 
 namespace {
 	Vector3 getRay(const Camera &cam) {
@@ -173,15 +176,20 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				size_t numAPs = model->getNumAPs();
 				for (size_t i = 0; i < numAPs; i++) {
 					auto ap = model->getAPInfo(i);
-					if (!ap.path.empty()) {
-						auto state = model->getAPState(i, obj->sceneEntity.animTime);
-						attachSceneEntities.emplace_back();
-						auto& apse = attachSceneEntities.back();
-						apse.model = model->cache->getModel("Warrior Kings Game Set\\" + ap.path);
-						apse.transform = Matrix::getTranslationMatrix(state.position) * obj->sceneEntity.transform;
-						apse.color = obj->sceneEntity.color;
-						apse.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
-						scene->add(&apse);
+					auto state = model->getAPState(i, obj->sceneEntity.animTime);
+					if (state.on) {
+						if (ap.tag.substr(0, 3) == "PS_") {
+							particlesContainer->generate(psCache->getPS(ap.tag.substr(3)), state.position.transform(obj->sceneEntity.transform), obj->id, client->timeManager.previousTime, client->timeManager.currentTime);
+						}
+						if (!ap.path.empty()) {
+							attachSceneEntities.emplace_back();
+							auto& apse = attachSceneEntities.back();
+							apse.model = model->cache->getModel("Warrior Kings Game Set\\" + ap.path);
+							apse.transform = Matrix::getTranslationMatrix(state.position) * obj->sceneEntity.transform;
+							apse.color = obj->sceneEntity.color;
+							apse.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
+							scene->add(&apse);
+						}
 					}
 				}
 				// Ray collision check
@@ -468,6 +476,12 @@ void ClientInterface::iter()
 	if (client->gameSet) {
 		if(!scene)
 			scene = new Scene(gfx, &client->gameSet->modelCache);
+		if (!particlesContainer)
+			particlesContainer = new ParticleContainer;
+		if (!psCache)
+			psCache = new PSCache("Warrior Kings Game Set\\Particle_Systems");
+		if (!particleRenderer)
+			particleRenderer = new DefaultParticleRenderer(gfx, particlesContainer);
 
 		numObjectsDrawn = 0;
 		attachSceneEntities.clear();
@@ -507,6 +521,13 @@ void ClientInterface::iter()
 
 	if (terrainRenderer)
 		terrainRenderer->render();
+
+	if (particleRenderer && particlesContainer) {
+		gfx->BeginParticles();
+		gfx->BeginBatchDrawing();
+		particleRenderer->render(client->timeManager.previousTime, client->timeManager.currentTime, client->camera);
+		particlesContainer->update(client->timeManager.currentTime);
+	}
 
 	if (selBoxOn) {
 		gfx->InitRectDrawing();

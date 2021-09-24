@@ -34,6 +34,9 @@
 #include "SDL_timer.h"
 #include "SoundPlayer.h"
 #include "Pathfinding.h"
+#include "ParticleSystem.h"
+#include "gfx/DefaultParticleRenderer.h"
+#include "ParticleContainer.h"
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -797,6 +800,93 @@ void Test_Pathfinding()
 	getchar();
 }
 
+void Test_ParticleSystem()
+{
+	LoadBCP("data.bcp");
+	PSCache pscache{ "Warrior Kings Game Set\\Particle_Systems" };
+	ParticleSystem* ps = pscache.getPS("HighPriestessSpell");
+
+	std::vector<std::string> psNames;
+	ListFiles("Warrior Kings Game Set\\Particle_Systems", &psNames);
+
+	InitWindow();
+	ImGuiImpl_Init();
+	IRenderer* gfx = CreateRenderer();
+	gfx->Init();
+	SetRenderer(gfx);
+	ImGuiImpl_CreateFontsTexture(gfx);
+
+	Camera camera;
+	camera.position = Vector3(0, 0, -6);
+	camera.orientation = Vector3(0, 0, 0);
+
+	ParticleContainer particleContainer;
+	DefaultParticleRenderer particleRenderer(gfx, &particleContainer);
+
+	uint32_t prevTimeMs = SDL_GetTicks();
+	uint32_t nextTimeMs = prevTimeMs;
+
+	int fps = 0, nextfps = 0;
+	uint32_t lastfpscheck = SDL_GetTicks();
+	while (!g_windowQuit)
+	{
+		uint32_t ticks = SDL_GetTicks();
+		if (ticks - lastfpscheck >= 1000) {
+			fps = nextfps;
+			nextfps = 0;
+			lastfpscheck = ticks;
+		}
+		nextfps++;
+		ImGuiImpl_NewFrame();
+		ImGui::Text("FPS: %i", fps);
+		ImGui::DragFloat3("Position", &camera.position.x);
+		ImGui::DragFloat2("Orientation", &camera.orientation.x, 0.1f);
+		ImGui::Text("Num particles: %zu", particleContainer.particles.size());
+		if (ImGui::BeginListBox("PSystem")) {
+			for (auto& name : psNames) {
+				if (ImGui::Selectable(name.c_str())) {
+					ps = pscache.getPS(name.substr(0, name.find('.')).c_str());
+					particleContainer.clearParticles();
+				}
+			}
+			ImGui::EndListBox();
+		}
+		camera.updateMatrix();
+
+		//
+		prevTimeMs = nextTimeMs;
+		nextTimeMs = ticks;
+		float prevTimeFlt = (float)prevTimeMs / 1000.0f;
+		float nextTimeFlt = (float)nextTimeMs / 1000.0f;
+		particleContainer.generate(ps, { 0,0,0 }, 0, prevTimeFlt, nextTimeFlt);
+		particleContainer.update(nextTimeFlt);
+
+		gfx->ClearFrame();
+		gfx->BeginDrawing();
+		//gfx->InitRectDrawing();
+		//gfx->DrawRect(10, 10, 20, 20);
+		gfx->BeginParticles();
+		gfx->BeginBatchDrawing();
+		gfx->SetTransformMatrix(&Matrix::getIdentity());
+		particleRenderer.render(prevTimeFlt, nextTimeFlt, camera);
+
+		gfx->InitImGuiDrawing();
+		ImGuiImpl_Render(gfx);
+		gfx->EndDrawing();
+
+		HandleWindow();
+		if (g_keyDown[SDL_SCANCODE_UP])
+			camera.position.z += 0.5;
+		if (g_keyDown[SDL_SCANCODE_DOWN])
+			camera.position.z -= 0.5;
+		if (g_keyDown[SDL_SCANCODE_RIGHT])
+			camera.position.x += 0.5;
+		if (g_keyDown[SDL_SCANCODE_LEFT])
+			camera.position.x -= 0.5;
+	}
+
+}
+
 const std::vector<std::pair<void(*)(), const char*> > testList = {
 {Test_GameSet, "Game set loading"},
 {Test_GSFileParser, "GSF Parser"},
@@ -815,6 +905,7 @@ const std::vector<std::pair<void(*)(), const char*> > testList = {
 {Test_Scene, "Scene"},
 {Test_SoundPlayer, "Sound Player"},
 {Test_Pathfinding, "Pathfinding"},
+{Test_ParticleSystem, "Particle system"},
 };
 
 void LaunchTest()

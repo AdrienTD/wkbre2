@@ -632,6 +632,8 @@ void ServerGameObject::convertTo(GameObjBlueprint * postbp)
 	this->setSubtypeAndAppearance((postsubtype != -1) ? postsubtype : 0, 0); // TODO: random subtype as fallback?
 	// update sight range
 	this->updateSightRange();
+	// update footprint
+	this->updateOccupiedTiles(this->position, this->orientation, this->position, this->orientation);
 }
 
 void ServerGameObject::setScale(const Vector3& scale)

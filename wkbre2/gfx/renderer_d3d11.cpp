@@ -229,6 +229,7 @@ struct D3D11Renderer : IRenderer {
 	ID3D11DepthStencilView* depthView = nullptr;
 	ID3D11DepthStencilState* depthOnState = nullptr;
 	ID3D11DepthStencilState* depthOffState = nullptr;
+	ID3D11DepthStencilState* depthTestOnlyState = nullptr;
 
 	// Constant buffers
 	ID3D11Buffer* transformBuffer = nullptr;
@@ -368,6 +369,11 @@ struct D3D11Renderer : IRenderer {
 		dsdesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 		dsdesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
 		hres = ddDevice->CreateDepthStencilState(&dsdesc, &depthOffState);
+		assert(!FAILED(hres));
+		dsdesc.DepthEnable = TRUE;
+		dsdesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+		dsdesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+		hres = ddDevice->CreateDepthStencilState(&dsdesc, &depthTestOnlyState);
 		assert(!FAILED(hres));
 
 		Bitmap whiteBmp;
@@ -520,7 +526,7 @@ struct D3D11Renderer : IRenderer {
 	virtual void UpdateTexture(texture t, Bitmap* bmp) override {}
 
 	// State changes
-	virtual void SetTransformMatrix(Matrix* m) override {
+	virtual void SetTransformMatrix(const Matrix* m) override {
 		D3D11_MAPPED_SUBRESOURCE mappedRes;
 		HRESULT hres = ddImmediateContext->Map(transformBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedRes);
 		assert(!FAILED(hres));
@@ -737,6 +743,12 @@ struct D3D11Renderer : IRenderer {
 		ddImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	}
 
+	virtual void BeginParticles() override {
+		ddImmediateContext->OMSetBlendState(alphaBlendState, {}, 0xFFFFFFFF);
+		ddImmediateContext->OMSetDepthStencilState(depthTestOnlyState, 0);
+		ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
+		ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
+	};
 };
 
 IRenderer* CreateD3D11Renderer() { return new D3D11Renderer; }
