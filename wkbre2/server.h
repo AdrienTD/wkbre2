@@ -70,6 +70,8 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void playAttachedSpecialEffect(int sfxTag, ServerGameObject* target);
 	void setName(const std::string& name);
 	void reportCurrentOrder(OrderBlueprint* orderBp);
+	void attachLoopingSpecialEffect(int sfxTag, const Vector3& position);
+	void detachLoopingSpecialEffect(int sfxTag);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();

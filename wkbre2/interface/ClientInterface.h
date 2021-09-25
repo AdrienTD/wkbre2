@@ -29,8 +29,6 @@ struct ClientInterface {
 	PSCache* psCache;
 	ParticleRenderer* particleRenderer;
 
-	void drawObject(ClientGameObject * obj);
-
 	void iter();
 	void render();
 
@@ -60,4 +58,7 @@ private:
 	bool selBoxOn = false;
 	int selBoxStartX, selBoxStartY, selBoxEndX, selBoxEndY;
 	std::vector<CliGORef> nextSelFromBox;
+
+	void drawObject(ClientGameObject* obj);
+	void drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t objid = 0);
 };

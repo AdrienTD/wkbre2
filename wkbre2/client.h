@@ -68,6 +68,7 @@ struct Client : CommonGameState<Client, ClientGameObject>
 		float startTime;
 	};
 	std::list<SpecialEffect> specialEffects;
+	std::multimap<std::pair<CliGORef, int>, SceneEntity> loopingSpecialEffects;
 
 	//void loadSaveGame(const char *filename);
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);

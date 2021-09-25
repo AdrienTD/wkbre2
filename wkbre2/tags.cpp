@@ -250,7 +250,7 @@ TagDict<41> Tags::FINDER_tagDict({
     "USER",
 });
 
-TagDict<17> Tags::POSITION_tagDict({
+TagDict<18> Tags::POSITION_tagDict({
     "ABSOLUTE_POSITION",
     "AWAY_FROM",
     "CENTRE_OF_MAP",
@@ -264,6 +264,7 @@ TagDict<17> Tags::POSITION_tagDict({
     "NEAREST_VALID_STAMPDOWN_POS",
     "OFFSET_FROM",
     "OUT_AT_ANGLE",
+    "RANDOM_ATTACHMENT_POINT",
     "SPAWN_TILE_POSITION",
     "THE_OTHER_SIDE_OF",
     "THIS_SIDE_OF",

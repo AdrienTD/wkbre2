@@ -379,6 +379,37 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 	}
 };
 
+struct PDRandomAttachmentPoint : public PositionDeterminer {
+	std::string sAttachTag;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		ServerGameObject* obj = finder->getFirst(ctx);
+		if (Model* model = obj->getModel()) {
+			size_t numAPs = model->getNumAPs();
+
+			static constexpr size_t MAXAPS = 16;
+			std::array<size_t, MAXAPS> validAPs;
+			size_t numValidAPs = 0;
+			for (size_t i = 0; i < numAPs; i++) {
+				const auto& apinfo = model->getAPInfo(i);
+				if (apinfo.tag.substr(0, sAttachTag.size()) == sAttachTag) {
+					validAPs[numValidAPs++] = i;
+					if (numValidAPs >= MAXAPS) break;
+				}
+			}
+			if (numValidAPs > 0) {
+				size_t randomAP = rand() % numValidAPs;
+				return model->getAPInfo(validAPs[randomAP]).staticState.position.transform(obj->getWorldMatrix());
+			}
+		}
+		return obj->position + Vector3(0.0f, 1.0f, 0.0f);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		sAttachTag = gsf.nextString(true);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet & gs)
 {
 	PositionDeterminer *pos;
@@ -400,6 +431,7 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet 
 	case Tags::POSITION_MATCHING_OFFSET: pos = new PDMatchingOffset; break;
 	case Tags::POSITION_FIRING_ATTACHMENT_POINT: pos = new PDFiringAttachmentPoint; break;
 	case Tags::POSITION_NEAREST_VALID_STAMPDOWN_POS: pos = new PDNearestValidStampdownPos; break;
+	case Tags::POSITION_RANDOM_ATTACHMENT_POINT: pos = new PDRandomAttachmentPoint; break;
 	default: pos = new PDUnknown; break;
 	}
 	pos->parse(gsf, gs);

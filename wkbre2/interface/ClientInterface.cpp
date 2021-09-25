@@ -173,28 +173,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				scene->add(&obj->sceneEntity);
 				numObjectsDrawn++;
 				// Attachment points
-				size_t numAPs = model->getNumAPs();
-				for (size_t i = 0; i < numAPs; i++) {
-					auto ap = model->getAPInfo(i);
-					auto state = model->getAPState(i, obj->sceneEntity.animTime);
-					if (state.on) {
-						if (strcmpi(ap.tag.c_str(), "PS_Trail") == 0) {
-							particlesContainer->generateTrail(state.position.transform(obj->sceneEntity.transform), obj->id, client->timeManager.previousTime, client->timeManager.currentTime);
-						}
-						else if (ap.tag.substr(0, 3) == "PS_") {
-							particlesContainer->generate(psCache->getPS(ap.tag.substr(3)), state.position.transform(obj->sceneEntity.transform), obj->id, client->timeManager.previousTime, client->timeManager.currentTime);
-						}
-						if (!ap.path.empty()) {
-							attachSceneEntities.emplace_back();
-							auto& apse = attachSceneEntities.back();
-							apse.model = model->cache->getModel("Warrior Kings Game Set\\" + ap.path);
-							apse.transform = Matrix::getTranslationMatrix(state.position) * obj->sceneEntity.transform;
-							apse.color = obj->sceneEntity.color;
-							apse.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
-							scene->add(&apse);
-						}
-					}
-				}
+				drawAttachmentPoints(&obj->sceneEntity, obj->id);
 				// Ray collision check
 				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
 					const float *verts = model->interpolate(obj->sceneEntity.animTime);
@@ -241,6 +220,35 @@ drawsub:
 		GameObjBlueprint* blueprint = client->gameSet->getBlueprint(typechildren.first);
 		for (ClientGameObject* child : typechildren.second) {
 			drawObject(child);
+		}
+	}
+}
+
+void ClientInterface::drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t objid)
+{
+	Model* model = sceneEntity->model;
+	size_t numAPs = model->getNumAPs();
+	for (size_t i = 0; i < numAPs; i++) {
+		auto ap = model->getAPInfo(i);
+		auto state = model->getAPState(i, sceneEntity->animTime);
+		if (state.on) {
+			if (strcmpi(ap.tag.c_str(), "PS_Trail") == 0) {
+				particlesContainer->generateTrail(state.position.transform(sceneEntity->transform), objid, client->timeManager.previousTime, client->timeManager.currentTime);
+			}
+			else if (ap.tag.substr(0, 3) == "PS_") {
+				particlesContainer->generate(psCache->getPS(ap.tag.substr(3)), state.position.transform(sceneEntity->transform), objid, client->timeManager.previousTime, client->timeManager.currentTime);
+			}
+			if (!ap.path.empty()) {
+				attachSceneEntities.emplace_back();
+				auto& apse = attachSceneEntities.back();
+				apse.model = model->cache->getModel("Warrior Kings Game Set\\" + ap.path);
+				apse.transform = Matrix::getTranslationMatrix(state.position) * sceneEntity->transform;
+				apse.color = sceneEntity->color;
+				apse.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
+				scene->add(&apse);
+				// Recursively draw attach. points of the attach. point's model!
+				drawAttachmentPoints(&apse, objid); // NOTE: Same objid kept, trail might be shared!!
+			}
 		}
 	}
 }
@@ -513,28 +521,12 @@ void ClientInterface::iter()
 				sfx.entity.transform = sfx.attachedObj->getWorldMatrix();
 			sfx.entity.animTime = (uint32_t)((client->timeManager.currentTime - sfx.startTime) * 1000.0f);
 			scene->add(&sfx.entity);
-
-			// Attachment points
-			Model* model = sfx.entity.model;
-			size_t numAPs = model->getNumAPs();
-			for (size_t i = 0; i < numAPs; i++) {
-				auto ap = model->getAPInfo(i);
-				auto state = model->getAPState(i, sfx.entity.animTime);
-				if (state.on) {
-					if (ap.tag.substr(0, 3) == "PS_") {
-						particlesContainer->generate(psCache->getPS(ap.tag.substr(3)), state.position.transform(sfx.entity.transform), 0, client->timeManager.previousTime, client->timeManager.currentTime);
-					}
-					if (!ap.path.empty()) {
-						attachSceneEntities.emplace_back();
-						auto& apse = attachSceneEntities.back();
-						apse.model = model->cache->getModel("Warrior Kings Game Set\\" + ap.path);
-						apse.transform = Matrix::getTranslationMatrix(state.position) * sfx.entity.transform;
-						apse.color = sfx.entity.color;
-						apse.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
-						scene->add(&apse);
-					}
-				}
-			}
+			drawAttachmentPoints(&sfx.entity);
+		}
+		for (auto& lsfx : client->loopingSpecialEffects) {
+			lsfx.second.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
+			scene->add(&lsfx.second);
+			drawAttachmentPoints(&lsfx.second);
 		}
 		if (client->terrain)
 			scene->sunDirection = client->terrain->sunVector;

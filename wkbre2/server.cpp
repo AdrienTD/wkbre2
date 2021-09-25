@@ -755,6 +755,20 @@ void ServerGameObject::reportCurrentOrder(OrderBlueprint* orderBp)
 	Server::instance->sendToAll(npw);
 }
 
+void ServerGameObject::attachLoopingSpecialEffect(int sfxTag, const Vector3& position)
+{
+	NetPacketWriter npw{ NETCLIMSG_LOOPING_SPECIAL_EFFECT_ATTACHED };
+	npw.writeValues(this->id, sfxTag, position);
+	Server::instance->sendToAll(npw);
+}
+
+void ServerGameObject::detachLoopingSpecialEffect(int sfxTag)
+{
+	NetPacketWriter npw{ NETCLIMSG_LOOPING_SPECIAL_EFFECT_DETACHED };
+	npw.writeValues(this->id, sfxTag);
+	Server::instance->sendToAll(npw);
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;

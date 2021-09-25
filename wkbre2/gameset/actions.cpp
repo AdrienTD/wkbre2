@@ -1211,6 +1211,37 @@ struct ActionCreateObject : Action {
 
 };
 
+struct ActionAttachLoopingSpecialEffect : Action {
+	int sfxTag;
+	std::unique_ptr<ObjectFinder> fObject;
+	std::unique_ptr<PositionDeterminer> pPosition;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (auto* obj : fObject->eval(ctx)) {
+			auto tvSelf = ctx->self.change(obj);
+			obj->attachLoopingSpecialEffect(sfxTag, pPosition->eval(ctx).position);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		sfxTag = gs.specialEffectTags.readIndex(gsf);
+		fObject.reset(ReadFinder(gsf, gs));
+		pPosition.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
+struct ActionDetachLoopingSpecialEffect : Action {
+	int sfxTag;
+	std::unique_ptr<ObjectFinder> fObject;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (auto* obj : fObject->eval(ctx)) {
+			obj->detachLoopingSpecialEffect(sfxTag);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		sfxTag = gs.specialEffectTags.readIndex(gsf);
+		fObject.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1290,10 +1321,10 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_PLAY_SPECIAL_EFFECT_BETWEEN: action = new ActionPlaySpecialEffectBetween; break;
 	case Tags::ACTION_ATTACH_SPECIAL_EFFECT: action = new ActionAttachSpecialEffect; break;
 	case Tags::ACTION_CREATE_OBJECT: action = new ActionCreateObject; break;
+	case Tags::ACTION_ATTACH_LOOPING_SPECIAL_EFFECT: action = new ActionAttachLoopingSpecialEffect; break;
+	case Tags::ACTION_DETACH_LOOPING_SPECIAL_EFFECT: action = new ActionDetachLoopingSpecialEffect; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
-	case Tags::ACTION_ATTACH_LOOPING_SPECIAL_EFFECT:
-	case Tags::ACTION_DETACH_LOOPING_SPECIAL_EFFECT:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:
 	case Tags::ACTION_COLLAPSING_CIRCLE_ON_MINIMAP:
 	case Tags::ACTION_SHOW_BLINKING_DOT_ON_MINIMAP:

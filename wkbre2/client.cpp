@@ -95,6 +95,12 @@ void Client::tick()
 
 	// Special effects
 	specialEffects.remove_if([this](SpecialEffect& sfx) {return timeManager.currentTime >= sfx.startTime + sfx.entity.model->getDuration(); });
+	for (auto nextIt = loopingSpecialEffects.begin(); nextIt != loopingSpecialEffects.end();) {
+		auto it = nextIt++;
+		auto& lsfx = *it;
+		if (!lsfx.first.first.get())
+			loopingSpecialEffects.erase(it);
+	}
 
 	if (serverLink) {
 		int pcnt = 1000000; //100;
@@ -480,6 +486,32 @@ void Client::tick()
 				uint32_t objid = br.readUint32();
 				if (ClientGameObject* obj = findObject(objid))
 					obj->reportedCurrentOrder = (int)br.readUint32();
+				break;
+			}
+			case NETCLIMSG_LOOPING_SPECIAL_EFFECT_ATTACHED: {
+				uint32_t objid; int sfxTag; Vector3 pos;
+				br.readTo(objid, sfxTag, pos);
+				if (ClientGameObject* obj = findObject(objid)) {
+					if (Model* sfxmodel = obj->blueprint->getSpecialEffect(sfxTag)) {
+						std::pair<std::pair<CliGORef, int>, SceneEntity> p;
+						p.first = { objid, sfxTag };
+						p.second.transform = Matrix::getTranslationMatrix(pos);
+						p.second.model = sfxmodel;
+						p.second.color = obj->color;
+						loopingSpecialEffects.insert(std::move(p));
+					}
+				}
+				break;
+			}
+			case NETCLIMSG_LOOPING_SPECIAL_EFFECT_DETACHED: {
+				uint32_t objid; int sfxTag;
+				br.readTo(objid, sfxTag);
+				if (ClientGameObject* obj = findObject(objid)) {
+					auto it = loopingSpecialEffects.find({ objid, sfxTag });
+					if (it != loopingSpecialEffects.end()) {
+						loopingSpecialEffects.erase(it);
+					}
+				}
 				break;
 			}
 			}
