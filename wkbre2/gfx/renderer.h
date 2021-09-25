@@ -129,7 +129,9 @@ struct IRenderer
 	virtual void InitImGuiDrawing() = 0;
 
 	// Particles
-	virtual void BeginParticles() {};
+	virtual void BeginParticles() {}
+	virtual void SetLineTopology() {}
+	virtual void SetTriangleTopology() {}
 };
 
 IRenderer *CreateRenderer();

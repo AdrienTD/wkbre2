@@ -749,6 +749,14 @@ struct D3D11Renderer : IRenderer {
 		ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
 		ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
 	};
+
+	virtual void SetLineTopology() override {
+		ddImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	}
+
+	virtual void SetTriangleTopology() override {
+		ddImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	}
 };
 
 IRenderer* CreateD3D11Renderer() { return new D3D11Renderer; }

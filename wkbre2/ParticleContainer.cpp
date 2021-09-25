@@ -47,6 +47,11 @@ void ParticleContainer::generate(ParticleSystem* system, const Vector3& position
 	}
 }
 
+void ParticleContainer::generateTrail(const Vector3& position, uint32_t objid, float prevTime, float nextTime)
+{
+	trails[objid].parts.push_back({ position, nextTime });
+}
+
 void ParticleContainer::update(float nextTime)
 {
 	for (size_t i = 0; i < particles.size(); ++i) {
@@ -54,6 +59,14 @@ void ParticleContainer::update(float nextTime)
 			particles[i] = std::move(particles.back());
 			particles.pop_back();
 			--i;
+		}
+	}
+
+	for (auto next = trails.begin(); next != trails.end();) {
+		auto it = next++;
+		auto& trail = it->second;
+		if (nextTime - trail.parts.back().startTime >= 2.0f) {
+			trails.erase(it);
 		}
 	}
 }

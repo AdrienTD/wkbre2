@@ -178,7 +178,10 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 					auto ap = model->getAPInfo(i);
 					auto state = model->getAPState(i, obj->sceneEntity.animTime);
 					if (state.on) {
-						if (ap.tag.substr(0, 3) == "PS_") {
+						if (strcmpi(ap.tag.c_str(), "PS_Trail") == 0) {
+							particlesContainer->generateTrail(state.position.transform(obj->sceneEntity.transform), obj->id, client->timeManager.previousTime, client->timeManager.currentTime);
+						}
+						else if (ap.tag.substr(0, 3) == "PS_") {
 							particlesContainer->generate(psCache->getPS(ap.tag.substr(3)), state.position.transform(obj->sceneEntity.transform), obj->id, client->timeManager.previousTime, client->timeManager.currentTime);
 						}
 						if (!ap.path.empty()) {
@@ -510,6 +513,28 @@ void ClientInterface::iter()
 				sfx.entity.transform = sfx.attachedObj->getWorldMatrix();
 			sfx.entity.animTime = (uint32_t)((client->timeManager.currentTime - sfx.startTime) * 1000.0f);
 			scene->add(&sfx.entity);
+
+			// Attachment points
+			Model* model = sfx.entity.model;
+			size_t numAPs = model->getNumAPs();
+			for (size_t i = 0; i < numAPs; i++) {
+				auto ap = model->getAPInfo(i);
+				auto state = model->getAPState(i, sfx.entity.animTime);
+				if (state.on) {
+					if (ap.tag.substr(0, 3) == "PS_") {
+						particlesContainer->generate(psCache->getPS(ap.tag.substr(3)), state.position.transform(sfx.entity.transform), 0, client->timeManager.previousTime, client->timeManager.currentTime);
+					}
+					if (!ap.path.empty()) {
+						attachSceneEntities.emplace_back();
+						auto& apse = attachSceneEntities.back();
+						apse.model = model->cache->getModel("Warrior Kings Game Set\\" + ap.path);
+						apse.transform = Matrix::getTranslationMatrix(state.position) * sfx.entity.transform;
+						apse.color = sfx.entity.color;
+						apse.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
+						scene->add(&apse);
+					}
+				}
+			}
 		}
 		if (client->terrain)
 			scene->sunDirection = client->terrain->sunVector;

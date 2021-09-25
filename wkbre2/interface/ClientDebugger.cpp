@@ -207,9 +207,10 @@ void ClientDebugger::draw()
 							ImGui::BeginDisabled(!enabled);
 							if (ImGui::ImageButton(tex, ImVec2(48.0f, 48.0f)))
 								for (ClientGameObject* obj : cliUi->selection)
-									if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end())
-										for (int i = 0; i < count; i++)
-											client->sendCommand(obj, cmd, assignmentMode);
+									if (obj)
+										if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end())
+											for (int i = 0; i < count; i++)
+												client->sendCommand(obj, cmd, assignmentMode);
 							if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 								ImGui::SetTooltip("%s", cmdname.c_str());
 							ImGui::EndDisabled();

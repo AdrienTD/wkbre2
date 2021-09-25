@@ -59,5 +59,32 @@ void DefaultParticleRenderer::render(float prevTime, float nextTime, const Camer
 		indices[5] = firstIndex + 2;
 	}
 	batch->flush();
+
+	gfx->NoTexture(0);
+	gfx->SetLineTopology();
+	for (auto& kv : particleContainer->trails) {
+		auto& trail = kv.second;
+		for (size_t p = 1; p < trail.parts.size(); ++p) {
+			static constexpr float FADETIME = 0.5f;
+			auto& partNext = trail.parts[p];
+			uint32_t alphaNext = (uint32_t)(255.0f - std::min(1.0f, std::max(0.0f, (nextTime - partNext.startTime) / FADETIME)) * 255.0f);
+			if (alphaNext == 0)
+				continue;
+			auto& partPrev = trail.parts[p - 1];
+			uint32_t alphaPrev = (uint32_t)(255.0f - std::min(1.0f, std::max(0.0f, (nextTime - partPrev.startTime) / FADETIME)) * 255.0f);
+
+			batchVertex* verts; uint16_t* indices; uint32_t firstIndex;
+			batch->next(2, 2, &verts, &indices, &firstIndex);
+			verts[0].x = partPrev.position.x; verts[0].y = partPrev.position.y; verts[0].z = partPrev.position.z;
+			verts[0].color = 0xFFFFFF | (alphaPrev << 24); verts[0].u = 1.0f; verts[0].v = 1.0f;
+			verts[1].x = partNext.position.x; verts[1].y = partNext.position.y; verts[1].z = partNext.position.z;
+			verts[1].color = 0xFFFFFF | (alphaNext << 24); verts[1].u = 1.0f; verts[1].v = 1.0f;
+			indices[0] = firstIndex;
+			indices[1] = firstIndex + 1;
+		}
+	}
+	batch->flush();
+	gfx->SetTriangleTopology();
+
 	delete batch;
 }

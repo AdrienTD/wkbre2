@@ -457,8 +457,9 @@ void ServerGameObject::setParent(ServerGameObject * newParent)
 void ServerGameObject::setPosition(const Vector3 & position)
 {
 	updatePosition(position);
-	if (blueprint->bpClass != Tags::GAMEOBJCLASS_MISSILE)
-		this->position.y = Server::instance->terrain->getHeightEx(position.x, position.z, blueprint->canWalkOnWater());
+	if (Server::instance->terrain)
+		if (blueprint->bpClass != Tags::GAMEOBJCLASS_MISSILE)
+			this->position.y = Server::instance->terrain->getHeightEx(position.x, position.z, blueprint->canWalkOnWater());
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_POSITION_SET);
 	msg.writeUint32(this->id);
@@ -852,6 +853,7 @@ void ServerGameObject::updateSightRange()
 void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation)
 {
 	Server* server = Server::instance;
+	if (!server->tiles) return;
 	int trnNumX, trnNumZ;
 	std::tie(trnNumX, trnNumZ) = server->terrain->getNumPlayableTiles();
 	if (blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING && blueprint->footprint) {
