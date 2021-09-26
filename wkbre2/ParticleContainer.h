@@ -13,6 +13,7 @@ struct Particle
 	Vector3 startPosition;
 	Vector3 startVelocity;
 	uint32_t objid;
+	float maxAge;
 
 	Vector3 getPosition(float time);
 	uint32_t getColor(float time);
@@ -27,7 +28,7 @@ struct ParticleContainer {
 		std::vector<Part> parts;
 	};
 
-	std::vector<Particle> particles;
+	std::map<void*, std::vector<Particle>> particles;
 	std::map<uint32_t, Trail> trails;
 
 	void clearParticles() { particles.clear(); }

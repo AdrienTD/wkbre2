@@ -7,7 +7,7 @@ Vector3 Particle::getPosition(float time) {
 	pos += startVelocity * dt;
 	for (auto& force : system->Particles.Forces) {
 		if (force.direction == PSForceType::Gravity)
-			pos.y += 0.5f * force.intensity * dt * dt;
+			pos.y += 0.5f * (force.intensity * (-9.81f)) * dt * dt;
 	}
 	return pos;
 }
@@ -33,17 +33,23 @@ void ParticleContainer::generate(ParticleSystem* system, const Vector3& position
 	float interval = system->Generation_Decision.Interval;
 	if (std::floor(prevTime / interval) < std::floor(nextTime / interval)) {
 		// create the particle
-		particles.emplace_back();
-		Particle& particle = particles.back();
+		auto& partVector = particles[system];
+		partVector.emplace_back();
+		Particle& particle = partVector.back();
 		particle.system = system;
 		particle.startTime = nextTime;
 		particle.startPosition = position;
 
-		float ang = system->State_Generation.Velocity.Direction.Cone * 3.141f / 180.0f;
-		//particle.startVelocity = Vector3(0,1,0).transform(Matrix::getRotationYMatrix(ang)).transform(Matrix::;
-		particle.startVelocity = Vector3(0, 1, 0);
-		particle.startVelocity *= system->State_Generation.Velocity.Magnitude_Range[0];
+		float maxAngle = system->State_Generation.Velocity.Direction.Cone * 3.141f / 180.0f;
+		float angX = (((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f) * maxAngle;
+		float angY = (((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f) * maxAngle;
+		particle.startVelocity = Vector3(0,1,0).transformNormal(Matrix::getRotationXMatrix(angX)).transformNormal(Matrix::getRotationYMatrix(angY));
+		auto& magRange = system->State_Generation.Velocity.Magnitude_Range;
+		particle.startVelocity *= ((float)rand() / (float)RAND_MAX) * (magRange[1] - magRange[0]) + magRange[0];
 		particle.objid = objid;
+
+		auto& maxAgeRange = system->Particles.Max_Age_Range;
+		particle.maxAge = ((float)rand() / (float)RAND_MAX) * (maxAgeRange[1] - maxAgeRange[0]) + maxAgeRange[0];
 	}
 }
 
@@ -54,11 +60,14 @@ void ParticleContainer::generateTrail(const Vector3& position, uint32_t objid, f
 
 void ParticleContainer::update(float nextTime)
 {
-	for (size_t i = 0; i < particles.size(); ++i) {
-		if (nextTime - particles[i].startTime >= particles[i].system->Particles.Max_Age_Range[0]) {
-			particles[i] = std::move(particles.back());
-			particles.pop_back();
-			--i;
+	for (auto& kv : particles) {
+		auto& partVec = kv.second;
+		for (size_t i = 0; i < partVec.size(); ++i) {
+			if (nextTime - partVec[i].startTime >= partVec[i].maxAge) {
+				partVec[i] = std::move(partVec.back());
+				partVec.pop_back();
+				--i;
+			}
 		}
 	}
 
