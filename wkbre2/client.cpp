@@ -587,6 +587,14 @@ void Client::sendTerminateObject(ClientGameObject* obj)
 	serverLink->send(msg);
 }
 
+void Client::sendBuildLastStampdownedObject(ClientGameObject* obj, int assignmentMode)
+{
+	NetPacketWriter msg{ NETSRVMSG_BUILD_LAST_STAMPDOWNED_OBJECT };
+	msg.writeUint32(obj->id);
+	msg.writeUint32(assignmentMode);
+	serverLink->send(msg);
+}
+
 ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t id)
 {
 	ClientGameObject *obj = new ClientGameObject(id, blueprint);

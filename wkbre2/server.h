@@ -127,6 +127,11 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	std::vector<NetLink*> clientLinks;
 	std::vector<SrvGORef> clientPlayerObjects;
 
+	struct ClientInfo {
+		SrvGORef lastStampdown;
+	};
+	std::vector<ClientInfo> clientInfos;
+
 	time_t lastSync;
 
 	std::vector<std::tuple<ServerGameObject*, int, int>> postAssociations;

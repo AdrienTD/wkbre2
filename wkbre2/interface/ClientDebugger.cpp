@@ -156,8 +156,10 @@ void ClientDebugger::draw()
 		for (auto &cls : client->gameSet->objBlueprints) {
 			for (auto &el : cls.names.str2idMap) {
 				GameObjBlueprint &type = cls.blueprints[el.second];
-				if (ImGui::Selectable(type.getFullName().c_str()))
+				if (ImGui::Selectable(type.getFullName().c_str())) {
 					cliUi->stampdownBlueprint = &type;
+					cliUi->stampdownFromCommand = false;
+				}
 			}
 		}
 		ImGui::EndChild();
@@ -181,15 +183,16 @@ void ClientDebugger::draw()
 	g_diag_animMisses = 0;
 
 	if (client->gameSet && cliUi) {
-		auto drawCmdIcons = [this](int assignmentMode, int count, bool whichButton) {
+		auto drawCmdIcons = [this](int assignmentMode, int count, auto whichButton) {
 			ClientGameObject* sel = nullptr; //selectedObject;
 			if (!sel && !cliUi->selection.empty()) sel = *cliUi->selection.begin();
 			if (sel) {
+				ImGui::BeginChild("CommandButtonArea", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 				CliScriptContext ctx{ client, sel };
 				auto _tv = ctx.selectedObject.change(sel);
 				for (Command* cmd : sel->blueprint->offeredCommands) {
 					const std::string cmdname = client->gameSet->commands.names.getString(cmd->id);
-					if (whichButton != (cmdname.substr(0, 6) == "Spawn "))
+					if (!whichButton(cmdname))
 						continue;
 					auto iconPred = [this, &ctx](int eq) {return client->gameSet->equations[eq]->booleval(&ctx); };
 					auto condPred = [&ctx](GSCondition* cond) {return cond->test->booleval(&ctx); };
@@ -205,12 +208,20 @@ void ClientDebugger::draw()
 						if (!texpath->empty()) {
 							texture tex = cliUi->uiTexCache.getTexture(texpath->c_str(), false);
 							ImGui::BeginDisabled(!enabled);
-							if (ImGui::ImageButton(tex, ImVec2(48.0f, 48.0f)))
-								for (ClientGameObject* obj : cliUi->selection)
-									if (obj)
-										if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end())
-											for (int i = 0; i < count; i++)
-												client->sendCommand(obj, cmd, assignmentMode);
+							if (ImGui::ImageButton(tex, ImVec2(48.0f, 48.0f))) {
+								if (cmd->stampdownObject) {
+									cliUi->stampdownBlueprint = cmd->stampdownObject;
+									cliUi->stampdownPlayer = sel->getPlayer();
+									cliUi->stampdownFromCommand = true;
+								}
+								else {
+									for (ClientGameObject* obj : cliUi->selection)
+										if (obj)
+											if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end())
+												for (int i = 0; i < count; i++)
+													client->sendCommand(obj, cmd, assignmentMode);
+								}
+							}
 							if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 								ImGui::SetTooltip("%s", cmdname.c_str());
 							ImGui::EndDisabled();
@@ -219,6 +230,7 @@ void ClientDebugger::draw()
 					}
 				}
 				ImGui::NewLine();
+				ImGui::EndChild();
 			}
 		};
 		ImGui::Begin("Commands");
@@ -226,12 +238,17 @@ void ClientDebugger::draw()
 			auto& io = ImGui::GetIO();
 			if (ImGui::BeginTabItem("Orders")) {
 				int assignmentMode = io.KeyCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (io.KeyShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
-				drawCmdIcons(assignmentMode, 1, false);
+				drawCmdIcons(assignmentMode, 1, [](const std::string& cmdname) {auto verb = cmdname.substr(0, 6); return verb != "Spawn " && verb != "Build "; });
 				ImGui::EndTabItem();
 			}
 			if (ImGui::BeginTabItem("Spawn units")) {
 				int count = io.KeyShift ? 10 : 1;
-				drawCmdIcons(Tags::ORDERASSIGNMODE_DO_LAST, count, true);
+				drawCmdIcons(Tags::ORDERASSIGNMODE_DO_LAST, count, [](const std::string& cmdname) {return cmdname.substr(0, 6) == "Spawn "; });
+				ImGui::EndTabItem();
+			}
+			if (ImGui::BeginTabItem("Buildings")) {
+				int assignmentMode = io.KeyCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (io.KeyShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
+				drawCmdIcons(assignmentMode, 1, [](const std::string& cmdname) {return cmdname.substr(0, 6) == "Build "; });
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();

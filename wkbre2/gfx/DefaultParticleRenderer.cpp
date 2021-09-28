@@ -46,13 +46,13 @@ void DefaultParticleRenderer::render(float prevTime, float nextTime, const Camer
 			batchVertex* verts; uint16_t* indices; uint32_t firstIndex;
 			batch->next(4, 6, &verts, &indices, &firstIndex);
 			verts[0].x = points[0].x; verts[0].y = points[0].y; verts[0].z = points[0].z;
-			verts[0].color = color; verts[0].u = 1.0f; verts[0].v = 1.0f;
+			verts[0].color = color; verts[0].u = 0.0f; verts[0].v = 0.0f;
 			verts[1].x = points[1].x; verts[1].y = points[1].y; verts[1].z = points[1].z;
-			verts[1].color = color; verts[1].u = 1.0f; verts[1].v = 0.0f;
+			verts[1].color = color; verts[1].u = 0.0f; verts[1].v = 1.0f;
 			verts[2].x = points[2].x; verts[2].y = points[2].y; verts[2].z = points[2].z;
-			verts[2].color = color; verts[2].u = 0.0f; verts[2].v = 0.0f;
+			verts[2].color = color; verts[2].u = 1.0f; verts[2].v = 1.0f;
 			verts[3].x = points[3].x; verts[3].y = points[3].y; verts[3].z = points[3].z;
-			verts[3].color = color; verts[3].u = 0.0f; verts[3].v = 1.0f;
+			verts[3].color = color; verts[3].u = 1.0f; verts[3].v = 0.0f;
 			indices[0] = firstIndex;
 			indices[1] = firstIndex + 3;
 			indices[2] = firstIndex + 1;

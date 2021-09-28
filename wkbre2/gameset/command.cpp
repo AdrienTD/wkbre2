@@ -47,6 +47,8 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 			conditionsWait.push_back(gs.conditions.readPtr(gsf));
 		else if (strtag == "CONDITION_WARNING")
 			conditionsWarning.push_back(gs.conditions.readPtr(gsf));
+		else if (strtag == "STAMPDOWN_OBJECT")
+			stampdownObject = gs.readObjBlueprintPtr(gsf);
 		else if (strtag == "END_COMMAND")
 			return;
 		gsf.advanceLine();

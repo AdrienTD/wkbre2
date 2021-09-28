@@ -368,6 +368,19 @@ void ClientInterface::iter()
 	if (g_mousePressed[SDL_BUTTON_RIGHT]) {
 		if (stampdownBlueprint && stampdownPlayer) {
 			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos, sendStampdownEvent);
+			if (stampdownFromCommand) {
+				const Command* cmd = &client->gameSet->commands[client->gameSet->commands.names.getIndex("Build")];
+				for (ClientGameObject* obj : selection) {
+					if (obj) {
+						if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end()) {
+							int assignmentMode = g_modCtrl ? Tags::ORDERASSIGNMODE_DO_FIRST : (g_modShift ? Tags::ORDERASSIGNMODE_DO_LAST : Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
+							client->sendBuildLastStampdownedObject(obj, assignmentMode);
+						}
+					}
+				}
+				if (!g_modShift && !g_modCtrl)
+					stampdownBlueprint = nullptr;
+			}
 		}
 		else if (rightClickCommand) {
 			Vector3 destPos = peapos;
@@ -508,6 +521,12 @@ void ClientInterface::iter()
 			//test.model = client->gameSet->modelCache.getModel("Warrior Kings Game Set\\Characters\\Peasant\\Male\\Peasant1.MESH3");
 			try {
 				test.model = stampdownBlueprint->subtypes.at(0).appearances.at(0).animations.at(0).at(0);
+				if (auto* fp = stampdownBlueprint->footprint) {
+					peapos.x = std::floor(peapos.x / 5.0f) * 5.0f + 2.5f + fp->originX;
+					peapos.z = std::floor(peapos.z / 5.0f) * 5.0f + 2.5f + fp->originZ;
+					if (client->terrain)
+						peapos.y = client->terrain->getHeightEx(peapos.x, peapos.z, stampdownBlueprint->canWalkOnWater());
+				}
 				test.transform = Matrix::getTranslationMatrix(peapos);
 				test.color = stampdownPlayer->color;
 				scene->add(&test);
@@ -519,14 +538,20 @@ void ClientInterface::iter()
 		for (auto& sfx : client->specialEffects) {
 			if (sfx.attachedObj)
 				sfx.entity.transform = sfx.attachedObj->getWorldMatrix();
-			sfx.entity.animTime = (uint32_t)((client->timeManager.currentTime - sfx.startTime) * 1000.0f);
-			scene->add(&sfx.entity);
-			drawAttachmentPoints(&sfx.entity);
+			Vector3 ttpp = sfx.entity.transform.getTranslationVector().transformScreenCoords(client->camera.sceneMatrix);
+			if (ttpp.x >= -1 && ttpp.x <= 1 && ttpp.y >= -1 && ttpp.y <= 1 && ttpp.z >= -1 && ttpp.z <= 1) {
+				sfx.entity.animTime = (uint32_t)((client->timeManager.currentTime - sfx.startTime) * 1000.0f);
+				scene->add(&sfx.entity);
+				drawAttachmentPoints(&sfx.entity);
+			}
 		}
 		for (auto& lsfx : client->loopingSpecialEffects) {
-			lsfx.second.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
-			scene->add(&lsfx.second);
-			drawAttachmentPoints(&lsfx.second);
+			Vector3 ttpp = lsfx.second.transform.getTranslationVector().transformScreenCoords(client->camera.sceneMatrix);
+			if (ttpp.x >= -1 && ttpp.x <= 1 && ttpp.y >= -1 && ttpp.y <= 1 && ttpp.z >= -1 && ttpp.z <= 1) {
+				lsfx.second.animTime = (uint32_t)(client->timeManager.currentTime * 1000.0f);
+				scene->add(&lsfx.second);
+				drawAttachmentPoints(&lsfx.second);
+			}
 		}
 		if (client->terrain)
 			scene->sunDirection = client->terrain->sunVector;

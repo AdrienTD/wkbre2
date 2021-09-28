@@ -1049,6 +1049,7 @@ void Server::addClient(NetLink* link)
 {
 	clientLinks.push_back(link);
 	clientPlayerObjects.emplace_back();
+	clientInfos.emplace_back();
 }
 
 void Server::removeClient(NetLink* link)
@@ -1060,6 +1061,7 @@ void Server::removeClient(NetLink* link)
 		player->clientIndex = -1;
 	clientLinks.erase(it);
 	clientPlayerObjects.erase(clientPlayerObjects.begin() + clientIndex);
+	clientInfos.erase(clientInfos.begin() + clientIndex);
 }
 
 void Server::tick()
@@ -1240,6 +1242,7 @@ void Server::tick()
 				obj->setPosition(pos);
 				if (sendEvent)
 					obj->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
+				clientInfos[clientIndex].lastStampdown = obj;
 				break;
 			}
 			case NETSRVMSG_START_LEVEL: {
@@ -1277,6 +1280,15 @@ void Server::tick()
 			case NETSRVMSG_TERMINATE_OBJECT: {
 				if (ServerGameObject* obj = findObject(br.readUint32())) {
 					deleteObject(obj);
+				}
+				break;
+			}
+			case NETSRVMSG_BUILD_LAST_STAMPDOWNED_OBJECT: {
+				uint32_t objid = br.readUint32();
+				if (ServerGameObject* obj = findObject(objid)) {
+					int assignmentMode = br.readUint32();
+					int cmdid = gameSet->commands.names.getIndex("Build");
+					gameSet->commands[cmdid].execute(obj, clientInfos[clientIndex].lastStampdown, assignmentMode);
 				}
 				break;
 			}

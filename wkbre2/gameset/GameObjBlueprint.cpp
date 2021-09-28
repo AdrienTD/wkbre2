@@ -278,6 +278,13 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			}
 			break;
 		}
+		case Tags::CBLUEPRINT_CAN_BUILD: {
+			auto name = gsf.nextString(true);
+			int x = gameSet->commands.names.getIndex("Build " + name);
+			if (x != -1)
+				offeredCommands.push_back(&gameSet->commands[x]);
+			break;
+		}
 		}
 		gsf.advanceLine();
 	}

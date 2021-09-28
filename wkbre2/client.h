@@ -91,6 +91,7 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	void sendCameraPathEnded(int camPathIndex);
 	void sendGameSpeedChange(float nextSpeed);
 	void sendTerminateObject(ClientGameObject* obj);
+	void sendBuildLastStampdownedObject(ClientGameObject* obj, int assignmentMode);
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }
 

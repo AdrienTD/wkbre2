@@ -41,6 +41,7 @@ struct ClientInterface {
 	GameObjBlueprint *stampdownBlueprint = nullptr;
 	CliGORef stampdownPlayer;
 	bool sendStampdownEvent = false;
+	bool stampdownFromCommand = false;
 	std::unordered_set<CliGORef> selection;
 	TextureCache uiTexCache;
 private:
