@@ -18,6 +18,9 @@
 
 #include <mpg123.h>
 
+#include "settings.h"
+#include <nlohmann/json.hpp>
+
 struct OALSoundPlayer : SoundPlayer {
 	static constexpr size_t MAX_SOURCES = 64;
 
@@ -223,6 +226,8 @@ struct OALSoundPlayer : SoundPlayer {
 	}
 
 	virtual void playMusic(const std::string& filePath) override {
+		if (!g_settings.value<bool>("musicEnabled", true))
+			return;
 		if (musicLoadingThread.joinable())
 			musicLoadingThread.join();
 		isMusicLoading = true;

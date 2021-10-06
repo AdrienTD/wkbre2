@@ -542,7 +542,7 @@ void ObjectReferenceTask::onUpdate()
 	if (this->target) {
 		ServerGameObject* go = this->order->gameObject;
 		float prox = this->proximity;
-		if (prox > 0.0f) prox = std::max(prox - (destination - target->position).len2xz(), 0.1f);
+		if (prox >= 0.0f) prox = std::max(prox - (destination - target->position).len2xz(), 0.1f);
 		if (prox < 0.0f || (go->position - destination).sqlen2xz() < prox * prox) {
 			this->startTriggers();
 			if (go->movementController.isMoving())
@@ -550,7 +550,9 @@ void ObjectReferenceTask::onUpdate()
 			if (!proximitySatisfied) {
 				proximitySatisfied = true;
 				blueprint->proximitySatisfiedSequence.run(order->gameObject);
-				//
+				blueprint->movementCompletedSequence.run(order->gameObject);
+
+				// Set the task animation
 				int animtoplay = -1;
 				for (const auto& ea : blueprint->equAnims) {
 					SrvScriptContext ctx(Server::instance, this->order->gameObject);
@@ -563,6 +565,12 @@ void ObjectReferenceTask::onUpdate()
 					animtoplay = blueprint->defaultAnim;
 				if (animtoplay != -1)
 					go->setAnimation(animtoplay, blueprint->playAnimationOnce);
+
+				// Set orientation towards target, TODO: update when target moves (perhaps on Client?)
+				if (go->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+					Vector3 dir = (target->position - go->position).normal2xz();
+					go->setOrientation(Vector3(0, std::atan2(dir.x, -dir.z), 0));
+				}
 			}
 		}
 		else {

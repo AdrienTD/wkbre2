@@ -48,6 +48,8 @@ struct TaskBlueprint {
 	int defaultAnim = -1;
 	bool playAnimationOnce = false;
 
+	ActionSequence movementCompletedSequence;
+
 	void parse(GSFileParser &gsf, GameSet &gs);
 };
 

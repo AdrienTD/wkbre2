@@ -111,6 +111,8 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			rejectTargetIfItIsTerminated = true;
 		else if (tag == "PLAY_ANIMATION_ONCE")
 			playAnimationOnce = true;
+		else if (tag == "MOVEMENT_COMPLETED_SEQUENCE")
+			movementCompletedSequence.init(gsf, gs, "END_MOVEMENT_COMPLETED_SEQUENCE");
 		gsf.advanceLine();
 	}
 }
