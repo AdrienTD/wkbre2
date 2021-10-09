@@ -879,8 +879,11 @@ void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 			if (true /*!to.mode*/) {
 				auto ro = to.rotate(oldorientation.y);
 				int px = ox + ro.first, pz = oz + ro.second;
-				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ)
-					server->tiles[pz * trnNumX + px].building = nullptr;
+				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
+					auto& tile = server->tiles[pz * trnNumX + px];
+					if (tile.building == this)
+						tile.building = nullptr;
+				}
 			}
 		}
 		// take tiles from new position
@@ -891,9 +894,13 @@ void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 			if (true /*!to.mode*/) {
 				auto ro = to.rotate(neworientation.y);
 				int px = ox + ro.first, pz = oz + ro.second;
-				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ)
-					server->tiles[pz * trnNumX + px].building = this;
-					server->tiles[pz * trnNumX + px].buildingPassable = to.mode;
+				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
+					auto& tile = server->tiles[pz * trnNumX + px];
+					if (!tile.building || tile.buildingPassable) {
+						tile.building = this;
+						tile.buildingPassable = to.mode;
+					}
+				}
 			}
 		}
 	}
@@ -1171,6 +1178,7 @@ void Server::tick()
 		}
 		else if (obj->trajectory.isMoving()) {
 			obj->updatePosition(obj->trajectory.getPosition(timeManager.currentTime));
+			obj->orientation = obj->trajectory.getRotationAngles(timeManager.currentTime);
 		}
 		if (obj->blueprint->receiveSightRangeEvents) {
 			obj->lookForSightRangeEvents();

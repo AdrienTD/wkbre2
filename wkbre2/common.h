@@ -75,8 +75,8 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	Matrix getWorldMatrix() {
 		return Matrix::getScaleMatrix(scale)
-			* Matrix::getRotationYMatrix(-orientation.y)
 			* Matrix::getRotationXMatrix(-orientation.x)
+			* Matrix::getRotationYMatrix(-orientation.y)
 			* Matrix::getRotationZMatrix(-orientation.z)
 			* Matrix::getTranslationMatrix(position);
 	}

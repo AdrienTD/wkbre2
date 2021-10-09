@@ -144,24 +144,40 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 	using namespace Tags;
 	//if ((obj->blueprint->bpClass == GAMEOBJCLASS_BUILDING) || (obj->blueprint->bpClass == GAMEOBJCLASS_CHARACTER)) {
 	if(true) {
-		Vector3 side = client->camera.direction.cross(Vector3(0, 1, 0));
-		float dist = client->camera.direction.dot(obj->position - client->camera.position);
-		if (dist < client->camera.nearDist || dist > client->camera.farDist)
+		//Vector3 side = client->camera.direction.cross(Vector3(0, 1, 0));
+		//float dist = client->camera.direction.dot(obj->position - client->camera.position);
+		//if (dist < client->camera.nearDist || dist > client->camera.farDist)
+		//	goto drawsub;
+
+		Model* model = nullptr;
+		const auto& ap = obj->blueprint->subtypes[obj->subtype].appearances[obj->appearance];
+		auto it = ap.animations.find(obj->animationIndex);
+		if (it == ap.animations.end())
+			it = ap.animations.find(0);
+		if (it != ap.animations.end()) {
+			const auto& anim = it->second;
+			if (!anim.empty())
+				model = anim[obj->animationVariant];
+		}
+		if (!model)
+			model = obj->blueprint->representAs;
+		if (!model)
 			goto drawsub;
-		Vector3 ttpp = obj->position.transformScreenCoords(client->camera.sceneMatrix);
-		if (!(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)) {
-			Model* model = nullptr;
-			const auto &ap = obj->blueprint->subtypes[obj->subtype].appearances[obj->appearance];
-			auto it = ap.animations.find(obj->animationIndex);
-			if (it == ap.animations.end())
-				it = ap.animations.find(0);
-			if (it != ap.animations.end()) {
-				const auto& anim = it->second;
-				if (!anim.empty())
-					model = anim[obj->animationVariant];
-			}
-			if (!model)
-				model = obj->blueprint->representAs;
+
+		Vector3 sphereCenter = model->getSphereCenter().transform(obj->getWorldMatrix());
+		float sphereRadius = model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z });
+		Vector3 ttpp = sphereCenter.transformScreenCoords(client->camera.sceneMatrix);
+		bool onCam = (client->camera.position - sphereCenter).len3() < sphereRadius;
+		if (!onCam)
+			onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
+		if (!onCam) {
+			Vector3 camdir = client->camera.direction.normal();
+			Vector3 H = client->camera.position + camdir * camdir.dot(sphereCenter - client->camera.position);
+			Vector3 sphereEnd = sphereCenter + (H - sphereCenter).normal() * sphereRadius;
+			ttpp = sphereEnd.transformScreenCoords(client->camera.sceneMatrix);
+			onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
+		}
+		if (onCam) {
 			if (model) {
 				obj->sceneEntity.model = model;
 				obj->sceneEntity.transform = obj->getWorldMatrix();

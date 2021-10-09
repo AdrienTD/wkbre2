@@ -569,7 +569,8 @@ void ObjectReferenceTask::onUpdate()
 				// Set orientation towards target, TODO: update when target moves (perhaps on Client?)
 				if (go->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
 					Vector3 dir = (target->position - go->position).normal2xz();
-					go->setOrientation(Vector3(0, std::atan2(dir.x, -dir.z), 0));
+					if (!(dir.x == 0.0f && dir.z == 0.0f))
+						go->setOrientation(Vector3(0, std::atan2(dir.x, -dir.z), 0));
 				}
 			}
 		}

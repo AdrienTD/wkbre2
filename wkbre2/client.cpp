@@ -30,6 +30,7 @@ void Client::tick()
 		}
 		if (obj->trajectory.isMoving()) {
 			obj->position = obj->trajectory.getPosition(timeManager.currentTime);
+			obj->orientation = obj->trajectory.getRotationAngles(timeManager.currentTime);
 		}
 		for (auto &it : obj->children)
 			for (ClientGameObject *obj : it.second)

@@ -7,6 +7,8 @@ public:
 	const float gravity = -9.81f;
 
 	Vector3 getPosition(float time);
+	Vector3 getDirection(float time);
+	Vector3 getRotationAngles(float time);
 	void start(const Vector3& initPos, const Vector3& initVel, float startTime);
 	bool isMoving() { return m_started; }
 
