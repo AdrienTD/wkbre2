@@ -15,7 +15,8 @@ void Anim::load(const char *filename) {
 	uint32_t ver = br.readUint32();
 	this->meshname = br.readStringZ();
 	this->duration = br.readUint32();
-	br.seek(4 * 4); // sphere
+	this->sphereCenter = br.readVector3();
+	this->sphereRadius = br.readFloat();
 	this->numVertices = br.readUint32();
 	uint32_t numVertexGroups = this->numVertices / 3 + ((this->numVertices % 3) ? 1 : 0);
 	for (Anim::AnimPosCoord &pc : this->coords) {

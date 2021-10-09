@@ -68,8 +68,8 @@ const Material* AnimatedModel::getMaterials() { prepare();  return this->staticM
 const uint32_t* AnimatedModel::getMaterialIds() { prepare(); return this->staticModel->getMaterialIds(); }
 size_t AnimatedModel::getNumMaterials() { prepare(); return this->staticModel->getNumMaterials(); }
 StaticModel* AnimatedModel::getStaticModel() { prepare(); return this->staticModel; }
-Vector3 AnimatedModel::getSphereCenter() { prepare(); return this->staticModel->getSphereCenter(); }
-float AnimatedModel::getSphereRadius() { prepare(); return this->staticModel->getSphereRadius(); }
+Vector3 AnimatedModel::getSphereCenter() { prepare(); return anim.sphereCenter; }
+float AnimatedModel::getSphereRadius() { prepare(); return anim.sphereRadius; }
 float AnimatedModel::getDuration() { prepare(); return (float)this->anim.duration / 1000.0f; }
 const float* AnimatedModel::interpolate(uint32_t animTime) { prepare(); staticModel->prepare(); return anim.interpolate(animTime, staticModel->mesh); }
 const Vector3* AnimatedModel::interpolateNormals(uint32_t animTime) { prepare(); staticModel->prepare(); return anim.interpolateNormals(animTime, staticModel->mesh); }

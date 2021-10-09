@@ -36,6 +36,7 @@ struct Anim
 	//Mesh *mesh;
 	std::string meshname;
 	uint32_t duration;
+	Vector3 sphereCenter; float sphereRadius;
 	uint32_t numVertices;
 	std::array<AnimPosCoord,3> coords;
 	//uint32_t numAttachPoints;

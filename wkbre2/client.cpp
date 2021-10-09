@@ -40,6 +40,13 @@ void Client::tick()
 		walkObj(level, walkObj);
 
 	// Camera paths
+	auto resetCameraMode = [this]() {
+		if (cameraCurrentPath) {
+			sendCameraPathEnded(cameraPathIndex);
+		}
+		cameraMode = 0;
+		cameraCurrentPath = nullptr;
+	};
 	if (cameraMode == 1) {
 		float camTime = (float)(SDL_GetTicks() - cameraStartTime) / 1000.0f;
 		float prevTime = 0.0f, nextTime = 0.0f;
@@ -51,9 +58,7 @@ void Client::tick()
 				break;
 		}
 		if (nextNode == cameraPathPos.size()) {
-			cameraMode = 0;
-			cameraCurrentPath = nullptr;
-			sendCameraPathEnded(cameraPathIndex);
+			resetCameraMode();
 		}
 		else {
 			auto p0 = cameraPathPos[nextNode - 1];
@@ -325,10 +330,9 @@ void Client::tick()
 				break;
 			}
 			case NETCLIMSG_SNAP_CAMERA_POSITION: {
+				resetCameraMode();
 				camera.position = br.readVector3();
 				camera.orientation = br.readVector3();
-				cameraMode = 0;
-				cameraCurrentPath = nullptr;
 			}
 			case NETCLIMSG_STORE_CAMERA_POSITION: {
 				storedCameraPosition = camera.position;
@@ -336,13 +340,13 @@ void Client::tick()
 				break;
 			}
 			case NETCLIMSG_RESTORE_CAMERA_POSITION: {
+				resetCameraMode();
 				camera.position = storedCameraPosition;
 				camera.orientation = storedCameraOrientation;
-				cameraMode = 0;
-				cameraCurrentPath = nullptr;
 				break;
 			}
 			case NETCLIMSG_PLAY_CAMERA_PATH: {
+				resetCameraMode();
 				int camPathIndex = br.readUint32();
 				const CameraPath& gspath = gameSet->cameraPaths[camPathIndex]; // TODO: boundary check
 				cameraMode = 1;
@@ -364,8 +368,7 @@ void Client::tick()
 				break;
 			}
 			case NETCLIMSG_STOP_CAMERA_PATH: {
-				cameraMode = 0;
-				cameraCurrentPath = nullptr;
+				resetCameraMode();
 				break;
 			}
 			case NETCLIMSG_OBJECT_TRAJECTORY_STARTED: {
