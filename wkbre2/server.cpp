@@ -298,6 +298,11 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 								else if (tsktag == "LAST_DESTINATION_VALID") {
 									task.lastDestinationValid = gsf.nextInt();
 								}
+								else if (tsktag == "SPAWN_BLUEPRINT") {
+									if (SpawnTask* spawnTask = dynamic_cast<SpawnTask*>(taskptr)) {
+										spawnTask->toSpawn = gameSet->readObjBlueprintPtr(gsf);
+									}
+								}
 								else if (tsktag == "END_TASK") {
 									break;
 								}

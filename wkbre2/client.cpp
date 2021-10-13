@@ -365,6 +365,9 @@ void Client::tick()
 					cameraPathPos.push_back({ op.position, op.rotation });
 					cameraPathDur.push_back(node.duration->eval(&ctx));
 				}
+				if (!cameraPathPos.empty()) {
+					std::tie(camera.position, camera.orientation) = cameraPathPos.front();
+				}
 				break;
 			}
 			case NETCLIMSG_STOP_CAMERA_PATH: {

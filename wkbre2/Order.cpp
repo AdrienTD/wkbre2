@@ -425,6 +425,12 @@ void AttachmentPointTrigger::parse(GSFileParser& gsf, GameSet& gs)
 
 void MissileTask::onStart()
 {
+	// remove the missile object if it has no target
+	if (!this->target) {
+		Server::instance->deleteObject(this->order->gameObject);
+		return;
+	}
+
 	SrvScriptContext ssc{ Server::instance, this->order->gameObject };
 	float speed = this->order->gameObject->blueprint->missileSpeed->eval(&ssc);
 
