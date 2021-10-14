@@ -109,11 +109,20 @@ void Client::tick()
 	}
 
 	if (serverLink) {
+		uint32_t pstime = SDL_GetTicks();
+		if ((pstime - dbgLastMessageCountTime) >= 1000) {
+			dbgLastMessageCountTime = pstime;
+			dbgNumMessagesPerSec = dbgNumMessagesInCurrentSec;
+			dbgNumMessagesInCurrentSec = 0;
+		}
+		dbgNumMessagesPerTick = 0;
+
 		int pcnt = 1000000; //100;
 		while (serverLink->available() && (pcnt--)) {
 			NetPacket packet = serverLink->receive();
 			BinaryReader br(packet.data.c_str());
 			uint8_t type = br.readUint8();
+			++dbgNumMessagesPerTick;
 
 			switch (type) {
 			case NETCLIMSG_TEST: {
@@ -523,6 +532,7 @@ void Client::tick()
 			}
 			}
 		}
+		dbgNumMessagesInCurrentSec += dbgNumMessagesPerTick;
 	}
 }
 

@@ -70,6 +70,9 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	std::list<SpecialEffect> specialEffects;
 	std::multimap<std::pair<CliGORef, int>, SceneEntity> loopingSpecialEffects;
 
+	int dbgNumMessagesPerTick = 0, dbgNumMessagesInCurrentSec = 0, dbgNumMessagesPerSec = 0;
+	uint32_t dbgLastMessageCountTime = 0;
+
 	//void loadSaveGame(const char *filename);
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 

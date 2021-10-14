@@ -178,6 +178,8 @@ void ClientDebugger::draw()
 		diagLastCheck = sdlTime;
 	}
 	ImGui::Text("serverTicks/s = %i", serverTicks);
+	ImGui::Text("clientMsgs/tick = %i", client->dbgNumMessagesPerTick);
+	ImGui::Text("clientMsgs/s = %i", client->dbgNumMessagesPerSec);
 	ImGui::End();
 	g_diag_animHits = 0;
 	g_diag_animMisses = 0;
