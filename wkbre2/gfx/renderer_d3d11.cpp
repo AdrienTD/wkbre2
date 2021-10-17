@@ -274,6 +274,26 @@ struct D3D11Renderer : IRenderer {
 
 		msaaNumSamples = g_settings.value<int>("msaaNumSamples", 1);
 
+		ComPtr<IDXGIFactory> dxgiFactory0;
+		ComPtr<IDXGIAdapter> dxgiAdapter0;
+		std::vector<ComPtr<IDXGIAdapter>> dxgiAdapters;
+		HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory), &dxgiFactory0);
+		assert(!FAILED(hr));
+		int adapterIndex = 0;
+		while (dxgiFactory0->EnumAdapters(adapterIndex++, &dxgiAdapter0) != DXGI_ERROR_NOT_FOUND) {
+			DXGI_ADAPTER_DESC desc;
+			dxgiAdapter0->GetDesc(&desc);
+			dxgiAdapters.push_back(std::move(dxgiAdapter0));
+		}
+
+		dxgiAdapter0.Reset();
+		D3D_DRIVER_TYPE driverType = D3D_DRIVER_TYPE_HARDWARE;
+		adapterIndex = g_settings.value<int>("d3d11AdapterIndex", -1);
+		if (adapterIndex >= 0 && adapterIndex < dxgiAdapters.size()) {
+			dxgiAdapter0 = dxgiAdapters[adapterIndex];
+			driverType = D3D_DRIVER_TYPE_UNKNOWN;
+		}
+		
 		D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_10_1 };
 		DXGI_SWAP_CHAIN_DESC swapChainDesc;
 		ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
@@ -288,7 +308,7 @@ struct D3D11Renderer : IRenderer {
 		swapChainDesc.SampleDesc.Count = msaaNumSamples;
 		swapChainDesc.SampleDesc.Quality = 0;
 		swapChainDesc.Windowed = TRUE;
-		HRESULT hres = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, featureLevels, std::size(featureLevels), D3D11_SDK_VERSION, &swapChainDesc, &dxgiSwapChain, &ddDevice, &featureLevel, &ddImmediateContext);
+		HRESULT hres = D3D11CreateDeviceAndSwapChain(dxgiAdapter0.Get(), driverType, NULL, 0, featureLevels, std::size(featureLevels), D3D11_SDK_VERSION, &swapChainDesc, &dxgiSwapChain, &ddDevice, &featureLevel, &ddImmediateContext);
 		assert(!FAILED(hres));
 
 		ComPtr<ID3DBlob> vsBlob = compileShader("VS", "vs_4_0");
