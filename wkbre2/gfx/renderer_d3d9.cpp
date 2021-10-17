@@ -44,6 +44,8 @@ IDirect3D9 *d3d9; IDirect3DDevice9 *ddev = 0;
 D3DPRESENT_PARAMETERS dpp = {0, 0, D3DFMT_UNKNOWN, 0, D3DMULTISAMPLE_NONE, 0,
 	D3DSWAPEFFECT_DISCARD, 0, TRUE, TRUE, D3DFMT_D24X8, D3DPRESENTFLAG_DISCARD_DEPTHSTENCIL, 0, 0/*D3DPRESENT_INTERVAL_IMMEDIATE*/};
 
+D3DPRIMITIVETYPE g_d3d9currentTopology = D3DPT_TRIANGLELIST;
+
 ///////////////
 // Rect
 typedef struct {float x, y, z, rhw; DWORD color; float u, v;} MYVERTEX;
@@ -179,7 +181,8 @@ struct RBatchD3D9 : public RBatch
 		if(!curverts) return;
 		ddev->SetStreamSource(0, vbuf, 0, sizeof(batchVertex));
 		ddev->SetIndices(ibuf);
-		ddev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, curverts, 0, curindis / 3);
+		int vertsPerPrim = (g_d3d9currentTopology == D3DPT_LINELIST) ? 2 : 3;
+		ddev->DrawIndexedPrimitive(g_d3d9currentTopology, 0, 0, curverts, 0, curindis / vertsPerPrim);
 		curverts = curindis = 0;
 	}
 	
@@ -278,6 +281,8 @@ struct D3D9Renderer : public IRenderer
 		ddev->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATEREQUAL);
 		ddev->SetRenderState(D3DRS_ALPHAREF, 240);
 		ddev->SetRenderState(D3DRS_ZENABLE, TRUE);
+		ddev->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
+		ddev->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
 		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
 		ddev->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 		ddev->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
@@ -416,6 +421,8 @@ struct D3D9Renderer : public IRenderer
 		ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
 		ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 		ddev->SetRenderState(D3DRS_ZENABLE, TRUE);
+		ddev->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
+		ddev->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
 		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
 		ddev->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 		ddev->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
@@ -526,7 +533,8 @@ struct D3D9Renderer : public IRenderer
 
 	void DrawBuffer(int first, int count)
 	{
-		ddev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, maxvbi, first, count/3);
+		int vertsPerPrim = (g_d3d9currentTopology == D3DPT_LINELIST) ? 2 : 3;
+		ddev->DrawIndexedPrimitive(g_d3d9currentTopology, 0, 0, maxvbi, first, count / vertsPerPrim);
 	}
 
 	void EnableScissor()
@@ -608,6 +616,28 @@ struct D3D9Renderer : public IRenderer
 		ddev->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
 	}
 
+	virtual void BeginParticles() override {
+		ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+		ddev->SetRenderState(D3DRS_LIGHTING, FALSE);
+		ddev->SetRenderState(D3DRS_ZENABLE, TRUE);
+		ddev->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
+		ddev->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+		ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+		ddev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+		ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+		ddev->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+		ddev->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+		ddev->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
+	};
+
+	virtual void SetLineTopology() override {
+		g_d3d9currentTopology = D3DPT_LINELIST;
+	}
+
+	virtual void SetTriangleTopology() override {
+		g_d3d9currentTopology = D3DPT_TRIANGLELIST;
+	}
 };
 
 IRenderer *CreateD3D9Renderer() {return new D3D9Renderer;}
