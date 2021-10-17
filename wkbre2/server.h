@@ -161,7 +161,8 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	void storeCameraPosition(ServerGameObject* player);
 	void restoreCameraPosition(ServerGameObject* player);
 	void playCameraPath(ServerGameObject* player, int camPathIndex);
-	void stopCameraPath(ServerGameObject* player);
+	void stopCameraPath(ServerGameObject* player, bool skipActions);
+	void skipCameraPath(ServerGameObject* player);
 	void setGameSpeed(float nextSpeed);
 	void playMusic(ServerGameObject* player, int musicTag);
 

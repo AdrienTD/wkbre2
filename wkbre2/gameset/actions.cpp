@@ -888,12 +888,14 @@ struct ActionPlayCameraPath : Action {
 
 struct ActionStopCameraPathPlayback : Action {
 	std::unique_ptr<ObjectFinder> finder;
+	bool skipActions = false;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject* obj : finder->eval(ctx))
-			ctx->server->stopCameraPath(obj);
+			ctx->server->stopCameraPath(obj, skipActions);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
+		skipActions = gsf.nextString() == "SKIP_ACTIONS";
 	}
 };
 
@@ -1242,6 +1244,17 @@ struct ActionDetachLoopingSpecialEffect : Action {
 	}
 };
 
+struct ActionSkipCameraPathPlayback : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			ctx->server->skipCameraPath(obj);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1323,6 +1336,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_CREATE_OBJECT: action = new ActionCreateObject; break;
 	case Tags::ACTION_ATTACH_LOOPING_SPECIAL_EFFECT: action = new ActionAttachLoopingSpecialEffect; break;
 	case Tags::ACTION_DETACH_LOOPING_SPECIAL_EFFECT: action = new ActionDetachLoopingSpecialEffect; break;
+	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK: action = new ActionSkipCameraPathPlayback; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:
@@ -1354,7 +1368,6 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_CONQUER_LEVEL:
 	case Tags::ACTION_DISPLAY_LOAD_GAME_MENU:
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION:
-	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK:
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION:
 	case Tags::ACTION_LOCK_TIME:
 	case Tags::ACTION_UNLOCK_TIME:

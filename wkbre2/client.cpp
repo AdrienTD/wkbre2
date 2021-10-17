@@ -40,8 +40,8 @@ void Client::tick()
 		walkObj(level, walkObj);
 
 	// Camera paths
-	auto resetCameraMode = [this]() {
-		if (cameraCurrentPath) {
+	auto resetCameraMode = [this](bool skipActions = false) {
+		if (cameraCurrentPath && !skipActions) {
 			sendCameraPathEnded(cameraPathIndex);
 		}
 		cameraMode = 0;
@@ -380,7 +380,8 @@ void Client::tick()
 				break;
 			}
 			case NETCLIMSG_STOP_CAMERA_PATH: {
-				resetCameraMode();
+				bool skipActions = br.readUint8();
+				resetCameraMode(skipActions);
 				break;
 			}
 			case NETCLIMSG_OBJECT_TRAJECTORY_STARTED: {
@@ -528,6 +529,13 @@ void Client::tick()
 						loopingSpecialEffects.erase(it);
 					}
 				}
+				break;
+			}
+			case NETCLIMSG_SKIP_CAMERA_PATH: {
+				if (cameraCurrentPath && !cameraPathPos.empty()) {
+					std::tie(camera.position, camera.orientation) = cameraPathPos.back();
+				}
+				resetCameraMode();
 				break;
 			}
 			}

@@ -1026,9 +1026,16 @@ void Server::playCameraPath(ServerGameObject* player, int camPathIndex)
 	sendTo(player, msg);
 }
 
-void Server::stopCameraPath(ServerGameObject* player)
+void Server::stopCameraPath(ServerGameObject* player, bool skipActions)
 {
 	NetPacketWriter msg{ NETCLIMSG_STOP_CAMERA_PATH };
+	msg.writeUint8(skipActions);
+	sendTo(player, msg);
+}
+
+void Server::skipCameraPath(ServerGameObject* player)
+{
+	NetPacketWriter msg{ NETCLIMSG_SKIP_CAMERA_PATH };
 	sendTo(player, msg);
 }
 
