@@ -112,7 +112,7 @@ void Terrain::readBCM(const char * filename) {
 	skyTextureDirectory = std::wstring((wchar_t*)fp, strs); fp += strs * 2;
 
 	std::string ctexDbPath(texDbPath.begin(), texDbPath.end());
-	texDb.load(ctexDbPath.c_str());
+	texDb.loadAndTranslate(ctexDbPath.c_str(), filename);
 
 	int numVerts = (width + 1)*(height + 1);
 	vertices = (uint8_t*)malloc(numVerts);
@@ -211,7 +211,7 @@ void Terrain::readSNR(const char* filename)
 		else if (tag == "SCENARIO_TEXTURE_DATABASE") {
 			auto str = gsf.nextString(true);
 			texDbPath = std::wstring(str.begin(), str.end());
-			texDb.load(str.c_str());
+			texDb.loadAndTranslate(str.c_str(), filename);
 		}
 		else if (tag == "SCENARIO_TERRAIN") {
 			auto str = gsf.nextString(true);

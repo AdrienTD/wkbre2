@@ -40,6 +40,8 @@ struct TerrainTextureDatabase
 	std::vector<std::string> textureFilenames;
 
 	void load(const char *filename);
+	void translate(const char* ltttFilePath);
+	void loadAndTranslate(const char* filename, const std::string& terrainFilePath);
 	TerrainTextureDatabase() {}
 	TerrainTextureDatabase(const char *filename) { load(filename); }
 };

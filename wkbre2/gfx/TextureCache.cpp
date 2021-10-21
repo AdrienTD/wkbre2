@@ -9,7 +9,7 @@ texture TextureCache::loadTexture(const char * fn, int mipmaps)
 	if (FileExists(fn))
 		bm = LoadBitmap(fn);
 	else
-		bm = LoadBitmap("netexfb.tga");
+		return nullptr; //bm = LoadBitmap("netexfb.tga");
 	texture t = gfx->CreateTexture(bm, mipmaps);
 	FreeBitmap(bm);
 	return t;

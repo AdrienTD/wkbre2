@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include "tags.h"
+#include "util/BinaryReader.h"
 
 void TerrainTextureDatabase::load(const char * filename)
 {
@@ -65,4 +66,69 @@ void TerrainTextureDatabase::load(const char * filename)
 		}
 		parser.advanceLine();
 	}
+}
+
+void TerrainTextureDatabase::translate(const char* ltttFilePath)
+{
+	if (!FileExists(ltttFilePath)) {
+		printf("No LTTT found\n");
+		return;
+	}
+	char* lttt; int siz;
+	LoadFile(ltttFilePath, &lttt, &siz);
+	BinaryReader br{ lttt };
+	uint32_t header = br.readUint32();
+	uint32_t version = br.readUint32();
+
+	std::vector<std::string> destNames, srcNames;
+	destNames.resize(br.readUint16());
+	for (auto& str : destNames)
+		str = "Packed\\" + br.readStringZ() + ".pcx";
+	srcNames.resize(br.readUint16());
+	for (auto& str : srcNames)
+		str = br.readStringZ();
+
+	struct TransEntry {
+		uint8_t position;
+		std::string textureFilePath;
+		bool operator==(const TransEntry& e) const { return position == e.position && stricmp(textureFilePath.c_str(), e.textureFilePath.c_str()) == 0; }
+		bool operator<(const TransEntry& e) const { return (position != e.position) ? (position < e.position) : stricmp(textureFilePath.c_str(), e.textureFilePath.c_str()) < 0; }
+	};
+	uint32_t numTranslations = br.readUint32();
+	std::map<TransEntry, TransEntry> translations;
+	for (uint32_t i = 0; i < numTranslations; i++) {
+		uint16_t srcIndex = br.readUint16();
+		uint8_t srcPos = br.readUint8();
+		uint16_t destIndex = br.readUint16();
+		uint8_t destPos = br.readUint8();
+
+		translations[{srcPos, srcNames[srcIndex]}] = { destPos, destNames[destIndex] };
+	}
+
+	free(lttt);
+
+	for (auto& grp : groups) {
+		for (auto& e_tex : grp.second->textures) {
+			auto& tex = *e_tex.second;
+			uint8_t pos = ((tex.starty / 64) << 2) | (tex.startx / 64);
+			auto it = translations.find({ pos, tex.file });
+			if (it != translations.end()) {
+				auto& tr = it->second;
+				tex.startx = (tr.position & 3) * 64;
+				tex.starty = ((tr.position >> 2) & 3) * 64;
+				tex.file = tr.textureFilePath;
+			}
+		}
+	}
+}
+
+void TerrainTextureDatabase::loadAndTranslate(const char* filename, const std::string& terrainFilePath)
+{
+	load(filename);
+	size_t namepos = terrainFilePath.rfind('\\');
+	if (namepos != std::string::npos) namepos += 1; else namepos = 0;
+	size_t endpos = terrainFilePath.rfind('.');
+	std::string name = terrainFilePath.substr(namepos, (endpos == std::string::npos) ? endpos : endpos - namepos);
+	std::string ltttFilePath = "Maps\\Map_Textures\\" + name + ".lttt";
+	translate(ltttFilePath.c_str());
 }
