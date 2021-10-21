@@ -41,12 +41,8 @@ struct TerrainTextureDatabase
 
 	void load(const char *filename);
 	void translate(const char* ltttFilePath);
-	void loadAndTranslate(const char* filename, const std::string& terrainFilePath);
 	TerrainTextureDatabase() {}
 	TerrainTextureDatabase(const char *filename) { load(filename); }
-};
 
-void FreeLTTT();
-void FreeTerrainTextures();
-void LoadLTTT(char *fn);
-void LoadTerrainTextures();
+	static std::string getLTTTPath(const std::string& terrainFilePath);
+};

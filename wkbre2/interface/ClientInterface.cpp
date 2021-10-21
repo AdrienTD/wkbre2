@@ -185,7 +185,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
 				obj->sceneEntity.flags = 0;
 				if (obj->animClamped) obj->sceneEntity.flags |= SceneEntity::SEFLAG_ANIM_CLAMP_END;
-				if (selection.count(obj) >= 1) obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTNING;
+				if (selection.count(obj) >= 1) obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
 				scene->add(&obj->sceneEntity);
 				numObjectsDrawn++;
 				// Attachment points
@@ -210,7 +210,6 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 							if (col.first) {
 								float dist = (client->camera.position - col.second).sqlen3();
 								if (dist < nextSelObjDistance) {
-									obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTNING;
 									nextSelectedObject = obj;
 									nextSelObjDistance = dist;
 								}
@@ -527,6 +526,8 @@ void ClientInterface::iter()
 		attachSceneEntities.clear();
 		if (client->level)
 			drawObject(client->level);
+		if (nextSelectedObject)
+			nextSelectedObject->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
 		// test
 		//Vector3 peapos = client->camera.position + getRay(client->camera).normal() * 16;
 		peapos = Vector3(0, 0, 0);

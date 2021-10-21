@@ -59,7 +59,7 @@ void DefaultSceneRenderer::render()
 					bver[i].x = postver.x;
 					bver[i].y = postver.y;
 					bver[i].z = postver.z;
-					if (ent->flags & ent->SEFLAG_NOLIGHTNING)
+					if (ent->flags & ent->SEFLAG_NOLIGHTING)
 						bver[i].color = 0xFFFFFFFF;
 					else
 						bver[i].color = (int)(std::max(160.0f, std::min(255.0f, (norms[tind.normal].transformNormal(ent->transform).normal().dot(sunNormal) + 1.0f) * 255 / 2))) * 0x010101 + 0xFF000000;

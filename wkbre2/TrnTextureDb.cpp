@@ -122,13 +122,11 @@ void TerrainTextureDatabase::translate(const char* ltttFilePath)
 	}
 }
 
-void TerrainTextureDatabase::loadAndTranslate(const char* filename, const std::string& terrainFilePath)
+std::string TerrainTextureDatabase::getLTTTPath(const std::string& terrainFilePath)
 {
-	load(filename);
 	size_t namepos = terrainFilePath.rfind('\\');
 	if (namepos != std::string::npos) namepos += 1; else namepos = 0;
 	size_t endpos = terrainFilePath.rfind('.');
 	std::string name = terrainFilePath.substr(namepos, (endpos == std::string::npos) ? endpos : endpos - namepos);
-	std::string ltttFilePath = "Maps\\Map_Textures\\" + name + ".lttt";
-	translate(ltttFilePath.c_str());
+	return "Maps\\Map_Textures\\" + name + ".lttt";
 }
