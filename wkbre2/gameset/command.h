@@ -7,7 +7,7 @@
 
 struct ServerGameObject;
 struct OrderBlueprint;
-struct Cursor;
+struct WndCursor;
 struct GSCondition;
 struct GameObjBlueprint;
 
@@ -15,9 +15,9 @@ struct Command {
 	int id;
 	OrderBlueprint *order = nullptr;
 	ActionSequence startSequence;
-	Cursor *cursor = nullptr;
+	WndCursor *cursor = nullptr;
 	std::vector<int> cursorConditions, iconConditions;
-	std::vector<std::pair<GSCondition*, Cursor*>> cursorAvailable;
+	std::vector<std::pair<GSCondition*, WndCursor*>> cursorAvailable;
 	std::string buttonEnabled, buttonWait, buttonDepressed, buttonHighlighted, buttonAvailable, buttonImpossible;
 	std::vector<GSCondition*> conditionsImpossible, conditionsWait, conditionsWarning;
 	GameObjBlueprint* stampdownObject = nullptr;

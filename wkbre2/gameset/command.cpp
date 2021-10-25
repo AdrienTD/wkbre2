@@ -26,7 +26,7 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 			iconConditions.push_back(gs.equations.readIndex(gsf));
 		else if (strtag == "CURSOR_AVAILABLE") {
 			GSCondition* cond = gs.conditions.readPtr(gsf);
-			Cursor* cursor = WndCreateCursor(gsf.nextString(true).c_str());
+			WndCursor* cursor = WndCreateCursor(gsf.nextString(true).c_str());
 			cursorAvailable.push_back({ cond, cursor });
 		}
 		else if (strtag == "BUTTON_ENABLED")

@@ -1,3 +1,5 @@
+#ifdef _WIN32
+
 #include "renderer.h"
 #include "../window.h"
 #include "../util/util.h"
@@ -780,3 +782,5 @@ struct D3D11Renderer : IRenderer {
 };
 
 IRenderer* CreateD3D11Renderer() { return new D3D11Renderer; }
+
+#endif // _WIN32

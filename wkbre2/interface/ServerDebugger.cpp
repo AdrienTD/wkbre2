@@ -4,6 +4,7 @@
 #include "../gameset/gameset.h"
 #include "../file.h"
 #include "../terrain.h"
+#include "../platform.h"
 
 void ServerDebugger::draw() {
 	static std::vector<std::string> savegameList;

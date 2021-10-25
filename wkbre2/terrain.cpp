@@ -4,6 +4,7 @@
 #include "util/GSFileParser.h"
 #include "gfx/bitmap.h"
 #include <algorithm>
+#include <cstring>
 
 float Terrain::getHeight(float ipx, float ipy) const {
 	//int tx = floorf(x / 5) + edge, tz = floorf(z / 5) + edge;
@@ -95,23 +96,23 @@ void Terrain::readFromFile(const char* filename)
 }
 
 void Terrain::readBCM(const char * filename) {
-	char *fcnt, *fp; int fsize, strs;
+	char *fcnt, *fp; int fsize;
 
 	LoadFile(filename, &fcnt, &fsize);
 	fp = fcnt + 12;
 	width = *(uint32_t*)fp; fp += 4;
 	height = *(uint32_t*)fp; fp += 4;
 	edge = *(uint32_t*)fp; fp += 4;
-	strs = *(uint16_t*)fp / 2; fp += 2;
-	texDbPath = std::wstring((wchar_t*)fp, strs);  fp += strs * 2;
+	uint16_t strs1 = *(uint16_t*)fp / 2; fp += 2;
+	texDbPath = std::wstring((wchar_t*)fp, strs1);  fp += strs1 * 2;
 	scale = *(float*)fp; fp += 4;
 	sunColor = (*(uint8_t*)fp << 16) | ((*(uint8_t*)(fp + 4)) << 8) | (*(uint8_t*)(fp + 8)); fp += 12;
 	sunVector.x = *(float*)fp; sunVector.y = *(float*)(fp + 4); sunVector.z = *(float*)(fp + 8); fp += 12;
 	fogColor = (*(uint8_t*)fp << 16) | ((*(uint8_t*)(fp + 4)) << 8) | (*(uint8_t*)(fp + 8)); fp += 12;
-	strs = *(uint16_t*)fp / 2; fp += 2;
-	skyTextureDirectory = std::wstring((wchar_t*)fp, strs); fp += strs * 2;
+	uint16_t strs2 = *(uint16_t*)fp / 2; fp += 2;
+	skyTextureDirectory = std::wstring((wchar_t*)fp, strs2); fp += strs2 * 2;
 
-	std::string ctexDbPath(texDbPath.begin(), texDbPath.end());
+	std::string ctexDbPath((uint16_t*)texDbPath.data(), (uint16_t*)texDbPath.data()+strs1);
 	texDb.load(ctexDbPath.c_str());
 	texDb.translate(texDb.getLTTTPath(filename).c_str());
 

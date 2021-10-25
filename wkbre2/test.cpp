@@ -1,9 +1,10 @@
 #include "wkbre2.h"
+#include "platform.h"
 
 #include <map>
 #include <string>
 #include <cstring>
-#include <direct.h>
+//#include <direct.h>
 #include <utility>
 #include <thread>
 #include "gameset/gameset.h"
@@ -17,7 +18,7 @@
 #include "gfx/TextureCache.h"
 #include "TrnTextureDb.h"
 #include "terrain.h"
-#include "SDL_keycode.h"
+#include <SDL2/SDL_keycode.h>
 #include "mesh.h"
 #include "client.h"
 #include "network.h"
@@ -31,7 +32,7 @@
 #include "gfx/DefaultTerrainRenderer.h"
 #include "interface/ClientInterface.h"
 #include "scene.h"
-#include "SDL_timer.h"
+#include <SDL2/SDL_timer.h>
 #include "SoundPlayer.h"
 #include "Pathfinding.h"
 #include "ParticleSystem.h"
@@ -867,7 +868,8 @@ void Test_ParticleSystem()
 		//gfx->DrawRect(10, 10, 20, 20);
 		gfx->BeginParticles();
 		gfx->BeginBatchDrawing();
-		gfx->SetTransformMatrix(&Matrix::getIdentity());
+		Matrix matId = Matrix::getIdentity();
+		gfx->SetTransformMatrix(&matId);
 		particleRenderer.render(prevTimeFlt, nextTimeFlt, camera);
 
 		gfx->InitImGuiDrawing();

@@ -1,6 +1,7 @@
 #include "TrnTextureDb.h"
 #include "file.h"
 #include "util/GSFileParser.h"
+#include <cstring>
 #include <string>
 #include <map>
 #include "tags.h"

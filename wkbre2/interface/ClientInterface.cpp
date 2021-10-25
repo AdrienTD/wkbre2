@@ -6,8 +6,8 @@
 #include "ClientDebugger.h"
 #include "../imguiimpl.h"
 #include "../window.h"
-#include <SDL_scancode.h>
-#include <SDL_mouse.h>
+#include <SDL2/SDL_scancode.h>
+#include <SDL2/SDL_mouse.h>
 #include "../tags.h"
 #include "../gameset/gameset.h"
 #include "../gfx/SceneRenderer.h"
@@ -15,7 +15,7 @@
 #include "../imgui/imgui.h"
 #include <ctime>
 #include "../terrain.h"
-#include <SDL_timer.h>
+#include <SDL2/SDL_timer.h>
 #include "../gameset/ScriptContext.h"
 #include <stdexcept>
 #include "../ParticleContainer.h"
@@ -273,8 +273,8 @@ void ClientInterface::iter()
 	static Vector3 peapos(0, 0, 0);
 
 	static bool firstTime = true;
-	static Cursor *arrowCursor;
-	static Cursor *currentCursor = nullptr;
+	static WndCursor *arrowCursor;
+	static WndCursor *currentCursor = nullptr;
 	if (firstTime) {
 		firstTime = false;
 		//arrowCursor = WndCreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
@@ -286,14 +286,14 @@ void ClientInterface::iter()
 
 	//----- Command cursors -----//
 
-	Cursor *nextCursor = nullptr;
+	WndCursor *nextCursor = nullptr;
 	Command *rightClickCommand = nullptr;
 	for (ClientGameObject *sel : selection) {
 		if (sel) {
 			CliScriptContext ctx(client, sel);
 			auto _ = ctx.target.change(nextSelectedObject);
 			for (Command* cmd : sel->blueprint->offeredCommands) {
-				Cursor* cmdCursor = nullptr;
+				WndCursor* cmdCursor = nullptr;
 				for (auto& avcond : cmd->cursorAvailable) {
 					if (avcond.first->test->eval(&ctx)) {
 						cmdCursor = avcond.second;

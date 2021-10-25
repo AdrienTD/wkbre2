@@ -1,6 +1,6 @@
 #include "WavDocument.h"
 #include <cassert>
-#include "File.h"
+#include "file.h"
 #include "util/BinaryReader.h"
 
 void WavDocument::read(BinaryReader& file)
