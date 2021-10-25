@@ -30,7 +30,7 @@ struct PSystemParser : GSFileParser {
 	void readTo(int& s) { s = nextInt(); }
 	void readTo(float& s) { s = nextFloat(); }
 	template<typename S> void readTo(S& s) { readStruct(s); }
-	template<typename S, int N> void readTo(std::array<S, N>& s) {
+	template<typename S, size_t N> void readTo(std::array<S, N>& s) {
 		for (S& e : s)
 			readTo(e);
 	}

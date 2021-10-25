@@ -10,6 +10,7 @@
 #include "Movement.h"
 #include "GameObjectRef.h"
 #include "Trajectory.h"
+#include "tags.h"
 
 struct GameObjBlueprint;
 struct Model;

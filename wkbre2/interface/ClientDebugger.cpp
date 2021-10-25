@@ -7,6 +7,7 @@
 #include "../window.h"
 #include "ClientInterface.h"
 #include "../gameset/ScriptContext.h"
+#include "../platform.h"
 #include <atomic>
 #include <SDL2/SDL_timer.h>
 

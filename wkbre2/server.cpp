@@ -14,7 +14,7 @@
 
 Server *Server::instance = nullptr;
 
-std::atomic_int g_diag_serverTicks = 0;
+std::atomic_int g_diag_serverTicks{ 0 };
 
 void Server::loadSaveGame(const char * filename)
 {

@@ -15,11 +15,21 @@
 #include "../netenetlink.h"
 #include <enet/enet.h>
 
+#ifdef _WIN32
+#define HAS_DISCORD
+#endif
+#ifdef HAS_DISCORD
 #include <discord_rpc.h>
+#endif
+
 #include "../settings.h"
 #include <nlohmann/json.hpp>
 
+#include <thread>
+#include "../platform.h"
+
 namespace {
+#ifdef HAS_DISCORD
 	bool g_discordRpcEnabled = false;
 	void initDiscordRPC() {
 		if (!g_settings.value<bool>("discord-rpc", false)) return;
@@ -64,6 +74,12 @@ namespace {
 		if (!g_discordRpcEnabled) return;
 		Discord_Shutdown();
 	}
+#else
+	void initDiscordRPC() {}
+	void updateDiscordRPC(const char* state, const char* details) {}
+	void runDiscordCallbacks() {}
+	void closeDiscordRPC() {}
+#endif
 }
 
 QuickStartMenu::QuickStartMenu(IRenderer* gfx) : gfx(gfx)

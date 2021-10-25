@@ -5,16 +5,14 @@
 #include <cassert>
 #include <string>
 
-//#include <GL/gl3w.h>
-//#include <GL/glext.h>
-//#include <GL/wgl.h>
-//#include <GL/wglext.h>
 #include <GL/glew.h>
+#ifdef _WIN32
 #include <GL/wglew.h>
+#endif
 
-#include <SDL.h>
-#include <SDL_syswm.h>
-#include <SDL_system.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_syswm.h>
+#include <SDL2/SDL_system.h>
 extern SDL_Window* g_sdlWindow;
 
 static const char* glsl_common = R"---(
@@ -174,8 +172,10 @@ struct RBatchOGL3 : public RBatch {
 
 
 struct OGL3Renderer : IRenderer {
+#ifdef _WIN32
 	HGLRC glContext;
 	HDC windowHdc;
+#endif
 
 	GLuint programDefault, programAlphaTest;
 
@@ -205,6 +205,7 @@ struct OGL3Renderer : IRenderer {
 	}
 
 	virtual void Init() override {
+	#ifdef _WIN32
 		SDL_SysWMinfo syswm;
 		SDL_VERSION(&syswm.version);
 		SDL_GetWindowWMInfo(g_sdlWindow, &syswm);
@@ -241,6 +242,11 @@ struct OGL3Renderer : IRenderer {
 
 		// VSync
 		wglSwapIntervalEXT(1);
+	#else
+		SDL_GL_CreateContext(g_sdlWindow);
+		glewInit();
+	#endif
+	// for Linux assume a context has already been created and it set as current (by SDL)
 
 		// Uniform buffers
 		glGenBuffers(1, &ub_transformMatrix);
@@ -268,7 +274,9 @@ struct OGL3Renderer : IRenderer {
 				GLsizei len;
 				glGetShaderInfoLog(shader, std::size(log), &len, (char*)log.data());
 				log.resize(len);
+			#ifdef _WIN32
 				MessageBoxA(NULL, log.c_str(), "GLSL compilation error", 16);
+			#endif
 			}
 			return shader;
 		};
@@ -329,7 +337,11 @@ struct OGL3Renderer : IRenderer {
 	}
 
 	virtual void EndDrawing() override {
+	#ifdef _WIN32
 		SwapBuffers(windowHdc);
+	#else
+		SDL_GL_SwapWindow(g_sdlWindow);
+	#endif
 	}
 
 	virtual void ClearFrame(bool clearColors = true, bool clearDepth = true, uint32_t color = 0) override {
@@ -381,7 +393,7 @@ struct OGL3Renderer : IRenderer {
 	
 	virtual void FreeTexture(texture t) override
 	{
-		GLuint gltex = (GLuint)t;
+		GLuint gltex = (GLuint)(size_t)t;
 		glDeleteTextures(1, &gltex);
 	}
 	virtual void UpdateTexture(texture t, Bitmap* bmp) override {}
@@ -402,7 +414,7 @@ struct OGL3Renderer : IRenderer {
 
 	virtual void SetTexture(uint32_t x, texture t) override {
 		glActiveTexture(GL_TEXTURE0 + x);
-		glBindTexture(GL_TEXTURE_2D, t ? (GLuint)t : defaultTexture);
+		glBindTexture(GL_TEXTURE_2D, t ? (GLuint)(size_t)t : defaultTexture);
 	}
 
 	virtual void NoTexture(uint32_t x) override {

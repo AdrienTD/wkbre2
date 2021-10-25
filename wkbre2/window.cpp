@@ -1,5 +1,5 @@
 #include "window.h"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include "imgui/imgui.h"
 #include "gfx/renderer.h"
 #include "gfx/bitmap.h"
@@ -17,7 +17,15 @@ void InitWindow()
 {
 	SDL_SetMainReady();
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-	g_sdlWindow = SDL_CreateWindow("wkbre2 \"Next\"", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, g_windowWidth, g_windowHeight, SDL_WINDOW_RESIZABLE);
+#ifndef _WIN32
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	auto flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
+#else
+	auto flags = SDL_WINDOW_RESIZABLE;
+#endif
+	g_sdlWindow = SDL_CreateWindow("wkbre2 \"Next\"", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, g_windowWidth, g_windowHeight, flags);
 }
 
 void HandleImGui(const SDL_Event &event)
@@ -121,13 +129,13 @@ void SetRenderer(IRenderer *gfx)
 	g_gfxRenderer = gfx;
 }
 
-struct Cursor
+struct WndCursor
 {
 	SDL_Cursor *sdlCursor = nullptr;
 	int w = 0, h = 0;
 };
 
-Cursor *WndCreateCursor(const char *path) {
+WndCursor *WndCreateCursor(const char *path) {
 	Bitmap *bmp = LoadBitmap(path);
 	Bitmap *cvtbmp = ConvertBitmapToR8G8B8A8(bmp);
 	int width = cvtbmp->width, height = cvtbmp->height;
@@ -136,13 +144,13 @@ Cursor *WndCreateCursor(const char *path) {
 	SDL_FreeSurface(surface);
 	FreeBitmap(cvtbmp);
 	FreeBitmap(bmp);
-	return new Cursor { cursor, width, height };
+	return new WndCursor { cursor, width, height };
 }
 
-Cursor *WndCreateSystemCursor(int id) {
-	return new Cursor { SDL_CreateSystemCursor((SDL_SystemCursor)id), 24, 24 };
+WndCursor *WndCreateSystemCursor(int id) {
+	return new WndCursor { SDL_CreateSystemCursor((SDL_SystemCursor)id), 24, 24 };
 }
 
-void WndSetCursor(Cursor *cursor) {
+void WndSetCursor(WndCursor *cursor) {
 	SDL_SetCursor(cursor->sdlCursor);
 }

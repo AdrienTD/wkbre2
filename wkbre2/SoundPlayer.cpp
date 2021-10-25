@@ -39,7 +39,7 @@ struct OALSoundPlayer : SoundPlayer {
 	mpg123_handle* mHandle;
 
 	std::thread musicLoadingThread;
-	std::atomic<bool> isMusicLoading = false;
+	std::atomic<bool> isMusicLoading{ false };
 
 	std::pair<bool, ALuint> getSoundBuf(const std::string& filePath) {
 		auto it = sndBufCache.find(filePath);
@@ -169,6 +169,7 @@ struct OALSoundPlayer : SoundPlayer {
 		LoadFile(filePath.c_str(), &streamBytes, &streamSize);
 		streamPtr = streamBytes;
 
+		mpg123_init();
 		mHandle = mpg123_new(nullptr, nullptr);
 		mpg123_replace_reader_handle(mHandle,
 			[](void* file, void* out, size_t len) -> ssize_t {
@@ -207,7 +208,7 @@ struct OALSoundPlayer : SoundPlayer {
 		numSamples = mpg123_length(mHandle);
 		int16_t* samples = new int16_t[numSamples * mChannels];
 		size_t rread = 0;
-		mpg123_read(mHandle, samples, numSamples * mChannels * 2, &rread);
+		mpg123_read(mHandle, (unsigned char*)samples, numSamples * mChannels * 2, &rread);
 
 		alSourceStop(musicSource);
 		alSourcei(musicSource, AL_BUFFER, 0);

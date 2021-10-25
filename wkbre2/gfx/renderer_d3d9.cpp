@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#ifdef _WIN32
+
 #include "renderer.h"
 #include "../util/util.h"
 #include "../util/vecmat.h"
@@ -641,3 +643,5 @@ struct D3D9Renderer : public IRenderer
 };
 
 IRenderer *CreateD3D9Renderer() {return new D3D9Renderer;}
+
+#endif // _WIN32

@@ -16,8 +16,8 @@ void InitWindow();
 void HandleWindow();
 void SetRenderer(IRenderer *gfx);
 
-struct Cursor;
+struct WndCursor;
 
-Cursor *WndCreateCursor(const char *path);
-Cursor *WndCreateSystemCursor(int id);
-void WndSetCursor(Cursor *cursor);
+WndCursor *WndCreateCursor(const char *path);
+WndCursor *WndCreateSystemCursor(int id);
+void WndSetCursor(WndCursor *cursor);

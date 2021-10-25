@@ -16,10 +16,19 @@
 
 #include "wkbre2.h"
 #include "file.h"
-#include <io.h>
-#include <Windows.h>
 #include "util/util.h"
+#include <algorithm>
+#include <cstring>
 #include <mutex>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <io.h>
+#else
+#include <unistd.h>
+#define _access access
+#endif
 
 extern "C" {
 
@@ -123,7 +132,7 @@ BCPReader::BCPReader(const char *fn)
 
 	char abuf[384]; unsigned char c;
 	strcpy(abuf, gamedir);
-	strcat(abuf, "\\");
+	strcat(abuf, "/");
 	strcat(abuf, fn);
 	//strcpy(abuf, fn);
 	bcpfile = fopen(abuf, "rb");
@@ -334,6 +343,7 @@ void LoadBCP(const char *fn)
 
 	if(!allowBCPPatches)
 		{bcpacks.push_back(new BCPReader(fn)); return;}
+#ifdef _WIN32
 	char sn[384]; HANDLE hf; WIN32_FIND_DATA fnd;
 	strcpy(sn, gamedir);
 	strcat(sn, "\\*.bcp");
@@ -342,6 +352,7 @@ void LoadBCP(const char *fn)
 	do {
 		bcpacks.push_back(new BCPReader(fnd.cFileName));
 	} while(FindNextFile(hf, &fnd));
+#endif
 }
 
 BCPReader *GetBCPWithMostRecentFile(const char *fn)
@@ -395,17 +406,18 @@ void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 	if(allowDataDirectory)
 	{
 		strcpy(sn, gamedir);
-		strcat(sn, "\\data\\");
+		strcat(sn, "/data/");
 		strcat(sn, fn);
 		sf = fopen(sn, "rb");
 	}
 	if(!sf)
 	{
 		strcpy(sn, gamedir);
-		strcat(sn, "\\saved\\");
+		strcat(sn, "/saved/");
 		strcat(sn, fn);
 		sf = fopen(sn, "rb");
 	}
+#ifdef _WIN32
 	if (!sf)
 		if(HRSRC h = FindResourceA(NULL, fn, "REDATA"))
 			if (HGLOBAL g = LoadResource(NULL, h))
@@ -418,9 +430,10 @@ void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 				*outsize = siz;
 				return;
 			}
+#endif
 	if (!sf)
 	{
-		strcpy(sn, "redata\\");
+		strcpy(sn, "redata/");
 		strcat(sn, fn);
 		sf = fopen(sn, "rb");
 	}
@@ -455,20 +468,22 @@ int FileExists(const char *fn)
 	// File not found in the BCPs. Find it in the "saved" and "redata" folder.
 	char sn[384];
 	strcpy(sn, gamedir);
-	strcat(sn, "\\saved\\");
+	strcat(sn, "/saved/");
 	strcat(sn, fn);
 	if (_access(sn, 0) != -1) return 1;
 
+#ifdef _WIN32
 	if (FindResourceA(NULL, fn, "REDATA"))
 		return 1;
+#endif
 
-	strcpy(sn, "redata\\");
+	strcpy(sn, "redata/");
 	strcat(sn, fn);
 	if (_access(sn, 0) != -1) return 1;
 
 	if (allowDataDirectory) {
 		strcpy(sn, gamedir);
-		strcat(sn, "\\data\\");
+		strcat(sn, "/data/");
 		strcat(sn, fn);
 		if (_access(sn, 0) != -1) return 1;
 	}
@@ -484,6 +499,7 @@ int FileExists(const char *fn)
 
 void FindFiles(const char *sn, std::vector<std::string>* gsl)
 {
+#ifdef _WIN32
 	HANDLE hf; WIN32_FIND_DATA fnd;
 	hf = FindFirstFile(sn, &fnd);
 	if(hf == INVALID_HANDLE_VALUE) return;
@@ -492,6 +508,7 @@ void FindFiles(const char *sn, std::vector<std::string>* gsl)
 			if (std::find_if(gsl->begin(), gsl->end(), [&](const std::string& s) { return !_stricmp(s.c_str(), fnd.cFileName); }) == gsl->end())
 				gsl->push_back(fnd.cFileName);
 	} while(FindNextFile(hf, &fnd));
+#endif
 }
 
 std::vector<std::string>* ListFiles(const char *dn, std::vector<std::string>* gsl)
@@ -506,13 +523,13 @@ std::vector<std::string>* ListFiles(const char *dn, std::vector<std::string>* gs
 
 	if(allowDataDirectory)
 	{
-		strcpy(sn, gamedir); strcat(sn, "\\data\\");
-		strcat(sn, dn); strcat(sn, "\\*.*");
+		strcpy(sn, gamedir); strcat(sn, "/data/");
+		strcat(sn, dn); strcat(sn, "/*.*");
 		FindFiles(sn, gsl);
 	}
 
-	strcpy(sn, gamedir); strcat(sn, "\\saved\\");
-	strcat(sn, dn); strcat(sn, "\\*.*");
+	strcpy(sn, gamedir); strcat(sn, "/saved/");
+	strcat(sn, dn); strcat(sn, "/*.*");
 	FindFiles(sn, gsl);
 
 	return gsl;
