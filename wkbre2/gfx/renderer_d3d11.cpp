@@ -1,3 +1,7 @@
+// wkbre2 - WK Engine Reimplementation
+// (C) 2021 AdrienTD
+// Licensed under the GNU General Public License 3
+
 #ifdef _WIN32
 
 #include "renderer.h"

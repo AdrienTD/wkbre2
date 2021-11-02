@@ -1,3 +1,7 @@
+// wkbre2 - WK Engine Reimplementation
+// (C) 2021AdrienTD
+// Licensed under the GNU General Public License 3
+
 #include "command.h"
 #include "gameset.h"
 #include "../util/util.h"

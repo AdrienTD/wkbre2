@@ -1,4 +1,8 @@
-﻿// wkbre2.cpp : définit le point d'entrée de l'application.
+﻿// wkbre2 - WK Engine Reimplementation
+// (C) 2021 AdrienTD
+// Licensed under the GNU General Public License 3
+
+// wkbre2.cpp : définit le point d'entrée de l'application.
 //
 
 #include "wkbre2.h"

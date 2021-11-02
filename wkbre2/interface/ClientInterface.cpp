@@ -1,3 +1,7 @@
+// wkbre2 - WK Engine Reimplementation
+// (C) 2021 AdrienTD
+// Licensed under the GNU General Public License 3
+
 #include "ClientInterface.h"
 #include "../gfx/TerrainRenderer.h"
 #include "../gfx/DefaultTerrainRenderer.h"
