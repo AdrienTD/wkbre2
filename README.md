@@ -7,6 +7,10 @@ This is an early development in progress. It's still not completely playable.
 
 Currently works on Windows as well as on Ubuntu!
 
+[Small demo video on YouTube:](https://youtu.be/WBQn7A8Gpwg)
+[![wkbre2 Video Demo](https://img.youtube.com/vi/WBQn7A8Gpwg/0.jpg)](https://youtu.be/WBQn7A8Gpwg)
+
+
 ## Why?
 
 Maybe you already know me and have heard about **wkbre**, which was my first attempt at making
@@ -107,6 +111,9 @@ and image quality.
      2 if it is the second **Warrior Kings Battles**.
  - Launch wkbre2
 
+**NOTE**: If the program crashes right at the start without any error, ensure that
+**wkconfig.json** doesn't have any syntax errors (missing commas, quotes, braces, ...).
+
 ## Compiling
 
 ### Windows
@@ -135,9 +142,9 @@ had some trouble, and I'm not used to Linux. Thus for now there is a regular Mak
 to make the CMake files run on Ubuntu too in the future.
 
 - Open a terminal.
-- cd \<repo root\>
-- sudo apt-get install libbz2-dev libenet-dev libglew-dev libmpg123-dev nlohmann-json3-dev libopenal-dev libsdl2-dev
-- mkdir inc
+- `cd \<repo root\>`
+- `sudo apt-get install libbz2-dev libenet-dev libglew-dev libmpg123-dev nlohmann-json3-dev libopenal-dev libsdl2-dev`
+- `mkdir inc`
 - Download the [stb headers](https://github.com/nothings/stb) and copy them to the inc folder
-- cd wkbre2
-- make -f ../Makefile
+- `cd wkbre2`
+- `make -f ../Makefile`
