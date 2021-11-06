@@ -333,16 +333,16 @@ void ClientInterface::iter()
 	Vector3 strafe = forward.cross(Vector3(0, 1, 0));
 	forward *= 2.f; strafe *= 2.f;
 
-	if (g_keyDown[SDL_SCANCODE_UP])
+	if (g_keyDown[SDL_SCANCODE_UP] || g_keyDown[SDL_SCANCODE_W])
 		client->camera.position += forward;
-	if (g_keyDown[SDL_SCANCODE_DOWN])
+	if (g_keyDown[SDL_SCANCODE_DOWN] || g_keyDown[SDL_SCANCODE_S])
 		client->camera.position -= forward;
-	if (g_keyDown[SDL_SCANCODE_RIGHT])
+	if (g_keyDown[SDL_SCANCODE_RIGHT] || g_keyDown[SDL_SCANCODE_D])
 		client->camera.position -= strafe;
-	if (g_keyDown[SDL_SCANCODE_LEFT])
+	if (g_keyDown[SDL_SCANCODE_LEFT] || g_keyDown[SDL_SCANCODE_A])
 		client->camera.position += strafe;
 
-	if (g_keyDown[SDL_SCANCODE_KP_0]) {
+	if (g_keyDown[SDL_SCANCODE_KP_0] || g_mouseDown[SDL_BUTTON_MIDDLE]) {
 		if (!camroton) {
 			camrotoffx = g_mouseX;
 			camrotoffy = g_mouseY;
