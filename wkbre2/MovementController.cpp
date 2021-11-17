@@ -8,6 +8,38 @@
 #include "terrain.h"
 #include <cassert>
 
+namespace {
+	template<typename Predicate> Pathfinding::PFPos findNearestUnblockedPos(Pathfinding::PFPos pfpos, Predicate pred, int maxr) {
+		int ox = pfpos.x, oz = pfpos.z;
+		if (!pred(pfpos))
+			return { ox, oz };
+		for (int r = 1; r < maxr; r++) {
+			int x = ox + r;
+			int z = oz;
+			for (int i = 0; i < r; i++) {
+				if (!pred({ x,z }))
+					return { x, z };
+				x--; z++;
+			}
+			for (int i = 0; i < r; i++) {
+				if (!pred({ x,z }))
+					return { x, z };
+				x--; z--;
+			}
+			for (int i = 0; i < r; i++) {
+				if (!pred({ x,z }))
+					return { x, z };
+				x++; z--;
+			}
+			for (int i = 0; i < r; i++) {
+				if (!pred({ x,z }))
+					return { x, z };
+				x++; z++;
+			}
+		}
+	}
+}
+
 Vector3 MovementController::startMovement(const Vector3& destination)
 {
 	//m_object->startMovement(destination);
@@ -33,40 +65,55 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 
 	// if start is blocked...
 	if (pred(posStart)) {
-		stopMovement();
-		return destination;
+		// find "nearest" blocked tile, if unit is currently inside blocked tile
+		auto area = trn->getNumPlayableTiles();
+		int maxr = std::max(area.first, area.second);
+		posStart = findNearestUnblockedPos(posStart, pred, maxr); // WARNING: Might cause infinite loop if there is no unblocked tile!
+		if (pred(posStart)) {
+			stopMovement();
+			return destination;
+		}
 	}
 
 	// if destination if blocked, find non-blocked tile nearest to destination
 	Vector3 realDestination = destination;
 	if (pred(posEnd)) {
 		Vector3 dir = (m_object->position - realDestination).normal2xz();
-		Vector3 test = realDestination;
-		while (true) {
-			test += dir;
-			PFPos near = { (int)(test.x / 5.0f), (int)(test.z / 5.0f) };
-			if (!pred(near)) {
-				posEnd = near;
-				realDestination = test;
-				break;
+		if (!(dir.x == 0.0f && dir.z == 0.0f)) {
+			Vector3 test = realDestination;
+			while (true) {
+				test += dir;
+				PFPos near = { (int)(test.x / 5.0f), (int)(test.z / 5.0f) };
+				if (!pred(near)) {
+					posEnd = near;
+					realDestination = test;
+					break;
+				}
+				assert(near != posStart);
 			}
-			assert(near != posStart);
 		}
 	}
 
-	auto tileList = DoPathfinding(posStart, posEnd, pred, ManhattanDiagHeuristic);
-
-	if (tileList.size() >= 1) {
-		m_pathNodes.clear();
-		m_pathNodes.emplace_back(realDestination);
-		for (PFPos& pfp : tileList) {
-			m_pathNodes.emplace_back(pfp.x * 5.0f + 2.5f, m_object->position.y, pfp.z * 5.0f + 2.5f);
-		}
-		m_object->startMovement(m_pathNodes[m_pathNodes.size() - 2]);
+	auto rtres = SegmentTraversal(m_object->position.x / 5.0f, m_object->position.z / 5.0f, realDestination.x / 5.0f, realDestination.z / 5.0f, pred);
+	if (!rtres.first) {
+		m_pathNodes = { realDestination, m_object->position };
+		m_object->startMovement(m_pathNodes[0]);
 		m_started = true;
 	}
-	else
-		stopMovement();
+	else {
+		auto tileList = DoPathfinding(posStart, posEnd, pred, ManhattanDiagHeuristic);
+		if (tileList.size() >= 1) {
+			m_pathNodes.clear();
+			m_pathNodes.emplace_back(realDestination);
+			for (PFPos& pfp : tileList) {
+				m_pathNodes.emplace_back(pfp.x * 5.0f + 2.5f, m_object->position.y, pfp.z * 5.0f + 2.5f);
+			}
+			m_object->startMovement(m_pathNodes[m_pathNodes.size() - 2]);
+			m_started = true;
+		}
+		else
+			stopMovement();
+	}
 	return realDestination;
 }
 

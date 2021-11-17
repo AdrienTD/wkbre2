@@ -893,6 +893,34 @@ void Test_ParticleSystem()
 
 }
 
+void Test_PFRayTraversal() {
+	using namespace Pathfinding;
+	static constexpr int WIDTH = 10, HEIGHT = 10;
+	static constexpr char map[HEIGHT][WIDTH] = {
+		{1,1,1,1,1,1,1,1,1,1},
+		{1,0,0,0,0,0,0,0,0,1},
+		{1,0,0,0,0,0,0,0,0,1},
+		{1,0,0,0,0,0,0,0,0,1},
+		{1,0,0,0,0,0,0,0,0,1},
+		{1,0,0,0,0,0,0,0,0,1},
+		{1,0,0,0,0,0,0,0,0,1},
+		{1,0,0,0,0,0,0,0,0,1},
+		{1,0,0,0,0,0,0,0,0,1},
+		{1,1,1,1,1,1,1,1,1,1}
+	};
+	auto pred = [](PFPos pos) -> bool {
+		if (pos.x >= 0 && pos.x < WIDTH && pos.z >= 0 && pos.z < HEIGHT)
+			return map[pos.z][pos.x] != 0;
+		return true;
+	};
+	float start[2] = { 2.0f, 2.0f }, end[2] = { 2.0f, 3.0f };
+	auto res = SegmentTraversal(start[0], start[1], end[0], end[1], pred);
+	printf("Result: %s, (%i, %i)\n", res.first ? "true" : "false", res.second.x, res.second.z);
+	res = SegmentTraversal(end[0], end[1], start[0], start[1], pred);
+	printf("Result: %s, (%i, %i)\n", res.first ? "true" : "false", res.second.x, res.second.z);
+	getchar();
+}
+
 const std::vector<std::pair<void(*)(), const char*> > testList = {
 {Test_GameSet, "Game set loading"},
 {Test_GSFileParser, "GSF Parser"},
@@ -912,6 +940,7 @@ const std::vector<std::pair<void(*)(), const char*> > testList = {
 {Test_SoundPlayer, "Sound Player"},
 {Test_Pathfinding, "Pathfinding"},
 {Test_ParticleSystem, "Particle system"},
+{Test_PFRayTraversal, "PF Ray Traversal"},
 };
 
 void LaunchTest()

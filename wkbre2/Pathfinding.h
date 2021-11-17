@@ -155,4 +155,46 @@ namespace Pathfinding {
             }
         }
     }
+
+    // Checks if the segment from "start" to "end" intersects with a blocked tile
+    template<typename Predicate> std::pair<bool, PFPos> SegmentTraversal(float start_x, float start_z, float end_x, float end_z, Predicate pred) {
+        // TODO: Fix BUG where end tile not found on short distances
+        const int end_tile_x = (int)end_x, end_tile_z = (int)end_z;
+        const float dx = end_x - start_x, dz = end_z - start_z;
+        const bool right = dx >= 0, down = dz >= 0;
+
+        float cur_x = start_x, cur_z = start_z;
+        int tile_x = (int)cur_x, tile_z = (int)cur_z;
+        if (pred({ tile_x, tile_z }))
+            return { true, {tile_x, tile_z} };
+
+        while ((tile_x != end_tile_x) || (tile_z != end_tile_z)) {
+            //printf("curpos = (%f, %f)\n", cur_x, cur_z);
+
+            constexpr float finf = std::numeric_limits<float>::infinity();
+            float nx1 = finf, nz1 = finf, nx2 = finf, nz2 = finf;
+            if (dx != 0.0f) {
+                nx1 = right ? std::floor(cur_x + 1.0f) : std::ceil(cur_x - 1.0f);
+                nz1 = start_z + (nx1 - start_x) * dz / dx;
+            }
+            if (dz != 0.0f) {
+                nz2 = down ? std::floor(cur_z + 1.0f) : std::ceil(cur_z - 1.0f);
+                nx2 = start_x + (nz2 - start_z) * dx / dz;
+            }
+
+            if (std::abs(nx1 - start_x) + std::abs(nz1 - start_z) < std::abs(nx2 - start_x) + std::abs(nz2 - start_z)) {
+                cur_x = nx1;
+                cur_z = nz1;
+            }
+            else {
+                cur_x = nx2;
+                cur_z = nz2;
+            }
+            tile_x = (int)cur_x, tile_z = (int)cur_z;
+            if (pred({ tile_x, tile_z }))
+                return { true, {tile_x, tile_z} };
+        }
+        //printf("FALSE! curpos = (%f, %f)\n", cur_x, cur_z);
+        return { false, {} };
+    }
 };
