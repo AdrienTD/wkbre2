@@ -42,7 +42,7 @@ template<typename T> struct GSBlueprintList {
 		auto str = gsf.nextString(true);
 		auto x = names.getIndex(str);
 		if (x == -1)
-			printf("WARNING: Name \"%s\" not found at line %i!\n", str.c_str(), gsf.linenum);
+			printf("WARNING: Name \"%s\" not found at %s!\n", str.c_str(), gsf.locate().c_str());
 		return x;
 	}
 	T & readRef(GSFileParser &gsf) { return blueprints[readIndex(gsf)]; }

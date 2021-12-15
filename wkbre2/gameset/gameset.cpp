@@ -40,6 +40,7 @@ void GameSet::parseFile(const char * fn, int pass)
 	LoadFile(fn, &text, &filesize, 1);
 	text[filesize] = 0;
 	GSFileParser gsf(text);
+	gsf.fileName = fn;
 
 	std::vector<std::string> linkedFiles;
 
