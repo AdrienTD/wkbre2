@@ -367,31 +367,32 @@ struct OGL3Renderer : IRenderer {
 			glClear(glbf);
 	}
 
-	virtual texture CreateTexture(Bitmap* bm, int mipmaps) override
+	virtual texture CreateTexture(const Bitmap& bm, int mipmaps) override
 	{
-		Bitmap* c = bm;
-		if (bm->format != BMFORMAT_R8G8B8A8)
-			c = ConvertBitmapToR8G8B8A8(bm);
+		const Bitmap* c = &bm;
+		Bitmap cvtbmp;
+		if (bm.format != BMFORMAT_R8G8B8A8) {
+			cvtbmp = bm.convertToR8G8B8A8();
+			c = &cvtbmp;
+		}
 
 		GLuint gltex;
 		glGenTextures(1, &gltex);
 		glBindTexture(GL_TEXTURE_2D, gltex);
 		if (mipmaps != 1)
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, c->width, c->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, c->pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, c->width, c->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, c->pixels.data());
 			glGenerateMipmap(GL_TEXTURE_2D);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 		}
 		else
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, c->width, c->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, c->pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, c->width, c->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, c->pixels.data());
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
 
-		if (bm->format != BMFORMAT_R8G8B8A8)
-			FreeBitmap(c);
 		return (texture)gltex;
 	}
 	
@@ -400,7 +401,7 @@ struct OGL3Renderer : IRenderer {
 		GLuint gltex = (GLuint)(size_t)t;
 		glDeleteTextures(1, &gltex);
 	}
-	virtual void UpdateTexture(texture t, Bitmap* bmp) override {}
+	virtual void UpdateTexture(texture t, const Bitmap& bmp) override {}
 
 	virtual void SetTransformMatrix(const Matrix* m) override {
 		// TODO: Use glMapBufferRange, but it doesn't work, and I have no idea why...

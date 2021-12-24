@@ -35,8 +35,7 @@ void LaunchQSM() {
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);
 
-	Bitmap* bgbmp = LoadBitmap("Interface\\Startup Screen.tga");
-	texture bgtex = gfx->CreateTexture(bgbmp, 1);
+	texture bgtex = gfx->CreateTexture(Bitmap::loadBitmap("Interface\\Startup Screen.tga"), 1);
 
 	QuickStartMenu qsm{ gfx };
 

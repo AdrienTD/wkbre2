@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "../util/DynArray.h"
+
 #define BMFORMAT_P8 1
 #define BMFORMAT_R8G8B8 2
 #define BMFORMAT_B8G8R8 3
@@ -14,21 +16,18 @@
 
 struct Bitmap
 {
-	unsigned int width, height, format; unsigned char *pixels, *palette;
+	unsigned int width, height, format; DynArray<unsigned char> pixels, palette;
 
-	//void loadFromTGA(void *data, size_t size);
-	//void loadFromPCX(void *data, size_t size);
-
-	Bitmap() : width(0), height(0), format(0), pixels(0), palette(0) {}
+	Bitmap() : width(0), height(0), format(0) {}
 	~Bitmap();
-};
 
-Bitmap *LoadBitmap(const char *fn);
-Bitmap *LoadTGA(const char *data, int ds);
-Bitmap *LoadPCX(const char *data, int ds);
-Bitmap *ConvertBitmapToR8G8B8A8(Bitmap *sb);
-Bitmap *ConvertBitmapToB8G8R8A8(Bitmap *sb);
-void FreeBitmap(Bitmap *bm);
-void BitmapBlit32(Bitmap *db, int dx, int dy, Bitmap *sb, int sx, int sy, int sw, int sh);
-void SaveBitmapPCX(Bitmap *bm, const char *fname);
-Bitmap* ResizeBitmap(const Bitmap& original, int nwidth, int nheight);
+	static Bitmap loadBitmap(const char* fn);
+	static Bitmap loadTGA(const void* data, size_t length);
+	static Bitmap loadPCX(const void* data, size_t length);
+
+	Bitmap convertToR8G8B8A8() const;
+	Bitmap convertToB8G8R8A8() const;
+	void blit32(int dx, int dy, const Bitmap& sb, int sx, int sy, int sw, int sh);
+	void savePCX(const char* fname) const;
+	Bitmap resize(int nwidth, int nheight) const;
+};

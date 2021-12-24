@@ -9,6 +9,7 @@
 #include <string>
 #include "util/vecmat.h"
 #include "TrnTextureDb.h"
+#include "util/DynArray.h"
 
 struct BitReader
 {
@@ -56,7 +57,7 @@ struct Terrain
 	std::vector<Vector3> lakes;
 
 	TerrainTextureDatabase texDb;
-	uint8_t *vertices;
+	DynArray<uint8_t> vertices;
 	Tile *tiles;
 
 	std::pair<int, int> getNumPlayableTiles() const { return { width - 2 * edge, height - 2 * edge }; }
@@ -76,7 +77,7 @@ struct Terrain
 	const Tile* getPlayableTile(int tx, int tz) const { return getTile(tx + edge, tz + edge); }
 
 	void freeArrays() {
-		if (vertices) delete[] vertices;
+		vertices.resize(0);
 		if (tiles) delete[] tiles;
 	}
 

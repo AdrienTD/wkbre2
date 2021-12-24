@@ -80,8 +80,10 @@ void ImGuiImpl_CreateFontsTexture(IRenderer *gfx)
 		io.Fonts->AddFontFromFileTTF(imguiFontFile, imguiFontSize);
 	io.Fonts->GetTexDataAsRGBA32(&pix, &w, &h, &bpp);
 	Bitmap bm;
-	bm.width = w; bm.height = h; bm.format = BMFORMAT_B8G8R8A8; bm.pixels = pix; bm.palette = 0;
-	texture t = gfx->CreateTexture(&bm, 1);
+	bm.width = w; bm.height = h; bm.format = BMFORMAT_B8G8R8A8;
+	bm.pixels.resize(w * h * 4);
+	memcpy(bm.pixels.data(), pix, w * h * 4);
+	texture t = gfx->CreateTexture(bm, 1);
 	io.Fonts->TexID = (void*)t;
 }
 

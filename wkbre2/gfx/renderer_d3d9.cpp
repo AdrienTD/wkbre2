@@ -378,11 +378,14 @@ struct D3D9Renderer : public IRenderer
 
 	//***********************************//
 
-	texture CreateTexture(Bitmap *bm, int mipmaps)
+	texture CreateTexture(const Bitmap& bm, int mipmaps)
 	{
-		Bitmap *c = bm;
-		if(bm->format != BMFORMAT_B8G8R8A8)
-			c = ConvertBitmapToB8G8R8A8(bm);
+		const Bitmap *c = &bm;
+		Bitmap cvtbmp;
+		if (bm.format != BMFORMAT_B8G8R8A8) {
+			cvtbmp = bm.convertToB8G8R8A8();
+			c = &cvtbmp;
+		}
 
 		// D3D9 specific
 		IDirect3DTexture9 *dt; D3DLOCKED_RECT lore;
@@ -390,11 +393,9 @@ struct D3D9Renderer : public IRenderer
 			ferr("Failed to create a D3D9 texture.");
 		dt->LockRect(0, &lore, NULL, 0);
 		for(int y = 0; y < c->height; y++)
-			memcpy( ((char*)(lore.pBits)) + y * lore.Pitch, c->pixels + y * c->width * 4, c->width * 4);
+			memcpy( ((char*)(lore.pBits)) + y * lore.Pitch, c->pixels.data() + y * c->width * 4, c->width * 4);
 		dt->UnlockRect(0);
 
-		if(bm->format != BMFORMAT_B8G8R8A8)
-			FreeBitmap(c);
 		return (texture)dt;
 	}
 
@@ -587,12 +588,12 @@ struct D3D9Renderer : public IRenderer
 		return c;
 	}
 
-	void UpdateTexture(texture t, Bitmap *bmp)
+	void UpdateTexture(texture t, const Bitmap& bmp)
 	{
 		D3DLOCKED_RECT lr;
 		((IDirect3DTexture9*)t)->LockRect(0, &lr, NULL, 0);
 		//assert(lr.Pitch == bmp->width * 4);
-		memcpy(lr.pBits, bmp->pixels, bmp->width * bmp->height * 4);
+		memcpy(lr.pBits, bmp.pixels.data(), bmp.width * bmp.height * 4);
 		((IDirect3DTexture9*)t)->UnlockRect(0);
 	}
 

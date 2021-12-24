@@ -9,19 +9,18 @@
 
 texture TextureCache::loadTexture(const char * fn, int mipmaps)
 {
-	Bitmap *bm;
+	Bitmap bm;
 	if (FileExists(fn))
-		bm = LoadBitmap(fn);
+		bm = Bitmap::loadBitmap(fn);
 	else
 		return nullptr; //bm = LoadBitmap("netexfb.tga");
 	texture t = gfx->CreateTexture(bm, mipmaps);
-	FreeBitmap(bm);
 	return t;
 }
 
 texture TextureCache::createTexture(const char* filename, int mipmaps, const Bitmap& bmp)
 {
-	texture t = gfx->CreateTexture(const_cast<Bitmap*>(&bmp), mipmaps);
+	texture t = gfx->CreateTexture(bmp, mipmaps);
 	loadedTextures[filename] = t;
 	return t;
 }

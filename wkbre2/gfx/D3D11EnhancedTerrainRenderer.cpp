@@ -271,12 +271,12 @@ void D3D11EnhancedTerrainRenderer::init()
 				ld.normalMap = texcache->getTextureIfCached(nrm.c_str());
 				if (!ld.normalMap) {
 #undef LoadBitmap
-					Bitmap* bmp = LoadBitmap((texcache->directory + nrm).c_str());
+					Bitmap bmp = Bitmap::loadBitmap((texcache->directory + nrm).c_str());
 					//Bitmap* bmp = LoadBitmap("lmao.pcx");
-					Bitmap nmap; nmap.width = bmp->width; nmap.height = bmp->height; nmap.format = BMFORMAT_R8G8B8A8;
-					nmap.pixels = (unsigned char*)malloc(nmap.width * nmap.height * 4);
-					uint8_t* bmpix = (uint8_t*)bmp->pixels;
-					uint8_t* nmpix = (uint8_t*)nmap.pixels;
+					Bitmap nmap; nmap.width = bmp.width; nmap.height = bmp.height; nmap.format = BMFORMAT_R8G8B8A8;
+					nmap.pixels.resize(nmap.width * nmap.height * 4);
+					uint8_t* bmpix = (uint8_t*)bmp.pixels.data();
+					uint8_t* nmpix = (uint8_t*)nmap.pixels.data();
 					int pitch = nmap.width;
 					for (int tz = 0; tz < 4; tz++) {
 						for (int tx = 0; tx < 4; tx++) {
@@ -319,7 +319,6 @@ void D3D11EnhancedTerrainRenderer::init()
 						}
 					}
 					ld.normalMap = texcache->createTexture(nrm.c_str(), 0, nmap);
-					delete bmp;
 				}
 			}
 			ttexmap[tex.second.get()] = ld;

@@ -140,14 +140,11 @@ struct WndCursor
 };
 
 WndCursor *WndCreateCursor(const char *path) {
-	Bitmap *bmp = LoadBitmap(path);
-	Bitmap *cvtbmp = ConvertBitmapToR8G8B8A8(bmp);
-	int width = cvtbmp->width, height = cvtbmp->height;
-	SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormatFrom(cvtbmp->pixels, cvtbmp->width, cvtbmp->height, 32, cvtbmp->width * 4, SDL_PIXELFORMAT_RGBA32);
+	Bitmap cvtbmp = Bitmap::loadBitmap(path).convertToR8G8B8A8();
+	int width = cvtbmp.width, height = cvtbmp.height;
+	SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormatFrom(cvtbmp.pixels.data(), cvtbmp.width, cvtbmp.height, 32, cvtbmp.width * 4, SDL_PIXELFORMAT_RGBA32);
 	SDL_Cursor *cursor = SDL_CreateColorCursor(surface, 0, 0);
 	SDL_FreeSurface(surface);
-	FreeBitmap(cvtbmp);
-	FreeBitmap(bmp);
 	return new WndCursor { cursor, width, height };
 }
 

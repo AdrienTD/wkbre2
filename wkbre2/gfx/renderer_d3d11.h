@@ -60,9 +60,9 @@ struct D3D11Renderer : IRenderer {
 	virtual void ClearFrame(bool clearColors = true, bool clearDepth = true, uint32_t color = 0) override;
 
 	// Textures management
-	virtual texture CreateTexture(Bitmap* bm, int mipmaps) override;
+	virtual texture CreateTexture(const Bitmap& bm, int mipmaps) override;
 	virtual void FreeTexture(texture t) override;
-	virtual void UpdateTexture(texture t, Bitmap* bmp) override;
+	virtual void UpdateTexture(texture t, const Bitmap& bmp) override;
 
 	// State changes
 	virtual void SetTransformMatrix(const Matrix* m) override;

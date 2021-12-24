@@ -377,10 +377,9 @@ void D3D11Renderer::Init() {
 	whiteBmp.width = 1;
 	whiteBmp.height = 1;
 	whiteBmp.format = BMFORMAT_R8G8B8A8;
-	whiteBmp.pixels = (uint8_t*)malloc(4);
-	*(uint32_t*)whiteBmp.pixels = 0xFFFFFFFF;
-	whiteBmp.palette = nullptr;
-	whiteTexture = CreateTexture(&whiteBmp, 1);
+	whiteBmp.pixels.resize(4);
+	*(uint32_t*)whiteBmp.pixels.data() = 0xFFFFFFFF;
+	whiteTexture = CreateTexture(whiteBmp, 1);
 
 	Reset();
 }
@@ -461,13 +460,13 @@ void D3D11Renderer::ClearFrame(bool clearColors, bool clearDepth, uint32_t color
 
 // Textures management
 
-texture D3D11Renderer::CreateTexture(Bitmap* bm, int mipmaps) {
-	Bitmap* cvtbmp = ConvertBitmapToR8G8B8A8(bm);
+texture D3D11Renderer::CreateTexture(const Bitmap& bm, int mipmaps) {
+	Bitmap cvtbmp = bm.convertToR8G8B8A8();
 
-	int mmwidth = cvtbmp->width,
-		mmheight = cvtbmp->height,
+	int mmwidth = cvtbmp.width,
+		mmheight = cvtbmp.height,
 		numMipmaps = 0;
-	Bitmap* mmbmp[32];
+	Bitmap mmbmp[32];
 	mmbmp[numMipmaps++] = cvtbmp;
 	if (mipmaps <= 0) {
 		mmwidth /= 2;
@@ -476,7 +475,7 @@ texture D3D11Renderer::CreateTexture(Bitmap* bm, int mipmaps) {
 			assert(numMipmaps < std::size(mmbmp));
 			if (!mmwidth) mmwidth = 1;
 			if (!mmheight) mmheight = 1;
-			mmbmp[numMipmaps++] = ResizeBitmap(*cvtbmp, mmwidth, mmheight);
+			mmbmp[numMipmaps++] = cvtbmp.resize(mmwidth, mmheight);
 			mmwidth /= 2;
 			mmheight /= 2;
 			// no mipmaps of 8x8 or below (to prevent tiles from being merged in the terrain atlas!)
@@ -486,8 +485,8 @@ texture D3D11Renderer::CreateTexture(Bitmap* bm, int mipmaps) {
 	}
 
 	D3D11_TEXTURE2D_DESC desc;
-	desc.Width = cvtbmp->width;
-	desc.Height = cvtbmp->height;
+	desc.Width = cvtbmp.width;
+	desc.Height = cvtbmp.height;
 	desc.MipLevels = numMipmaps;
 	desc.ArraySize = 1;
 	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -499,9 +498,9 @@ texture D3D11Renderer::CreateTexture(Bitmap* bm, int mipmaps) {
 	desc.MiscFlags = 0;
 	D3D11_SUBRESOURCE_DATA sub[std::size(mmbmp)];
 	for (size_t i = 0; i < numMipmaps; i++) {
-		sub[i].pSysMem = mmbmp[i]->pixels;
-		sub[i].SysMemPitch = mmbmp[i]->width * 4u;
-		sub[i].SysMemSlicePitch = sub[i].SysMemPitch * mmbmp[i]->height;
+		sub[i].pSysMem = mmbmp[i].pixels.data();
+		sub[i].SysMemPitch = mmbmp[i].width * 4u;
+		sub[i].SysMemSlicePitch = sub[i].SysMemPitch * mmbmp[i].height;
 	}
 	ID3D11Texture2D* tex = nullptr;
 	ddDevice->CreateTexture2D(&desc, sub, &tex);
@@ -522,7 +521,7 @@ texture D3D11Renderer::CreateTexture(Bitmap* bm, int mipmaps) {
 
 void D3D11Renderer::FreeTexture(texture t) {}
 
-void D3D11Renderer::UpdateTexture(texture t, Bitmap* bmp) {}
+void D3D11Renderer::UpdateTexture(texture t, const Bitmap& bmp) {}
 
 // State changes
 

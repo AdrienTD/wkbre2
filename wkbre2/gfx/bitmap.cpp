@@ -11,29 +11,30 @@
 #define STBIR_DEFAULT_FILTER_DOWNSAMPLE  STBIR_FILTER_BOX
 #include <stb_image_resize.h>
 
-Bitmap *LoadBitmap(const char *fn)
+Bitmap Bitmap::loadBitmap(const char *fn)
 {
 	char *d; int s;
 	const char *e = strrchr(fn, '.');
 	LoadFile(fn, &d, &s);
 	if(!_stricmp(e, ".tga"))
-		return LoadTGA(d, s);
+		return loadTGA(d, s);
 	if(!_stricmp(e, ".pcx"))
-		return LoadPCX(d, s);
-	ferr("Unknown bitmap file extension."); return 0;
+		return loadPCX(d, s);
+	ferr("Unknown bitmap file extension.");
 }
 
-Bitmap *LoadTGA(const char *data, int ds)
+Bitmap Bitmap::loadTGA(const void* _data, size_t length)
 {
-	Bitmap *bm = new Bitmap;
-	bm->width = *(uint16_t*)(data+12);
-	bm->height = *(uint16_t*)(data+14);
+	Bitmap bm;
+	const char* data = static_cast<const char*>(_data);
+	bm.width = *(uint16_t*)(data+12);
+	bm.height = *(uint16_t*)(data+14);
 	if(data[1] && ((data[2]&7) == 1) && (data[7] == 24) && (data[16] == 8))
-		bm->format = BMFORMAT_P8;
+		bm.format = BMFORMAT_P8;
 	else if(((data[2]&7) == 2) && (data[16] == 24))
-		bm->format = BMFORMAT_B8G8R8;
+		bm.format = BMFORMAT_B8G8R8;
 	else if(((data[2]&7) == 2) && (data[16] == 32))
-		bm->format = BMFORMAT_B8G8R8A8;
+		bm.format = BMFORMAT_B8G8R8A8;
 	else
 		ferr("Unknown TGA image format.");
 	const char *dp = data + 18 + (uint8_t)data[0];
@@ -43,28 +44,25 @@ Bitmap *LoadTGA(const char *data, int ds)
 	// 32-bits bitmap:  BB GG RR AA (!)
 	if(data[1])
 	{
-		bm->palette = (uint8_t*)malloc(768);
+		bm.palette.resize(768);
 		for(int i = 0; i < 256; i++)
 		{
-			bm->palette[i*3+0] = dp[i*3+2];
-			bm->palette[i*3+1] = dp[i*3+1];
-			bm->palette[i*3+2] = dp[i*3+0];
+			bm.palette[i*3+0] = dp[i*3+2];
+			bm.palette[i*3+1] = dp[i*3+1];
+			bm.palette[i*3+2] = dp[i*3+0];
 		}
 		dp += 768;
-	} else
-		bm->palette = 0;
+	}
 
 	int e = data[16] / 8;
 	e = ((data[16]&7)?(e+1):e);
-	//printf("e = %i\n", e);
-	int s = bm->width * bm->height * e;
-	bm->pixels = (uint8_t*)malloc(s);
-	//memcpy(bm->pixels, dp, s);
+	int s = bm.width * bm.height * e;
+	bm.pixels.resize(s);
 	if(data[2] & 8) // RLE
 	{
-		int x = 0, y = (data[17]&32) ? 0 : (bm->height - 1);
+		int x = 0, y = (data[17]&32) ? 0 : (bm.height - 1);
 		const char *c = dp;
-		while((y >= 0) || (y < bm->height))
+		while((y >= 0) || (y < bm.height))
 		{
 			uint8_t ua = *(c++);
 			uint32_t us = ((uint8_t)ua & 127) + 1;
@@ -72,14 +70,14 @@ Bitmap *LoadTGA(const char *data, int ds)
 			for(int i = 0; i < us; i++)
 			{
 			 	for(int j = 0; j < e; j++)	
-					bm->pixels[(y * bm->width + x) * e + j] = c[j];
+					bm.pixels[(y * bm.width + x) * e + j] = c[j];
 				x++;
 				if(!(ua & 128)) c += e;
-				if(x >= bm->width)
+				if(x >= bm.width)
 				{
 					x = 0;
 					y += (data[17]&32) ? 1 : (-1);
-					if((y < 0) || (y >= bm->height)) goto rleend;
+					if((y < 0) || (y >= bm.height)) goto rleend;
 				}
 			}
 			if(ua & 128) c += e;
@@ -89,77 +87,77 @@ Bitmap *LoadTGA(const char *data, int ds)
 	else
 	{
 		if(data[17] & 32)
-			for(int y = 0; y < bm->height; y++)
-				memcpy(bm->pixels + (y * bm->width * e), dp + (y * bm->width * e), bm->width * e);
+			for(int y = 0; y < bm.height; y++)
+				memcpy(bm.pixels.data() + (y * bm.width * e), dp + (y * bm.width * e), bm.width * e);
 		else
-			for(int y = 0; y < bm->height; y++)
-				memcpy(bm->pixels + ((bm->height-1-y) * bm->width * e), dp + (y * bm->width * e), bm->width * e);
+			for(int y = 0; y < bm.height; y++)
+				memcpy(bm.pixels.data() + ((bm.height-1-y) * bm.width * e), dp + (y * bm.width * e), bm.width * e);
 	}
 
 	return bm;
 }
 
-Bitmap *LoadPCX(const char *data, int ds)
+Bitmap Bitmap::loadPCX(const void* _data, size_t length)
 {
-	Bitmap *bm = new Bitmap;
+	Bitmap bm;
+	const char* data = static_cast<const char*>(_data);
 	int nplanes = (uint8_t)data[65];
 	if((uint8_t)data[3] != 8) ferr("PCX files that don't have 8 bits per channel are not supported.");
-	bm->width = *((uint16_t*)&(data[8])) - *((uint16_t*)&(data[4])) + 1;
-	bm->height = *((uint16_t*)&(data[10])) - *((uint16_t*)&(data[6])) + 1;
-	bm->format = (nplanes==3) ? BMFORMAT_R8G8B8 : BMFORMAT_P8;
-	bm->pixels = (uint8_t*)malloc(bm->width * bm->height * nplanes);
-	int pitch = (bm->width & 1) ? (bm->width + 1) : bm->width;
+	bm.width = *((uint16_t*)&(data[8])) - *((uint16_t*)&(data[4])) + 1;
+	bm.height = *((uint16_t*)&(data[10])) - *((uint16_t*)&(data[6])) + 1;
+	bm.format = (nplanes==3) ? BMFORMAT_R8G8B8 : BMFORMAT_P8;
+	bm.pixels.resize(bm.width * bm.height * nplanes);
+	int pitch = (bm.width & 1) ? (bm.width + 1) : bm.width;
 
-	uint8_t *f = (uint8_t*)data + 128, *o = bm->pixels; int pp = 0;
-	while(pp < (pitch * bm->height * nplanes))
+	uint8_t *f = (uint8_t*)data + 128, *o = bm.pixels.data(); int pp = 0;
+	while(pp < (pitch * bm.height * nplanes))
 	{
 		int a = *f++, c;
 		if(a >= 192)
 			{c = a & 63; a = *f++;}
 		else	c = 1;
 		for(; c > 0; c--)
-			{if(bm->width & 1)
-				if( (pp % (bm->width+1)) == bm->width)	
+			{if(bm.width & 1)
+				if( (pp % (bm.width+1)) == bm.width)	
 					{pp++; continue;}
-			if(bm->format == BMFORMAT_P8)
+			if(bm.format == BMFORMAT_P8)
 			{
 				*o++ = a;
 			/*
 				int oy = pp / pitch;
 				int ox = pp % pitch;
-				bm->pixels[oy*bm->width + ox] = a;
+				bm.pixels[oy*bm.width + ox] = a;
 			*/
 			}
-			else if(bm->format == BMFORMAT_R8G8B8)
+			else if(bm.format == BMFORMAT_R8G8B8)
 			{
 				int pl = (pp / pitch) % 3;
 				int oy = (pp / pitch) / 3;
 				int ox = pp % pitch;
-				bm->pixels[(oy*bm->width+ox)*3+pl] = a;
+				bm.pixels[(oy*bm.width+ox)*3+pl] = a;
 			}
 			pp++;}
 	}
 
-	bm->palette = (uint8_t*)malloc(768);
-	memcpy(bm->palette, data + ds - 768, 768);
+	bm.palette.resize(768);
+	memcpy(bm.palette.data(), data + length - 768, 768);
 
 	return bm;
 }
 
-Bitmap *ConvertBitmapToR8G8B8A8(Bitmap *sb)
+Bitmap Bitmap::convertToR8G8B8A8() const
 {
-	Bitmap *bm = new Bitmap;
-	bm->width = sb->width; bm->height = sb->height;
-	bm->format = BMFORMAT_R8G8B8A8;
-	int l = bm->width * bm->height;
-	bm->pixels = (uint8_t*)malloc(l * 4);
-	bm->palette = 0;
+	Bitmap bm; const Bitmap* sb = this;
+	bm.width = sb->width; bm.height = sb->height;
+	bm.format = BMFORMAT_R8G8B8A8;
+	int l = bm.width * bm.height;
+	bm.pixels.resize(l * 4);
 	if(sb->format == BMFORMAT_R8G8B8A8)
-		memcpy(bm->pixels, sb->pixels, l * 4);
+		memcpy(bm.pixels.data(), sb->pixels.data(), l * 4);
 	else if(sb->format == BMFORMAT_P8)
 	{
 		for(int i = 0; i < l; i++)
-			((uint32_t*)bm->pixels)[i] =	CM_RGBA(sb->palette[sb->pixels[i]*3+0],
+			((uint32_t*)bm.pixels.data())[i] =	CM_RGBA(sb->palette[sb->pixels[i]*3+0],
 							sb->palette[sb->pixels[i]*3+1],
 							sb->palette[sb->pixels[i]*3+2],
 							255);
@@ -167,7 +165,7 @@ Bitmap *ConvertBitmapToR8G8B8A8(Bitmap *sb)
 	else if(sb->format == BMFORMAT_R8G8B8)
 	{
 		for(int i = 0; i < l; i++)
-			((uint32_t*)bm->pixels)[i] =	CM_RGBA(sb->pixels[i*3+0],
+			((uint32_t*)bm.pixels.data())[i] =	CM_RGBA(sb->pixels[i*3+0],
 							sb->pixels[i*3+1],
 							sb->pixels[i*3+2],
 							255);
@@ -175,7 +173,7 @@ Bitmap *ConvertBitmapToR8G8B8A8(Bitmap *sb)
 	else if(sb->format == BMFORMAT_B8G8R8)
 	{
 		for(int i = 0; i < l; i++)
-			((uint32_t*)bm->pixels)[i] =	CM_RGBA(sb->pixels[i*3+2],
+			((uint32_t*)bm.pixels.data())[i] =	CM_RGBA(sb->pixels[i*3+2],
 							sb->pixels[i*3+1],
 							sb->pixels[i*3+0],
 							255);
@@ -183,7 +181,7 @@ Bitmap *ConvertBitmapToR8G8B8A8(Bitmap *sb)
 	else if(sb->format == BMFORMAT_B8G8R8A8)
 	{
 		for(int i = 0; i < l; i++)
-			((uint32_t*)bm->pixels)[i] =	CM_RGBA(sb->pixels[i*4+2],
+			((uint32_t*)bm.pixels.data())[i] =	CM_RGBA(sb->pixels[i*4+2],
 							sb->pixels[i*4+1],
 							sb->pixels[i*4+0],
 							sb->pixels[i*4+3]);
@@ -193,20 +191,19 @@ Bitmap *ConvertBitmapToR8G8B8A8(Bitmap *sb)
 	return bm;
 }
 
-Bitmap *ConvertBitmapToB8G8R8A8(Bitmap *sb)
+Bitmap Bitmap::convertToB8G8R8A8() const
 {
-	Bitmap *bm = new Bitmap;
-	bm->width = sb->width; bm->height = sb->height;
-	bm->format = BMFORMAT_B8G8R8A8;
-	int l = bm->width * bm->height;
-	bm->pixels = (uint8_t*)malloc(l * 4);
-	bm->palette = 0;
+	Bitmap bm; const Bitmap* sb = this;
+	bm.width = sb->width; bm.height = sb->height;
+	bm.format = BMFORMAT_B8G8R8A8;
+	int l = bm.width * bm.height;
+	bm.pixels.resize(l * 4);
 	if(sb->format == BMFORMAT_B8G8R8A8)
-		memcpy(bm->pixels, sb->pixels, l * 4);
+		memcpy(bm.pixels.data(), sb->pixels.data(), l * 4);
 	else if(sb->format == BMFORMAT_P8)
 	{
 		for(int i = 0; i < l; i++)
-			((uint32_t*)bm->pixels)[i] =	CM_BGRA(sb->palette[sb->pixels[i]*3+0],
+			((uint32_t*)bm.pixels.data())[i] =	CM_BGRA(sb->palette[sb->pixels[i]*3+0],
 							sb->palette[sb->pixels[i]*3+1],
 							sb->palette[sb->pixels[i]*3+2],
 							255);
@@ -214,7 +211,7 @@ Bitmap *ConvertBitmapToB8G8R8A8(Bitmap *sb)
 	else if(sb->format == BMFORMAT_R8G8B8)
 	{
 		for(int i = 0; i < l; i++)
-			((uint32_t*)bm->pixels)[i] =	CM_BGRA(sb->pixels[i*3+0],
+			((uint32_t*)bm.pixels.data())[i] =	CM_BGRA(sb->pixels[i*3+0],
 							sb->pixels[i*3+1],
 							sb->pixels[i*3+2],
 							255);
@@ -222,7 +219,7 @@ Bitmap *ConvertBitmapToB8G8R8A8(Bitmap *sb)
 	else if(sb->format == BMFORMAT_B8G8R8)
 	{
 		for(int i = 0; i < l; i++)
-			((uint32_t*)bm->pixels)[i] =	CM_BGRA(sb->pixels[i*3+2],
+			((uint32_t*)bm.pixels.data())[i] =	CM_BGRA(sb->pixels[i*3+2],
 							sb->pixels[i*3+1],
 							sb->pixels[i*3+0],
 							255);
@@ -230,7 +227,7 @@ Bitmap *ConvertBitmapToB8G8R8A8(Bitmap *sb)
 	else if(sb->format == BMFORMAT_R8G8B8A8)
 	{
 		for(int i = 0; i < l; i++)
-			((uint32_t*)bm->pixels)[i] =	CM_BGRA(sb->pixels[i*4+0],
+			((uint32_t*)bm.pixels.data())[i] =	CM_BGRA(sb->pixels[i*4+0],
 							sb->pixels[i*4+1],
 							sb->pixels[i*4+2],
 							sb->pixels[i*4+3]);
@@ -240,29 +237,20 @@ Bitmap *ConvertBitmapToB8G8R8A8(Bitmap *sb)
 	return bm;
 }
 
-void FreeBitmap(Bitmap *bm)
+Bitmap::~Bitmap() = default;
+
+void Bitmap::blit32(int dx, int dy, const Bitmap& sb, int sx, int sy, int sw, int sh)
 {
-	delete bm;
+	for (int y = sy; y < (sy + sh); y++)
+		for (int x = sx; x < (sx + sw); x++)
+			((uint32_t*)pixels.data())[((y - sy + dy) * width + (x - sx + dx))] = ((uint32_t*)sb.pixels.data())[(y * sb.width + x)];
 }
 
-Bitmap::~Bitmap() {
-	if (pixels) free(pixels);
-	if (palette) free(palette);
-}
+static void write8(FILE *f, uint8_t a) {fwrite(&a, 1, 1, f);}
+static void write16(FILE *f, uint16_t a) {fwrite(&a, 2, 1, f);}
+static void write32(FILE *f, uint32_t a) {fwrite(&a, 4, 1, f);}
 
-void BitmapBlit32(Bitmap *db, int dx, int dy, Bitmap *sb, int sx, int sy, int sw, int sh)
-{
-	//printf("BitmapBlit32: dx = %i, dy = %i, sx = %i, sy = %i, sw = %i, sh = %i\n", dx, dy, sx, sy, sw, sh);
-	for(int y = sy; y < (sy+sh); y++)
-	for(int x = sx; x < (sx+sw); x++)
-		((uint32_t*)db->pixels)[((y-sy+dy)*db->width+(x-sx+dx))] = ((uint32_t*)sb->pixels)[(y*sb->width+x)];
-}
-
-void write8(FILE *f, uint8_t a) {fwrite(&a, 1, 1, f);}
-void write16(FILE *f, uint16_t a) {fwrite(&a, 2, 1, f);}
-void write32(FILE *f, uint32_t a) {fwrite(&a, 4, 1, f);}
-
-void WritePCXHeader(FILE *f, int w, int h, int np)
+static void WritePCXHeader(FILE *f, int w, int h, int np)
 {
 	int i;
 	write8(f, 10); write8(f, 5); write8(f, 1); write8(f, 8);
@@ -278,7 +266,7 @@ void WritePCXHeader(FILE *f, int w, int h, int np)
 	for(i = 0; i < 14; i++) write32(f, 0);
 }
 
-void WritePCXData(FILE *f, const uint8_t *pix, int w, int h, int np)
+static void WritePCXData(FILE *f, const uint8_t *pix, int w, int h, int np)
 {
 	int y, p, x;
 	for(y = 0; y < h; y++)
@@ -309,37 +297,36 @@ void WritePCXData(FILE *f, const uint8_t *pix, int w, int h, int np)
 	}
 }
 
-void SaveBitmapPCX(Bitmap *bm, const char *fname)
+void Bitmap::savePCX(const char *fname) const
 {
 	FILE *f = fopen(fname, "wb"); if(!f) ferr("Cannot open \"%s\" for writing PCX file.", fname);
-	switch(bm->format)
+	switch(format)
 	{
 		case BMFORMAT_P8:
-			WritePCXHeader(f, bm->width, bm->height, 1);
-			WritePCXData(f, bm->pixels, bm->width, bm->height, 1);
+			WritePCXHeader(f, width, height, 1);
+			WritePCXData(f, pixels.data(), width, height, 1);
 			write8(f, 12);
-			fwrite(bm->palette, 768, 1, f);
+			fwrite(palette.data(), 768, 1, f);
 			break;
 		case BMFORMAT_R8G8B8:
-			WritePCXHeader(f, bm->width, bm->height, 3);
-			WritePCXData(f, bm->pixels, bm->width, bm->height, 3);
+			WritePCXHeader(f, width, height, 3);
+			WritePCXData(f, pixels.data(), width, height, 3);
 			break;
 		default:
-			ferr("SaveBitmapPCX doesn't support format %i.", bm->format);
+			ferr("Bitmap::savePCX doesn't support format %i.", format);
 	}
 	fclose(f);
 }
 
-Bitmap* ResizeBitmap(const Bitmap& original, int nwidth, int nheight) {
-	Bitmap* _res = new Bitmap;
-	Bitmap& res = *_res;
+Bitmap Bitmap::resize(int nwidth, int nheight) const {
+	Bitmap res;
+	const Bitmap& original = *this;
 	res.width = nwidth;
 	res.height = nheight;
 	res.format = original.format;
 	int npitch = nwidth * 4;
 	int totalSize = npitch * nheight;
-	res.pixels = (uint8_t*)malloc(totalSize);
-	res.palette = nullptr;
-	stbir_resize_uint8(original.pixels, original.width, original.height, original.width * 4, res.pixels, res.width, res.height, npitch, 4);
-	return _res;
+	res.pixels.resize(totalSize);
+	stbir_resize_uint8(original.pixels.data(), original.width, original.height, original.width * 4, res.pixels.data(), res.width, res.height, npitch, 4);
+	return res;
 }

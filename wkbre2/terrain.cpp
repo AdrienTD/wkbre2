@@ -121,8 +121,7 @@ void Terrain::readBCM(const char * filename) {
 	texDb.translate(texDb.getLTTTPath(filename).c_str());
 
 	int numVerts = (width + 1)*(height + 1);
-	vertices = (uint8_t*)malloc(numVerts);
-	if (!vertices) ferr("No mem. left for heightmap.");
+	vertices.resize(numVerts);
 
 	BitReader br(fp + 0xC000);
 
@@ -226,13 +225,10 @@ void Terrain::readSNR(const char* filename)
 		}
 		else if (tag == "SCENARIO_HEIGHTMAP") {
 			int numVerts = (width + 1) * (height + 1);
-			vertices = (uint8_t*)malloc(numVerts);
-			if (!vertices) ferr("No mem. left for heightmap.");
-			Bitmap *bmp = LoadBitmap(gsf.nextString(true).c_str());
-			if (bmp->width != width + 1 || bmp->height != height + 1)
+			Bitmap bmp = Bitmap::loadBitmap(gsf.nextString(true).c_str());
+			if (bmp.width != width + 1 || bmp.height != height + 1)
 				ferr("Incorrect heightmap bitmap size");
-			vertices = bmp->pixels;
-			// TODO: Free bitmap without pixels
+			vertices = std::move(bmp.pixels);
 		}
 		else if (tag == "SCENARIO_HEIGHT_SCALE_FACTOR") {
 			scale = gsf.nextFloat();
