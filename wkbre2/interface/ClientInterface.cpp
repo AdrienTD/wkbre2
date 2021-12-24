@@ -25,6 +25,9 @@
 #include "../ParticleContainer.h"
 #include "../ParticleSystem.h"
 #include "../gfx/DefaultParticleRenderer.h"
+#include "../gfx/D3D11EnhancedTerrainRenderer.h"
+#include "../settings.h"
+#include <nlohmann/json.hpp>
 
 namespace {
 	Vector3 getRay(const Camera &cam) {
@@ -454,6 +457,17 @@ void ClientInterface::iter()
 	ImGui::DragFloat3("peapos", &peapos.x);
 	if (ImGui::Button("Start level"))
 		client->sendStartLevelRequest();
+#ifdef _WIN32
+	if (g_settings.value<bool>("enhancedGraphics", false)) {
+		if (D3D11EnhancedTerrainRenderer* etr = static_cast<D3D11EnhancedTerrainRenderer*>(terrainRenderer)) {
+			if (client->terrain)
+				ImGui::DragFloat3("Sun", &client->terrain->sunVector.x, 0.1f);
+			etr->m_lampPos = peapos + Vector3(0, 4, 0);
+			ImGui::DragFloat3("Lamp", &etr->m_lampPos.x, 0.1f);
+			ImGui::Checkbox("Bump", &etr->m_bumpOn);
+		}
+	}
+#endif
 	ImGui::End();
 
 	for (auto& activeGtw : client->gtwStates) {
@@ -620,5 +634,12 @@ void ClientInterface::render()
 }
 
 void ClientInterface::updateTerrain() {
+#ifdef _WIN32
+	if (g_settings.value<bool>("enhancedGraphics", false))
+		this->terrainRenderer = new D3D11EnhancedTerrainRenderer(gfx, client->terrain, &client->camera);
+	else
+		this->terrainRenderer = new DefaultTerrainRenderer(gfx, client->terrain, &client->camera);
+#else
 	this->terrainRenderer = new DefaultTerrainRenderer(gfx, client->terrain, &client->camera);
+#endif
 }

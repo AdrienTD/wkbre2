@@ -13,5 +13,6 @@ struct TerrainRenderer {
 	Terrain *terrain;
 	Camera *camera;
 	TerrainRenderer(IRenderer *gfx, Terrain *terrain, Camera *camera) : gfx(gfx), terrain(terrain), camera(camera) {}
+	virtual ~TerrainRenderer() {}
 	virtual void render() = 0;
 };

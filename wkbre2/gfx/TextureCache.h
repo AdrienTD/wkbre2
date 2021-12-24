@@ -8,6 +8,8 @@
 #include <map>
 #include "renderer.h"
 
+struct Bitmap;
+
 struct TextureCache
 {
 	IRenderer *gfx;
@@ -15,7 +17,10 @@ struct TextureCache
 	std::string directory;
 
 	texture loadTexture(const char *fn, int mipmaps);
+	texture createTexture(const char* filename, int mipmaps, const Bitmap &bmp);
+
 	texture getTexture(const char *filename, bool mipmaps = true);
+	texture getTextureIfCached(const char* filename) const;
 
 	TextureCache(IRenderer *gfx, const std::string &directory = "") : gfx(gfx), directory(directory) {}
 };
