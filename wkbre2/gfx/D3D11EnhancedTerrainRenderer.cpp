@@ -29,9 +29,19 @@ using Microsoft::WRL::ComPtr;
 
 struct D11NTRVtx {
 	Vector3 pos;
-	Vector3 normal, tangent, bitangent;
+	uint32_t normal, tangent, bitangent;
 	float u, v;
 };
+
+static constexpr uint32_t Vec3ToR10G10B10A2(const Vector3& vec) {
+	uint32_t res = (uint32_t)(vec.x * 1023.0f);
+	res |= (uint32_t)(vec.y * 1023.0f) << 10;
+	res |= (uint32_t)(vec.z * 1023.0f) << 20;
+	return res;
+}
+static constexpr uint32_t NormalToR10G10B10A2(const Vector3& vec) {
+	return Vec3ToR10G10B10A2((vec + Vector3(1, 1, 1)) * 0.5f);
+}
 
 const char tshaderCode[] = R"---(
 Texture2D inpTexture : register(t0);
@@ -61,7 +71,7 @@ cbuffer SunBuffer : register(b2)
 struct VS_OUTPUT
 {
 	float4 Pos : SV_POSITION;
-	float3 FragPos : COLOR2;
+	float3 FragPos : COLOR1;
 	float3 Norm: NORMAL;
 	float4 Color : COLOR0;
 	float2 Texcoord : TEXCOORD0;
@@ -83,14 +93,12 @@ VS_OUTPUT VS(float4 Pos : POSITION, float3 Normal : NORMAL, float3 Tangent : TAN
 	VS_OUTPUT output = (VS_OUTPUT)0;
 	output.Pos = mul(Pos, Transform);
 	output.FragPos = Pos.xyz;
-	output.Norm = Normal;
+	output.Norm = Normal * 2 - float3(1,1,1);
 	output.Color = float4(1,1,1,1);
-	//float lum = (dot(Normal, SunDirection) + 1) / 2;
-	//output.Color = float4(lum.xxx, 1);
 	output.Texcoord = Texcoord;
 	output.Fog = clamp((output.Pos.w-FogStartDist) / (FogEndDist-FogStartDist), 0, 1);
-	output.Tangent = Tangent;
-	output.Bitangent = Bitangent;
+	output.Tangent = Tangent * 2 - float3(1,1,1);
+	output.Bitangent = Bitangent * 2 - float3(1,1,1);
 	return output;
 };
 
@@ -121,6 +129,7 @@ float4 PS(VS_OUTPUT input) : SV_Target
 		float3 m3 = input.Bitangent;
 		float3 actnorm = nrm.xxx * m1 + nrm.yyy * m2 + nrm.zzz * m3;
 		lum += clamp(dot(normalize(actnorm), SunDirection), 0, 1);
+		lum = clamp(lum, 0, 1);
 
 		float lampLum = clamp(dot(normalize(actnorm), normalize(lampDir)), 0, 1);
 		float lampDist = length(lampDir);
@@ -130,6 +139,7 @@ float4 PS(VS_OUTPUT input) : SV_Target
 	}
 	else {
 		lum += clamp(dot(input.Norm, SunDirection), 0, 1);
+		lum = clamp(lum, 0, 1);
 
 		float lampLum = clamp(dot(input.Norm, normalize(lampDir)), 0, 1);
 		float lampDist = length(lampDir);
@@ -342,10 +352,10 @@ void D3D11EnhancedTerrainRenderer::render() {
 		auto vsBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "VS", "vs_4_0");
 		static const D3D11_INPUT_ELEMENT_DESC iadesc[] = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 36, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"NORMAL", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TANGENT", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"BITANGENT", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 		HRESULT hres;
 		hres = d11gfx->ddDevice->CreateInputLayout(iadesc, std::size(iadesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &ddInputLayout);
@@ -462,33 +472,49 @@ void D3D11EnhancedTerrainRenderer::render() {
 				std::rotate(uvs.begin(), uvs.begin() + tile->rot, uvs.end());
 			}
 
-			D11NTRVtx *outvert; uint16_t *outindices; unsigned int firstindex;
-			batch->next(4, 6, &outvert, &outindices, &firstindex);
-			outvert[0].pos = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - z), lz * tilesize);
-			outvert[1].pos = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - z), lz * tilesize);
-			outvert[2].pos = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - (z + 1)), (lz + 1) * tilesize);
-			outvert[3].pos = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - (z + 1)), (lz + 1) * tilesize);
-			outvert[0].normal = terrain->getNormal(x, terrain->height - z);
-			outvert[1].normal = terrain->getNormal(x + 1, terrain->height - z);
-			outvert[2].normal = terrain->getNormal(x + 1, terrain->height - z - 1);
-			outvert[3].normal = terrain->getNormal(x, terrain->height - z - 1);
+			Vector3 poses[4];
+			poses[0] = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - z), lz * tilesize);
+			poses[1] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - z), lz * tilesize);
+			poses[2] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - (z + 1)), (lz + 1) * tilesize);
+			poses[3] = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - (z + 1)), (lz + 1) * tilesize);
 
 			float du1 = uvs[3].first - uvs[0].first, dv1 = uvs[3].second - uvs[0].second;
 			float du2 = uvs[1].first - uvs[0].first, dv2 = uvs[1].second - uvs[0].second;
-			Vector3 edge1 = outvert[3].pos - outvert[0].pos;
-			Vector3 edge2 = outvert[1].pos - outvert[0].pos;
+			Vector3 edge1 = poses[3] - poses[0];
+			Vector3 edge2 = poses[1] - poses[0];
 			float idet = 1.0f / (du1 * dv2 - du2 * dv1);
 			Vector3 tangent = (edge1 * dv2 - edge2 * dv1) * idet;
 			Vector3 bitangent = (edge2 * du1 - edge1 * du2) * idet;
-			for (int i = 0; i < 4; i++) {
-				outvert[i].tangent = tangent.normal();
-				outvert[i].bitangent = bitangent.normal();
-			}
+			uint32_t cmprTangent = NormalToR10G10B10A2(tangent.normal());
+			uint32_t cmprBitangent = NormalToR10G10B10A2(bitangent.normal());
 
-			for (int i = 0; i < 4; i++) {
-				outvert[i].u = uvs[i].first;
-				outvert[i].v = uvs[i].second;
-			}
+			D11NTRVtx *outvert; uint16_t *outindices; unsigned int firstindex;
+			batch->next(4, 6, &outvert, &outindices, &firstindex);
+			outvert[0].pos = poses[0];
+			outvert[0].normal = NormalToR10G10B10A2(terrain->getNormal(x, terrain->height - z));
+			outvert[0].tangent = cmprTangent;
+			outvert[0].bitangent = cmprBitangent;
+			outvert[0].u = uvs[0].first;
+			outvert[0].v = uvs[0].second;
+			outvert[1].pos = poses[1];
+			outvert[1].normal = NormalToR10G10B10A2(terrain->getNormal(x + 1, terrain->height - z));
+			outvert[1].tangent = cmprTangent;
+			outvert[1].bitangent = cmprBitangent;
+			outvert[1].u = uvs[1].first;
+			outvert[1].v = uvs[1].second;
+			outvert[2].pos = poses[2];
+			outvert[2].normal = NormalToR10G10B10A2(terrain->getNormal(x + 1, terrain->height - z - 1));
+			outvert[2].tangent = cmprTangent;
+			outvert[2].bitangent = cmprBitangent;
+			outvert[2].u = uvs[2].first;
+			outvert[2].v = uvs[2].second;
+			outvert[3].pos = poses[3];
+			outvert[3].normal = NormalToR10G10B10A2(terrain->getNormal(x, terrain->height - z - 1));
+			outvert[3].tangent = cmprTangent;
+			outvert[3].bitangent = cmprBitangent;
+			outvert[3].u = uvs[3].first;
+			outvert[3].v = uvs[3].second;
+
 			uint16_t *oix = outindices;
 			for (const int &c : { 0,3,1,1,3,2 })
 				*(oix++) = firstindex + c;
