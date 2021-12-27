@@ -28,8 +28,8 @@
 using Microsoft::WRL::ComPtr;
 
 struct D11NTRVtx {
-	float x, y, z;
-	Vector3 normal;
+	Vector3 pos;
+	Vector3 normal, tangent, bitangent;
 	float u, v;
 };
 
@@ -62,10 +62,12 @@ struct VS_OUTPUT
 {
 	float4 Pos : SV_POSITION;
 	float3 FragPos : COLOR2;
-	float3 Norm: COLOR1;
+	float3 Norm: NORMAL;
 	float4 Color : COLOR0;
 	float2 Texcoord : TEXCOORD0;
 	float Fog : FOG;
+	float3 Tangent : TANGENT0;
+	float3 Bitangent : TANGENT1;
 };
 
 [maxvertexcount(3)]
@@ -76,7 +78,7 @@ void GS( triangle VS_OUTPUT input[3], inout TriangleStream<VS_OUTPUT> TriStream 
 	TriStream.RestartStrip();
 }
 
-VS_OUTPUT VS(float4 Pos : POSITION, float3 Normal : NORMAL, float2 Texcoord : TEXCOORD)
+VS_OUTPUT VS(float4 Pos : POSITION, float3 Normal : NORMAL, float3 Tangent : TANGENT, float3 Bitangent : BITANGENT, float2 Texcoord : TEXCOORD)
 {
 	VS_OUTPUT output = (VS_OUTPUT)0;
 	output.Pos = mul(Pos, Transform);
@@ -87,6 +89,8 @@ VS_OUTPUT VS(float4 Pos : POSITION, float3 Normal : NORMAL, float2 Texcoord : TE
 	//output.Color = float4(lum.xxx, 1);
 	output.Texcoord = Texcoord;
 	output.Fog = clamp((output.Pos.w-FogStartDist) / (FogEndDist-FogStartDist), 0, 1);
+	output.Tangent = Tangent;
+	output.Bitangent = Bitangent;
 	return output;
 };
 
@@ -111,21 +115,10 @@ float4 PS(VS_OUTPUT input) : SV_Target
 	const float lampRadius = 5;
 	if(BumpOn) {
 		float3 nrm = normalTexture.Sample(inpSampler, fuv).xyz * 2 - 1;
-		//float4 gat = normalTexture.Gather(inpSampler, fuv);
-		//float dx = clamp((gat.y - gat.x)*3, -1, 1);
-		//float dz = clamp((gat.z - gat.x)*3, -1, 1);
-		//float3 nrm = float3(dx, 1 - dx*dx - dz*dz, dz);
 
-		//float3 m1 = normalize(float3(1,0,-nrm.x / nrm.z));
-		//float3 m2 = input.Norm;
-		//float3 m3 = normalize(float3(0,1,-nrm.y / nrm.z));
+		float3 m1 = input.Tangent;
 		float3 m2 = input.Norm;
-		m2.z = max(0.04, m2.z); // prevents null cross product when input.Norm==(0,1,0)
-		m2 = normalize(m2);
-		float3 m1 = normalize(cross(m2, float3(0,1,0)));
-		float3 m3 = normalize(cross(m1, m2));
-		//tex = float4(dot(m1,m2), dot(m1,m3), dot(m2,m3), 1);
-
+		float3 m3 = input.Bitangent;
 		float3 actnorm = nrm.xxx * m1 + nrm.yyy * m2 + nrm.zzz * m3;
 		lum += clamp(dot(normalize(actnorm), SunDirection), 0, 1);
 
@@ -350,7 +343,9 @@ void D3D11EnhancedTerrainRenderer::render() {
 		static const D3D11_INPUT_ELEMENT_DESC iadesc[] = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 36, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 		HRESULT hres;
 		hres = d11gfx->ddDevice->CreateInputLayout(iadesc, std::size(iadesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &ddInputLayout);
@@ -469,14 +464,26 @@ void D3D11EnhancedTerrainRenderer::render() {
 
 			D11NTRVtx *outvert; uint16_t *outindices; unsigned int firstindex;
 			batch->next(4, 6, &outvert, &outindices, &firstindex);
-			outvert[0].x = lx * tilesize; outvert[0].z = lz * tilesize; outvert[0].y = terrain->getVertex(x, terrain->height - z);
-			outvert[1].x = (lx + 1) * tilesize; outvert[1].z = lz * tilesize; outvert[1].y = terrain->getVertex(x + 1, terrain->height - z);
-			outvert[2].x = (lx + 1) * tilesize; outvert[2].z = (lz + 1) * tilesize; outvert[2].y = terrain->getVertex(x + 1, terrain->height - (z + 1));
-			outvert[3].x = lx * tilesize; outvert[3].z = (lz + 1) * tilesize; outvert[3].y = terrain->getVertex(x, terrain->height - (z + 1));
+			outvert[0].pos = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - z), lz * tilesize);
+			outvert[1].pos = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - z), lz * tilesize);
+			outvert[2].pos = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - (z + 1)), (lz + 1) * tilesize);
+			outvert[3].pos = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - (z + 1)), (lz + 1) * tilesize);
 			outvert[0].normal = terrain->getNormal(x, terrain->height - z);
 			outvert[1].normal = terrain->getNormal(x + 1, terrain->height - z);
 			outvert[2].normal = terrain->getNormal(x + 1, terrain->height - z - 1);
 			outvert[3].normal = terrain->getNormal(x, terrain->height - z - 1);
+
+			float du1 = uvs[3].first - uvs[0].first, dv1 = uvs[3].second - uvs[0].second;
+			float du2 = uvs[1].first - uvs[0].first, dv2 = uvs[1].second - uvs[0].second;
+			Vector3 edge1 = outvert[3].pos - outvert[0].pos;
+			Vector3 edge2 = outvert[1].pos - outvert[0].pos;
+			float idet = 1.0f / (du1 * dv2 - du2 * dv1);
+			Vector3 tangent = (edge1 * dv2 - edge2 * dv1) * idet;
+			Vector3 bitangent = (edge2 * du1 - edge1 * du2) * idet;
+			for (int i = 0; i < 4; i++) {
+				outvert[i].tangent = tangent.normal();
+				outvert[i].bitangent = bitangent.normal();
+			}
 
 			for (int i = 0; i < 4; i++) {
 				outvert[i].u = uvs[i].first;
