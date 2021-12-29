@@ -458,6 +458,8 @@ void ClientInterface::iter()
 	ImGui::DragFloat3("peapos", &peapos.x);
 	if (ImGui::Button("Start level"))
 		client->sendStartLevelRequest();
+	static bool showTerrain = true;
+	ImGui::Checkbox("Terrain", &showTerrain);
 #ifdef _WIN32
 	if (g_settings.value<bool>("enhancedGraphics", false)) {
 		if (D3D11EnhancedTerrainRenderer* etr = static_cast<D3D11EnhancedTerrainRenderer*>(terrainRenderer)) {
@@ -605,7 +607,7 @@ void ClientInterface::iter()
 		scene->clear();
 	}
 
-	if (terrainRenderer)
+	if (terrainRenderer && showTerrain)
 		terrainRenderer->render();
 
 	if (particleRenderer && particlesContainer) {

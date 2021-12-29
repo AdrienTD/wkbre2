@@ -56,7 +56,7 @@ cbuffer SunBuffer : register(b2)
 
 cbuffer SceneBuffer : register(b3)
 {
-	matrix EntityTransform;
+	matrix OldEntityTransform;
 	int EntityFlags;
 	float EntityTime;
 };
@@ -70,7 +70,7 @@ struct VS_OUTPUT
 	float Fog : FOG;
 };
 
-VS_OUTPUT VS(float3 Pos : POSITION, float3 Normal : NORMAL, float2 Texcoord : TEXCOORD)
+VS_OUTPUT VS(float3 Pos : POSITION, float3 Normal : NORMAL, float2 Texcoord : TEXCOORD, float4x4 EntityTransform : TRANSFORM)
 {
 	VS_OUTPUT output = (VS_OUTPUT)0;
 	float4x4 trans = mul(EntityTransform, Transform);
@@ -88,9 +88,9 @@ VS_OUTPUT VS(float3 Pos : POSITION, float3 Normal : NORMAL, float2 Texcoord : TE
 	return output;
 };
 
-VS_OUTPUT VS_Anim(float3 Pos1 : POSITION0, float3 Pos2 : POSITION1, float3 Normal1 : NORMAL0, float3 Normal2 : NORMAL1, float2 Texcoord : TEXCOORD)
+VS_OUTPUT VS_Anim(float3 Pos1 : POSITION0, float3 Pos2 : POSITION1, float3 Normal1 : NORMAL0, float3 Normal2 : NORMAL1, float2 Texcoord : TEXCOORD, float4x4 EntityTransform : TRANSFORM)
 {
-	return VS(lerp(Pos1, Pos2, EntityTime), lerp(Normal1, Normal2, EntityTime), Texcoord);
+	return VS(lerp(Pos1, Pos2, EntityTime), lerp(Normal1, Normal2, EntityTime), Texcoord, EntityTransform);
 };
 
 float4 PS(VS_OUTPUT input) : SV_Target
@@ -243,6 +243,8 @@ struct D3D11EnhancedSceneRenderer::Impl {
 	ComPtr<ID3D11VertexShader> meshVS, animVS;
 	ComPtr<ID3D11PixelShader> defPS, alphaPS;
 	ComPtr<ID3D11Buffer> sceneConstBuffer, sunConstBuffer;
+	const int MAX_INSTANCES = 16;
+	ComPtr<ID3D11Buffer> instanceBuffer;
 };
 
 D3D11EnhancedSceneRenderer::~D3D11EnhancedSceneRenderer()
@@ -261,7 +263,11 @@ void D3D11EnhancedSceneRenderer::init()
 	static const D3D11_INPUT_ELEMENT_DESC iadescMesh[] = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"NORMAL", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TRANSFORM", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"TRANSFORM", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"TRANSFORM", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"TRANSFORM", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 3, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1},
 	};
 	ddev->CreateInputLayout(iadescMesh, std::size(iadescMesh), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &_impl->meshIA);
 	ddev->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &_impl->meshVS);
@@ -273,6 +279,10 @@ void D3D11EnhancedSceneRenderer::init()
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"POSITION", 1, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"NORMAL", 1, DXGI_FORMAT_R10G10B10A2_UNORM, 4, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TRANSFORM", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"TRANSFORM", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"TRANSFORM", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1},
+		{"TRANSFORM", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1},
 	};
 	ddev->CreateInputLayout(iadescAnim, std::size(iadescAnim), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &_impl->animIA);
 	if (!_impl->animIA)
@@ -294,6 +304,9 @@ void D3D11EnhancedSceneRenderer::init()
 	ddev->CreateBuffer(&bdesc, nullptr, &_impl->sceneConstBuffer);
 	bdesc.ByteWidth = 48;
 	ddev->CreateBuffer(&bdesc, nullptr, &_impl->sunConstBuffer);
+	bdesc.ByteWidth = 64 * _impl->MAX_INSTANCES;
+	bdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	ddev->CreateBuffer(&bdesc, nullptr, &_impl->instanceBuffer);
 }
 
 void D3D11EnhancedSceneRenderer::render()
@@ -376,6 +389,63 @@ void D3D11EnhancedSceneRenderer::render()
 			cur_isanim = next_isanim;
 		}
 
+		int prevFrame = -1;
+		float prevAnimLerp = -1.0f;
+		int prevColor = -1;
+		uint32_t prevFlags = -1;
+		std::vector<Matrix> instTransforms;
+
+		auto flush = [&]() {
+			if (instTransforms.empty()) return;
+			D3D11_MAPPED_SUBRESOURCE scbm;
+			dimm->Map(_impl->instanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &scbm);
+			memcpy(scbm.pData, instTransforms.data(), instTransforms.size() * 64);
+			dimm->Unmap(_impl->instanceBuffer.Get(), 0);
+
+			dimm->Map(_impl->sceneConstBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &scbm);
+			//*(Matrix*)scbm.pData = ent->transform.getTranspose();
+			((uint32_t*)scbm.pData)[16] = prevFlags;
+			((float*)scbm.pData)[17] = prevAnimLerp;
+			dimm->Unmap(_impl->sceneConstBuffer.Get(), 0);
+			dimm->VSSetConstantBuffers(3, 1, _impl->sceneConstBuffer.GetAddressOf());
+
+			if (enhAnim) {
+				auto* animModel = (AnimatedModel*)model;
+				ID3D11Buffer* iaBuffers[6] = { enhAnim->animVertices[prevFrame].Get(), enhAnim->animNormals[prevFrame].Get(),
+												enhMesh->texcoords[prevColor].Get(),
+												enhAnim->animVertices[prevFrame + 1].Get(), enhAnim->animNormals[prevFrame + 1].Get(),
+												_impl->instanceBuffer.Get() };
+				static const UINT iaStrides[std::size(iaBuffers)] = { 12, 4, 8, 12, 4, 64 };
+				static const UINT iaOffsets[std::size(iaBuffers)] = { 0,0,0,0,0,0 };
+				dimm->IASetVertexBuffers(0, std::size(iaBuffers), std::data(iaBuffers), iaStrides, iaOffsets);
+				dimm->IASetIndexBuffer(enhMesh->indices.Get(), DXGI_FORMAT_R16_UINT, 0);
+			}
+			else {
+				ID3D11Buffer* iaBuffers[4] = { enhMesh->vertices.Get(), enhMesh->normals.Get(),
+												enhMesh->texcoords[prevColor].Get(),
+												_impl->instanceBuffer.Get() };
+				static const UINT iaStrides[std::size(iaBuffers)] = { 12, 4, 8, 64 };
+				static const UINT iaOffsets[std::size(iaBuffers)] = { 0,0,0,0 };
+				dimm->IASetVertexBuffers(0, std::size(iaBuffers), std::data(iaBuffers), iaStrides, iaOffsets);
+				dimm->IASetIndexBuffer(enhMesh->indices.Get(), DXGI_FORMAT_R16_UINT, 0);
+			}
+
+			PolygonList& polylist = staticModel->mesh.polyLists[0];
+			uint32_t startIndex = 0, startVertex = 0;
+			for (int g = 0; g < polylist.groups.size(); g++) {
+				uint32_t numIndices = 3 * polylist.groups[g].tupleIndex.size();
+				uint32_t numVertices = staticModel->mesh.groupIndices[g].size();
+				if (staticModel->matIds[g] == it.first.first) {
+					//dimm->DrawIndexed(numIndices, startIndex, startVertex);
+					dimm->DrawIndexedInstanced(numIndices, instTransforms.size(), startIndex, startVertex, 0);
+				}
+				startIndex += numIndices;
+				startVertex += numVertices;
+			}
+
+			instTransforms.clear();
+		};
+
 		for (const SceneEntity* ent : it.second.list) {
 			size_t frame = 0;
 			float animLerp = 0.0f;
@@ -387,43 +457,16 @@ void D3D11EnhancedSceneRenderer::render()
 						break;
 				animLerp = (float)(animtime - enhAnim->animTimes[frame]) / (float)(enhAnim->animTimes[frame + 1] - enhAnim->animTimes[frame]);
 			}
+			int actualColor = ent->color % enhMesh->texcoords.size();
 
-			D3D11_MAPPED_SUBRESOURCE scbm;
-			dimm->Map(_impl->sceneConstBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &scbm);
-			*(Matrix*)scbm.pData = ent->transform.getTranspose();
-			((uint32_t*)scbm.pData)[16] = ent->flags;
-			((float*)scbm.pData)[17] = animLerp;
-			dimm->Unmap(_impl->sceneConstBuffer.Get(), 0);
-			dimm->VSSetConstantBuffers(3, 1, _impl->sceneConstBuffer.GetAddressOf());
-
-			if (enhAnim) {
-				auto* animModel = (AnimatedModel*)model;
-				ID3D11Buffer* iaBuffers[5] = { enhAnim->animVertices[frame].Get(), enhAnim->animNormals[frame].Get(), enhMesh->texcoords[ent->color % enhMesh->texcoords.size()].Get(),
-												enhAnim->animVertices[frame+1].Get(), enhAnim->animNormals[frame+1].Get() };
-				static const UINT iaStrides[5] = { 12, 4, 8, 12, 4 };
-				static const UINT iaOffsets[5] = { 0,0,0,0,0 };
-				dimm->IASetVertexBuffers(0, 5, std::data(iaBuffers), iaStrides, iaOffsets);
-				dimm->IASetIndexBuffer(enhMesh->indices.Get(), DXGI_FORMAT_R16_UINT, 0);
+			if (instTransforms.size() >= _impl->MAX_INSTANCES || std::tie(prevFrame, prevAnimLerp, prevColor, prevFlags) != std::tie(frame, animLerp, actualColor, ent->flags)) {
+				flush();
 			}
-			else {
-				ID3D11Buffer* iaBuffers[3] = { enhMesh->vertices.Get(), enhMesh->normals.Get(), enhMesh->texcoords[ent->color % enhMesh->texcoords.size()].Get() };
-				static const UINT iaStrides[3] = { 12, 4, 8 };
-				static const UINT iaOffsets[3] = { 0,0,0 };
-				dimm->IASetVertexBuffers(0, 3, std::data(iaBuffers), iaStrides, iaOffsets);
-				dimm->IASetIndexBuffer(enhMesh->indices.Get(), DXGI_FORMAT_R16_UINT, 0);
-			}
-
-			PolygonList& polylist = staticModel->mesh.polyLists[0];
-			uint32_t startIndex = 0, startVertex = 0;
-			for (int g = 0; g < polylist.groups.size(); g++) {
-				uint32_t numIndices = 3 * polylist.groups[g].tupleIndex.size();
-				uint32_t numVertices = staticModel->mesh.groupIndices[g].size();
-				if (staticModel->matIds[g] == it.first.first) {
-					dimm->DrawIndexed(numIndices, startIndex, startVertex);
-				}
-				startIndex += numIndices;
-				startVertex += numVertices;
-			}
+			std::tie(prevFrame, prevAnimLerp, prevColor, prevFlags) = std::tie(frame, animLerp, actualColor, ent->flags);
+			instTransforms.push_back(ent->transform.getTranspose());
 		}
+		flush();
 	}
+
+	dimm->IASetInputLayout(((D3D11Renderer*)gfx)->ddInputLayout);
 }
