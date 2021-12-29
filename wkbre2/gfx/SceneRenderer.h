@@ -6,10 +6,12 @@
 
 struct IRenderer;
 struct Scene;
+struct Camera;
 
 struct SceneRenderer {
-	IRenderer *gfx;
-	Scene *scene;
-	SceneRenderer(IRenderer *gfx, Scene *scene) : gfx(gfx), scene(scene) {}
+	IRenderer* gfx;
+	Scene* scene;
+	Camera* camera;
+	SceneRenderer(IRenderer* gfx, Scene* scene, Camera* camera) : gfx(gfx), scene(scene), camera(camera) {}
 	virtual void render() = 0;
 };

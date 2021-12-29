@@ -149,6 +149,12 @@ float4 PS(VS_OUTPUT input) : SV_Target
 	//lum = clamp(lum, 0, 1);
 	return lerp(float4(lum.xxx, 1) * input.Color * tex, FogColor, input.Fog);
 }
+
+// TODO
+//float4 PS_Lake(VS_OUTPUT input) : SV_Target
+//{
+//	return noise(input.Texcoord);
+//}
 )---";
 
 template<typename Vtx> struct RCustomBatchD3D11
@@ -243,6 +249,7 @@ template<typename Vtx> struct RCustomBatchD3D11
 
 struct D3D11EnhancedTerrainRenderer::Impl {
 	std::unique_ptr<RCustomBatchD3D11<D11NTRVtx>> batch;
+	std::unique_ptr<RBatch> lakeBatch;
 };
 
 void D3D11EnhancedTerrainRenderer::init()
@@ -250,6 +257,7 @@ void D3D11EnhancedTerrainRenderer::init()
 	auto* d11gfx = (D3D11Renderer*)gfx;
 	_impl = new Impl;
 	_impl->batch = std::make_unique<RCustomBatchD3D11<D11NTRVtx>>(4 * 256, 6 * 256, d11gfx->ddDevice, d11gfx->ddImmediateContext);
+	_impl->lakeBatch.reset(d11gfx->CreateBatch(4 * 256, 6 * 256));
 	texcache = new TextureCache(gfx, "Maps\\Map_Textures\\");
 
 	// Load terrain color textures
@@ -345,9 +353,9 @@ void D3D11EnhancedTerrainRenderer::render() {
 	static ID3D11VertexShader* shaderVtx;
 	static ID3D11InputLayout* ddInputLayout;
 	static ID3D11Buffer* sunBuffer;
+	auto* d11gfx = (D3D11Renderer*)gfx;
 	if (firstTime) {
 		firstTime = false;
-		auto* d11gfx = (D3D11Renderer*)gfx;
 		auto psBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "PS", "ps_4_1");
 		auto vsBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "VS", "vs_4_0");
 		static const D3D11_INPUT_ELEMENT_DESC iadesc[] = {
@@ -527,45 +535,48 @@ void D3D11EnhancedTerrainRenderer::render() {
 	dimm->IASetInputLayout(((D3D11Renderer*)gfx)->ddInputLayout);
 
 	// ----- Lakes -----
-	//gfx->BeginBatchDrawing();
-	//gfx->NoTexture(0);
-	//batch->begin();
-	//gfx->BeginLakeDrawing();
-	//const uint32_t color = (terrain->fogColor & 0xFFFFFF) | 0x80000000;
-	//for (int z = tlsz; z <= tlez; z++) {
-	//	for (int x = tlsx; x <= tlex; x++) {
-	//		const TerrainTile* tile = terrain->getTile(x, z);
-	//		if (tile && tile->fullOfWater) {
-	//			unsigned int x = tile->x;
-	//			unsigned int z = terrain->height - 1 - tile->z;
-	//			int lx = x - terrain->edge, lz = z - terrain->edge;
+	gfx->BeginBatchDrawing();
+	gfx->NoTexture(0);
+	auto* lakeBatch = _impl->lakeBatch.get();
+	lakeBatch->begin();
+	gfx->BeginLakeDrawing();
+	dimm->PSSetShader(d11gfx->ddLakePixelShader, nullptr, 0);
+	dimm->VSSetShader(d11gfx->ddFogVertexShader, nullptr, 0);
+	const uint32_t color = (terrain->fogColor & 0xFFFFFF) | 0x80000000;
+	for (int z = tlsz; z <= tlez; z++) {
+		for (int x = tlsx; x <= tlex; x++) {
+			const TerrainTile* tile = terrain->getTile(x, z);
+			if (tile && tile->fullOfWater) {
+				unsigned int x = tile->x;
+				unsigned int z = terrain->height - 1 - tile->z;
+				int lx = x - terrain->edge, lz = z - terrain->edge;
 
-	//			// is water tile visible on screen?
-	//			Vector3 pp((lx + 0.5f) * tilesize, tile->waterLevel, (lz + 0.5f) * tilesize);
-	//			Vector3 camcenter = camera->position + camera->direction * 125.0f;
-	//			pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
-	//			Vector3 ttpp = pp.transformScreenCoords(camera->sceneMatrix);
-	//			if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
-	//				continue;
+				// is water tile visible on screen?
+				Vector3 pp((lx + 0.5f) * tilesize, tile->waterLevel, (lz + 0.5f) * tilesize);
+				Vector3 camcenter = camera->position + camera->direction * 125.0f;
+				pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
+				Vector3 ttpp = pp.transformScreenCoords(camera->sceneMatrix);
+				if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
+					continue;
 
-	//			batchVertex* outvert; uint16_t* outindices; unsigned int firstindex;
-	//			batch->next(4, 6, &outvert, &outindices, &firstindex);
-	//			outvert[0].x = lx * tilesize; outvert[0].y = tile->waterLevel ; outvert[0].z = lz * tilesize;
-	//			outvert[0].color = color; outvert[0].u = 0.0f; outvert[0].v = 0.0f;
-	//			outvert[1].x = (lx + 1) * tilesize; outvert[1].y = tile->waterLevel; outvert[1].z = lz * tilesize;
-	//			outvert[1].color = color; outvert[1].u = 0.0f; outvert[1].v = 0.0f;
-	//			outvert[2].x = (lx + 1) * tilesize; outvert[2].y = tile->waterLevel; outvert[2].z = (lz + 1) * tilesize;
-	//			outvert[2].color = color; outvert[2].u = 0.0f; outvert[2].v = 0.0f;
-	//			outvert[3].x = lx * tilesize; outvert[3].y = tile->waterLevel; outvert[3].z = (lz + 1) * tilesize;
-	//			outvert[3].color = color; outvert[3].u = 0.0f; outvert[3].v = 0.0f;
-	//			uint16_t* oix = outindices;
-	//			for (const int& c : { 0,3,1,1,3,2 })
-	//				*(oix++) = firstindex + c;
-	//		}
-	//	}
-	//}
-	//batch->flush();
-	//batch->end();
+				batchVertex* outvert; uint16_t* outindices; unsigned int firstindex;
+				lakeBatch->next(4, 6, &outvert, &outindices, &firstindex);
+				outvert[0].x = lx * tilesize; outvert[0].y = tile->waterLevel ; outvert[0].z = lz * tilesize;
+				outvert[0].color = color; outvert[0].u = 0.0f; outvert[0].v = 0.0f;
+				outvert[1].x = (lx + 1) * tilesize; outvert[1].y = tile->waterLevel; outvert[1].z = lz * tilesize;
+				outvert[1].color = color; outvert[1].u = 0.0f; outvert[1].v = 0.0f;
+				outvert[2].x = (lx + 1) * tilesize; outvert[2].y = tile->waterLevel; outvert[2].z = (lz + 1) * tilesize;
+				outvert[2].color = color; outvert[2].u = 0.0f; outvert[2].v = 0.0f;
+				outvert[3].x = lx * tilesize; outvert[3].y = tile->waterLevel; outvert[3].z = (lz + 1) * tilesize;
+				outvert[3].color = color; outvert[3].u = 0.0f; outvert[3].v = 0.0f;
+				uint16_t* oix = outindices;
+				for (const int& c : { 0,3,1,1,3,2 })
+					*(oix++) = firstindex + c;
+			}
+		}
+	}
+	lakeBatch->flush();
+	lakeBatch->end();
 
 	for (auto& pack : tilesPerTex)
 		pack.second.clear();

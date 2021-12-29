@@ -28,6 +28,7 @@
 #include "../gfx/D3D11EnhancedTerrainRenderer.h"
 #include "../settings.h"
 #include <nlohmann/json.hpp>
+#include "../gfx/D3D11EnhancedSceneRenderer.h"
 
 namespace {
 	Vector3 getRay(const Camera &cam) {
@@ -590,8 +591,16 @@ void ClientInterface::iter()
 		}
 		if (client->terrain)
 			scene->sunDirection = client->terrain->sunVector;
-		if (!sceneRenderer)
-			sceneRenderer = new DefaultSceneRenderer(gfx, scene);
+		if (!sceneRenderer) {
+#ifdef _WIN32
+			if (g_settings.value<bool>("enhancedGraphics", false))
+				sceneRenderer = new D3D11EnhancedSceneRenderer(gfx, scene, &client->camera);
+			else
+				sceneRenderer = new DefaultSceneRenderer(gfx, scene, &client->camera);
+#else
+			sceneRenderer = new DefaultSceneRenderer(gfx, scene, &client->camera);
+#endif
+		}
 		sceneRenderer->render();
 		scene->clear();
 	}

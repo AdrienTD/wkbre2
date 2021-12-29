@@ -703,7 +703,7 @@ void Test_Scene()
 
 	Scene scene(gfx, &modcache);
 
-	SceneRenderer *sceneRenderer = new DefaultSceneRenderer(gfx, &scene);
+	SceneRenderer *sceneRenderer = new DefaultSceneRenderer(gfx, &scene, &camera);
 
 	int fps = 0, nextfps = 0;
 	uint32_t lastfpscheck = SDL_GetTicks();
