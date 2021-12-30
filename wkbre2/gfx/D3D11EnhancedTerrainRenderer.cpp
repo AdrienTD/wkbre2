@@ -21,6 +21,7 @@
 #include <nlohmann/json.hpp>
 
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include "renderer_d3d11.h"
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -250,6 +251,11 @@ template<typename Vtx> struct RCustomBatchD3D11
 struct D3D11EnhancedTerrainRenderer::Impl {
 	std::unique_ptr<RCustomBatchD3D11<D11NTRVtx>> batch;
 	std::unique_ptr<RBatch> lakeBatch;
+	DynArray<uint32_t> trnNormals;
+	ComPtr<ID3D11PixelShader> shaderPix;
+	ComPtr<ID3D11VertexShader> shaderVtx;
+	ComPtr<ID3D11InputLayout> ddInputLayout;
+	ComPtr<ID3D11Buffer> sunBuffer;
 };
 
 void D3D11EnhancedTerrainRenderer::init()
@@ -281,9 +287,7 @@ void D3D11EnhancedTerrainRenderer::init()
 				nrm.append("_BumpMap.pcx");
 				ld.normalMap = texcache->getTextureIfCached(nrm.c_str());
 				if (!ld.normalMap) {
-#undef LoadBitmap
 					Bitmap bmp = Bitmap::loadBitmap((texcache->directory + nrm).c_str());
-					//Bitmap* bmp = LoadBitmap("lmao.pcx");
 					Bitmap nmap; nmap.width = bmp.width; nmap.height = bmp.height; nmap.format = BMFORMAT_R8G8B8A8;
 					nmap.pixels.resize(nmap.width * nmap.height * 4);
 					uint8_t* bmpix = (uint8_t*)bmp.pixels.data();
@@ -335,6 +339,42 @@ void D3D11EnhancedTerrainRenderer::init()
 			ttexmap[tex.second.get()] = ld;
 		}
 	}
+
+	// Precompute terrain normals
+	_impl->trnNormals.resize((terrain->width + 1) * (terrain->height + 1));
+	size_t ni = 0;
+	for (unsigned int z = 0; z <= terrain->height; z++) {
+		for (unsigned int x = 0; x <= terrain->width; x++) {
+			_impl->trnNormals[ni++] = NormalToR10G10B10A2(terrain->getNormal(x, z));
+		}
+	}
+
+	// D3D11 stuff
+	auto psBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "PS", "ps_4_1");
+	auto vsBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "VS", "vs_4_0");
+	static const D3D11_INPUT_ELEMENT_DESC iadesc[] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TANGENT", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"BITANGENT", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	};
+	HRESULT hres;
+	hres = d11gfx->ddDevice->CreateInputLayout(iadesc, std::size(iadesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &_impl->ddInputLayout);
+	assert(!FAILED(hres));
+	hres = d11gfx->ddDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &_impl->shaderPix);
+	assert(!FAILED(hres));
+	hres = d11gfx->ddDevice->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &_impl->shaderVtx);
+	assert(!FAILED(hres));
+
+	D3D11_BUFFER_DESC bd;
+	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.MiscFlags = 0;
+	bd.StructureByteStride = 0;
+	bd.ByteWidth = 48;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	d11gfx->ddDevice->CreateBuffer(&bd, nullptr, &_impl->sunBuffer);
 }
 
 D3D11EnhancedTerrainRenderer::~D3D11EnhancedTerrainRenderer()
@@ -346,42 +386,7 @@ Vector3 g_gfxplusLampPos(0.0f, 0.0f, 0.0f);
 bool g_gfxplusBumpOn = true;
 
 void D3D11EnhancedTerrainRenderer::render() {
-	//static std::map<int, int> zoccurs;
-
-	static bool firstTime = true;
-	static ID3D11PixelShader* shaderPix;
-	static ID3D11VertexShader* shaderVtx;
-	static ID3D11InputLayout* ddInputLayout;
-	static ID3D11Buffer* sunBuffer;
 	auto* d11gfx = (D3D11Renderer*)gfx;
-	if (firstTime) {
-		firstTime = false;
-		auto psBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "PS", "ps_4_1");
-		auto vsBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "VS", "vs_4_0");
-		static const D3D11_INPUT_ELEMENT_DESC iadesc[] = {
-			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"NORMAL", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TANGENT", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"BITANGENT", 0, DXGI_FORMAT_R10G10B10A2_UNORM, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		};
-		HRESULT hres;
-		hres = d11gfx->ddDevice->CreateInputLayout(iadesc, std::size(iadesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &ddInputLayout);
-		assert(!FAILED(hres));
-		hres = d11gfx->ddDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &shaderPix);
-		assert(!FAILED(hres));
-		hres = d11gfx->ddDevice->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &shaderVtx);
-		assert(!FAILED(hres));
-
-		D3D11_BUFFER_DESC bd;
-		bd.Usage = D3D11_USAGE_DYNAMIC;
-		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		bd.MiscFlags = 0;
-		bd.StructureByteStride = 0;
-		bd.ByteWidth = 48;
-		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		d11gfx->ddDevice->CreateBuffer(&bd, nullptr, &sunBuffer);
-	}
 
 	gfx->BeginMapDrawing();
 
@@ -402,49 +407,42 @@ void D3D11EnhancedTerrainRenderer::render() {
 	float bbx1, bbz1, bbx2, bbz2;
 	std::tie(bbx1, bbx2) = std::minmax({ camstart.x, farleft.x, farright.x, farup.x, fardown.x });
 	std::tie(bbz1, bbz2) = std::minmax({ camstart.z, farleft.z, farright.z, farup.z, fardown.z });
-	int tlsx = (int)std::floor(bbx1 / tilesize) + terrain->edge;
-	int tlsz = (int)std::floor(bbz1 / tilesize) + terrain->edge;
-	int tlex = (int)std::ceil(bbx2 / tilesize) + terrain->edge;
-	int tlez = (int)std::ceil(bbz2 / tilesize) + terrain->edge;
-	//int tlsx = 0, tlsz = 0, tlex = terrain->width, tlez = terrain->height;
+	auto clamp = [](auto val, auto low, auto high) {return std::max(low, std::min(high, val)); };
+	int tlsx = clamp((int)std::floor(bbx1 / tilesize) + (int)terrain->edge, 0, (int)terrain->width - 1);
+	int tlsz = clamp((int)std::floor(bbz1 / tilesize) + (int)terrain->edge, 0, (int)terrain->height - 1);
+	int tlex = clamp((int)std::ceil(bbx2 / tilesize) + (int)terrain->edge, 0, (int)terrain->width - 1);
+	int tlez = clamp((int)std::ceil(bbz2 / tilesize) + (int)terrain->edge, 0, (int)terrain->height - 1);
 
 	gfx->BeginBatchDrawing();
 	auto* dimm = ((D3D11Renderer*)gfx)->ddImmediateContext;
-	dimm->PSSetShader(shaderPix, nullptr, 0);
-	dimm->IASetInputLayout(ddInputLayout);
-	dimm->VSSetShader(shaderVtx, nullptr, 0);
+	dimm->PSSetShader(_impl->shaderPix.Get(), nullptr, 0);
+	dimm->IASetInputLayout(_impl->ddInputLayout.Get());
+	dimm->VSSetShader(_impl->shaderVtx.Get(), nullptr, 0);
 
 	D3D11_MAPPED_SUBRESOURCE mappedRes;
-	HRESULT hres = dimm->Map(sunBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedRes);
+	HRESULT hres = dimm->Map(_impl->sunBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedRes);
 	assert(!FAILED(hres));
 	char* sbdata = (char*)mappedRes.pData;
 	*(Vector3*)(sbdata+0) = sunNormal;
 	*(Vector3*)(sbdata+16) = m_lampPos;
 	*(int*)(sbdata + 28) = m_bumpOn ? 1 : 0;
 	*(int*)(sbdata + 32) = 1;
-	dimm->Unmap(sunBuffer, 0);
-	dimm->VSSetConstantBuffers(2, 1, &sunBuffer);
-	dimm->PSSetConstantBuffers(2, 1, &sunBuffer);
+	dimm->Unmap(_impl->sunBuffer.Get(), 0);
+	dimm->VSSetConstantBuffers(2, 1, _impl->sunBuffer.GetAddressOf());
+	dimm->PSSetConstantBuffers(2, 1, _impl->sunBuffer.GetAddressOf());
 
 	auto* batch = _impl->batch.get();
 	batch->begin();
 	texture oldgfxtex = 0;
 	for (int z = tlsz; z <= tlez; z++) {
 		for (int x = tlsx; x <= tlex; x++) {
-			if (x < 0 || x >= terrain->width || z < 0 || z >= terrain->height)
-				continue;
-
 			int lx = x - terrain->edge, lz = z - terrain->edge;
 			Vector3 pp((lx + 0.5f)*tilesize, terrain->getVertex(x, terrain->height - z), (lz + 0.5f)*tilesize);
 			Vector3 camcenter = camera->position + camera->direction * 125.0f;
 			pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
-			//TransformVector3(&ttpp, &pp, &camera->sceneMatrix);
-			//float oriz = ttpp.z;
-			//ttpp /= ttpp.z;
 			Vector3 ttpp = pp.transformScreenCoords(camera->sceneMatrix);
 			if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
 				continue;
-			//zoccurs[(int)(oriz * 100)]++;
 			Terrain::Tile *tile = &terrain->tiles[(terrain->height - 1 - z)*terrain->width + x];
 			TerrainTexture *trntex = tile->texture;
 			auto& newgfxtex = ttexmap.at(trntex);
@@ -468,16 +466,23 @@ void D3D11EnhancedTerrainRenderer::render() {
 			float tw = trntex->width / 256.0f;
 			float th = trntex->height / 256.0f;
 			std::array<std::pair<float, float>, 4> uvs{ { {sx, sy}, {sx + tw, sy}, { sx + tw, sy + th }, {sx, sy + th } } };
-			if (!tile->xflip) {
+			bool xflip = (bool)tile->xflip != (bool)(tile->rot & 2);
+			bool zflip = (bool)tile->zflip != (bool)(tile->rot & 2);
+			bool rot = tile->rot & 1;
+			if (!xflip) {
 				std::swap(uvs[0], uvs[3]);
 				std::swap(uvs[1], uvs[2]);
 			}
-			if (tile->zflip) {
+			if (zflip) {
 				std::swap(uvs[0], uvs[1]);
 				std::swap(uvs[2], uvs[3]);
 			}
-			if (tile->rot) {
-				std::rotate(uvs.begin(), uvs.begin() + tile->rot, uvs.end());
+			if (rot) {
+				auto tmp = uvs[0];
+				uvs[0] = uvs[1];
+				uvs[1] = uvs[2];
+				uvs[2] = uvs[3];
+				uvs[3] = tmp;
 			}
 
 			Vector3 poses[4];
@@ -496,28 +501,29 @@ void D3D11EnhancedTerrainRenderer::render() {
 			uint32_t cmprTangent = NormalToR10G10B10A2(tangent.normal());
 			uint32_t cmprBitangent = NormalToR10G10B10A2(bitangent.normal());
 
+			auto getPrecomputedNormal = [this](int x, int z) { return _impl->trnNormals[z * (terrain->width + 1) + x]; };
 			D11NTRVtx *outvert; uint16_t *outindices; unsigned int firstindex;
 			batch->next(4, 6, &outvert, &outindices, &firstindex);
 			outvert[0].pos = poses[0];
-			outvert[0].normal = NormalToR10G10B10A2(terrain->getNormal(x, terrain->height - z));
+			outvert[0].normal = getPrecomputedNormal(x, terrain->height - z);
 			outvert[0].tangent = cmprTangent;
 			outvert[0].bitangent = cmprBitangent;
 			outvert[0].u = uvs[0].first;
 			outvert[0].v = uvs[0].second;
 			outvert[1].pos = poses[1];
-			outvert[1].normal = NormalToR10G10B10A2(terrain->getNormal(x + 1, terrain->height - z));
+			outvert[1].normal = getPrecomputedNormal(x + 1, terrain->height - z);
 			outvert[1].tangent = cmprTangent;
 			outvert[1].bitangent = cmprBitangent;
 			outvert[1].u = uvs[1].first;
 			outvert[1].v = uvs[1].second;
 			outvert[2].pos = poses[2];
-			outvert[2].normal = NormalToR10G10B10A2(terrain->getNormal(x + 1, terrain->height - z - 1));
+			outvert[2].normal = getPrecomputedNormal(x + 1, terrain->height - z - 1);
 			outvert[2].tangent = cmprTangent;
 			outvert[2].bitangent = cmprBitangent;
 			outvert[2].u = uvs[2].first;
 			outvert[2].v = uvs[2].second;
 			outvert[3].pos = poses[3];
-			outvert[3].normal = NormalToR10G10B10A2(terrain->getNormal(x, terrain->height - z - 1));
+			outvert[3].normal = getPrecomputedNormal(x, terrain->height - z - 1);
 			outvert[3].tangent = cmprTangent;
 			outvert[3].bitangent = cmprBitangent;
 			outvert[3].u = uvs[3].first;
@@ -528,7 +534,6 @@ void D3D11EnhancedTerrainRenderer::render() {
 				*(oix++) = firstindex + c;
 		}
 		batch->flush();
-		//pack.second.clear();
 	}
 	batch->end();
 

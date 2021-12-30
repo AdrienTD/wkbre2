@@ -56,10 +56,11 @@ void DefaultTerrainRenderer::render() {
 	float bbx1, bbz1, bbx2, bbz2;
 	std::tie(bbx1, bbx2) = std::minmax({ camstart.x, farleft.x, farright.x, farup.x, fardown.x });
 	std::tie(bbz1, bbz2) = std::minmax({ camstart.z, farleft.z, farright.z, farup.z, fardown.z });
-	int tlsx = (int)std::floor(bbx1 / tilesize) + terrain->edge;
-	int tlsz = (int)std::floor(bbz1 / tilesize) + terrain->edge;
-	int tlex = (int)std::ceil(bbx2 / tilesize) + terrain->edge;
-	int tlez = (int)std::ceil(bbz2 / tilesize) + terrain->edge;
+	auto clamp = [](auto val, auto low, auto high) {return std::max(low, std::min(high, val)); };
+	int tlsx = clamp((int)std::floor(bbx1 / tilesize) + (int)terrain->edge, 0, (int)terrain->width - 1);
+	int tlsz = clamp((int)std::floor(bbz1 / tilesize) + (int)terrain->edge, 0, (int)terrain->height - 1);
+	int tlex = clamp((int)std::ceil(bbx2 / tilesize) + (int)terrain->edge, 0, (int)terrain->width - 1);
+	int tlez = clamp((int)std::ceil(bbz2 / tilesize) + (int)terrain->edge, 0, (int)terrain->height - 1);
 	//int tlsx = 0, tlsz = 0, tlex = terrain->width, tlez = terrain->height;
 
 	gfx->BeginBatchDrawing();
@@ -68,9 +69,6 @@ void DefaultTerrainRenderer::render() {
 	texture oldgfxtex = 0;
 	for (int z = tlsz; z <= tlez; z++) {
 		for (int x = tlsx; x <= tlex; x++) {
-			if (x < 0 || x >= terrain->width || z < 0 || z >= terrain->height)
-				continue;
-
 			int lx = x - terrain->edge, lz = z - terrain->edge;
 			Vector3 pp((lx + 0.5f)*tilesize, terrain->getVertex(x, terrain->height - z), (lz + 0.5f)*tilesize);
 			Vector3 camcenter = camera->position + camera->direction * 125.0f;
@@ -104,16 +102,23 @@ void DefaultTerrainRenderer::render() {
 			float tw = trntex->width / 256.0f;
 			float th = trntex->height / 256.0f;
 			std::array<std::pair<float, float>, 4> uvs{ { {sx, sy}, {sx + tw, sy}, { sx + tw, sy + th }, {sx, sy + th } } };
-			if (!tile->xflip) {
+			bool xflip = (bool)tile->xflip != (bool)(tile->rot & 2);
+			bool zflip = (bool)tile->zflip != (bool)(tile->rot & 2);
+			bool rot = tile->rot & 1;
+			if (!xflip) {
 				std::swap(uvs[0], uvs[3]);
 				std::swap(uvs[1], uvs[2]);
 			}
-			if (tile->zflip) {
+			if (zflip) {
 				std::swap(uvs[0], uvs[1]);
 				std::swap(uvs[2], uvs[3]);
 			}
-			if (tile->rot) {
-				std::rotate(uvs.begin(), uvs.begin() + tile->rot, uvs.end());
+			if (rot) {
+				auto tmp = uvs[0];
+				uvs[0] = uvs[1];
+				uvs[1] = uvs[2];
+				uvs[2] = uvs[3];
+				uvs[3] = tmp;
 			}
 
 			batchVertex *outvert; uint16_t *outindices; unsigned int firstindex;
