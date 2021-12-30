@@ -248,6 +248,76 @@ template<typename Vtx> struct RCustomBatchD3D11
 
 };
 
+template<typename Idx> struct RIndexBatchD3D11
+{
+	static constexpr DXGI_FORMAT format = (sizeof(Idx) == 2) ? DXGI_FORMAT_R16_UINT : (sizeof(Idx) == 4) ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_UNKNOWN;
+	static_assert(format != DXGI_FORMAT_UNKNOWN, "Invalid index integer size for RIndexBatchD3D11");
+
+	uint32_t maxindis;
+	uint32_t curindis;
+	ComPtr<ID3D11Buffer> ibuf;
+	Idx* ilock;
+	bool locked;
+	ID3D11DeviceContext* ddImmediateContext;
+
+	RIndexBatchD3D11(int mi, ID3D11Device* ddDevice, ID3D11DeviceContext* ddic)
+	{
+		maxindis = mi;
+		curindis = 0;
+
+		D3D11_BUFFER_DESC bd;
+		bd.Usage = D3D11_USAGE_DYNAMIC;
+		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		bd.MiscFlags = 0;
+		bd.StructureByteStride = 0;
+		bd.ByteWidth = mi * sizeof(Idx);
+		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		ddDevice->CreateBuffer(&bd, nullptr, &ibuf);
+
+		locked = false;
+		ddImmediateContext = ddic;
+	}
+
+	~RIndexBatchD3D11()
+	{
+		if (locked) unlock();
+	}
+
+	void lock()
+	{
+		D3D11_MAPPED_SUBRESOURCE ms;
+		ddImmediateContext->Map(ibuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		ilock = (Idx*)ms.pData;
+		locked = true;
+	}
+	void unlock()
+	{
+		ddImmediateContext->Unmap(ibuf.Get(), 0);
+		locked = false;
+	}
+
+	void next(uint32_t nindis, Idx** ipnt)
+	{
+		if (curindis + nindis > maxindis)
+			flush();
+
+		if (!locked) lock();
+		*ipnt = ilock + curindis;
+
+		curindis += nindis;
+	}
+
+	void flush()
+	{
+		if (locked) unlock();
+		if (!curindis) return;
+		ddImmediateContext->IASetIndexBuffer(ibuf.Get(), format, 0);
+		ddImmediateContext->DrawIndexed(curindis, 0, 0);
+		curindis = 0;
+	}
+
+};
+
 struct D3D11EnhancedTerrainRenderer::Impl {
 	std::unique_ptr<RCustomBatchD3D11<D11NTRVtx>> batch;
 	std::unique_ptr<RBatch> lakeBatch;
@@ -256,6 +326,9 @@ struct D3D11EnhancedTerrainRenderer::Impl {
 	ComPtr<ID3D11VertexShader> shaderVtx;
 	ComPtr<ID3D11InputLayout> ddInputLayout;
 	ComPtr<ID3D11Buffer> sunBuffer;
+
+	ComPtr<ID3D11Buffer> trnVertexBuffer;
+	std::unique_ptr<RIndexBatchD3D11<uint32_t>> trnIndexBatch;
 };
 
 void D3D11EnhancedTerrainRenderer::init()
@@ -349,6 +422,98 @@ void D3D11EnhancedTerrainRenderer::init()
 		}
 	}
 
+	// Terrain vertex buffer
+	std::vector<D11NTRVtx> trnVertices;
+	assert(terrain != nullptr);
+	for (unsigned int z = 0; z < terrain->height; z++) {
+		for (unsigned int x = 0; x < terrain->width; x++) {
+			int lx = x - terrain->edge, lz = z - terrain->edge;
+			Terrain::Tile* tile = &terrain->tiles[(terrain->height - 1 - z) * terrain->width + x];
+
+			TerrainTexture* trntex = tile->texture;
+			float sx = trntex->startx / 256.0f;
+			float sy = trntex->starty / 256.0f;
+			float tw = trntex->width / 256.0f;
+			float th = trntex->height / 256.0f;
+			std::array<std::pair<float, float>, 4> uvs{ { {sx, sy}, {sx + tw, sy}, { sx + tw, sy + th }, {sx, sy + th } } };
+			bool xflip = (bool)tile->xflip != (bool)(tile->rot & 2);
+			bool zflip = (bool)tile->zflip != (bool)(tile->rot & 2);
+			bool rot = tile->rot & 1;
+			if (!xflip) {
+				std::swap(uvs[0], uvs[3]);
+				std::swap(uvs[1], uvs[2]);
+			}
+			if (zflip) {
+				std::swap(uvs[0], uvs[1]);
+				std::swap(uvs[2], uvs[3]);
+			}
+			if (rot) {
+				auto tmp = uvs[0];
+				uvs[0] = uvs[1];
+				uvs[1] = uvs[2];
+				uvs[2] = uvs[3];
+				uvs[3] = tmp;
+			}
+
+			constexpr float tilesize = 5.0f;
+			Vector3 poses[4];
+			poses[0] = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - z), lz * tilesize);
+			poses[1] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - z), lz * tilesize);
+			poses[2] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - (z + 1)), (lz + 1) * tilesize);
+			poses[3] = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - (z + 1)), (lz + 1) * tilesize);
+
+			float du1 = uvs[3].first - uvs[0].first, dv1 = uvs[3].second - uvs[0].second;
+			float du2 = uvs[1].first - uvs[0].first, dv2 = uvs[1].second - uvs[0].second;
+			Vector3 edge1 = poses[3] - poses[0];
+			Vector3 edge2 = poses[1] - poses[0];
+			float idet = 1.0f / (du1 * dv2 - du2 * dv1);
+			Vector3 tangent = (edge1 * dv2 - edge2 * dv1) * idet;
+			Vector3 bitangent = (edge2 * du1 - edge1 * du2) * idet;
+			uint32_t cmprTangent = NormalToR10G10B10A2(tangent.normal());
+			uint32_t cmprBitangent = NormalToR10G10B10A2(bitangent.normal());
+
+			auto getPrecomputedNormal = [this](int x, int z) { return _impl->trnNormals[z * (terrain->width + 1) + x]; };
+
+			D11NTRVtx outvert[4];
+			outvert[0].pos = poses[0];
+			outvert[0].normal = getPrecomputedNormal(x, terrain->height - z);
+			outvert[0].tangent = cmprTangent;
+			outvert[0].bitangent = cmprBitangent;
+			outvert[0].u = uvs[0].first;
+			outvert[0].v = uvs[0].second;
+			outvert[1].pos = poses[1];
+			outvert[1].normal = getPrecomputedNormal(x + 1, terrain->height - z);
+			outvert[1].tangent = cmprTangent;
+			outvert[1].bitangent = cmprBitangent;
+			outvert[1].u = uvs[1].first;
+			outvert[1].v = uvs[1].second;
+			outvert[2].pos = poses[2];
+			outvert[2].normal = getPrecomputedNormal(x + 1, terrain->height - z - 1);
+			outvert[2].tangent = cmprTangent;
+			outvert[2].bitangent = cmprBitangent;
+			outvert[2].u = uvs[2].first;
+			outvert[2].v = uvs[2].second;
+			outvert[3].pos = poses[3];
+			outvert[3].normal = getPrecomputedNormal(x, terrain->height - z - 1);
+			outvert[3].tangent = cmprTangent;
+			outvert[3].bitangent = cmprBitangent;
+			outvert[3].u = uvs[3].first;
+			outvert[3].v = uvs[3].second;
+			trnVertices.insert(trnVertices.end(), std::begin(outvert), std::end(outvert));
+		}
+	}
+	D3D11_BUFFER_DESC vbd;
+	vbd.Usage = D3D11_USAGE_DEFAULT;
+	vbd.CPUAccessFlags = 0;
+	vbd.MiscFlags = 0;
+	vbd.StructureByteStride = 0;
+	vbd.ByteWidth = trnVertices.size() * sizeof(D11NTRVtx);
+	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	D3D11_SUBRESOURCE_DATA vsd;
+	vsd.pSysMem = trnVertices.data();
+	d11gfx->ddDevice->CreateBuffer(&vbd, &vsd, &_impl->trnVertexBuffer);
+	_impl->trnIndexBatch = std::make_unique<RIndexBatchD3D11<uint32_t>>(4 * 256, d11gfx->ddDevice, d11gfx->ddImmediateContext);
+
 	// D3D11 stuff
 	auto psBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "PS", "ps_4_1");
 	auto vsBlob = d11gfx->compileShader(tshaderCode, sizeof(tshaderCode), "VS", "vs_4_0");
@@ -431,8 +596,6 @@ void D3D11EnhancedTerrainRenderer::render() {
 	dimm->VSSetConstantBuffers(2, 1, _impl->sunBuffer.GetAddressOf());
 	dimm->PSSetConstantBuffers(2, 1, _impl->sunBuffer.GetAddressOf());
 
-	auto* batch = _impl->batch.get();
-	batch->begin();
 	texture oldgfxtex = 0;
 	for (int z = tlsz; z <= tlez; z++) {
 		for (int x = tlsx; x <= tlex; x++) {
@@ -450,6 +613,8 @@ void D3D11EnhancedTerrainRenderer::render() {
 		}
 	}
 
+	UINT vstride = sizeof(D11NTRVtx); UINT voffset = 0;
+	dimm->IASetVertexBuffers(0, 1, _impl->trnVertexBuffer.GetAddressOf(), &vstride, &voffset);
 	for(auto &pack : tilesPerTex) {
 		if (pack.second.empty())
 			continue;
@@ -458,84 +623,15 @@ void D3D11EnhancedTerrainRenderer::render() {
 		for (TerrainTile *tile : pack.second) {
 			unsigned int x = tile->x;
 			unsigned int z = terrain->height - 1 - tile->z;
-			int lx = x - terrain->edge, lz = z - terrain->edge;
 
-			TerrainTexture *trntex = tile->texture;
-			float sx = trntex->startx / 256.0f;
-			float sy = trntex->starty / 256.0f;
-			float tw = trntex->width / 256.0f;
-			float th = trntex->height / 256.0f;
-			std::array<std::pair<float, float>, 4> uvs{ { {sx, sy}, {sx + tw, sy}, { sx + tw, sy + th }, {sx, sy + th } } };
-			bool xflip = (bool)tile->xflip != (bool)(tile->rot & 2);
-			bool zflip = (bool)tile->zflip != (bool)(tile->rot & 2);
-			bool rot = tile->rot & 1;
-			if (!xflip) {
-				std::swap(uvs[0], uvs[3]);
-				std::swap(uvs[1], uvs[2]);
-			}
-			if (zflip) {
-				std::swap(uvs[0], uvs[1]);
-				std::swap(uvs[2], uvs[3]);
-			}
-			if (rot) {
-				auto tmp = uvs[0];
-				uvs[0] = uvs[1];
-				uvs[1] = uvs[2];
-				uvs[2] = uvs[3];
-				uvs[3] = tmp;
-			}
-
-			Vector3 poses[4];
-			poses[0] = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - z), lz * tilesize);
-			poses[1] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - z), lz * tilesize);
-			poses[2] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - (z + 1)), (lz + 1) * tilesize);
-			poses[3] = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - (z + 1)), (lz + 1) * tilesize);
-
-			float du1 = uvs[3].first - uvs[0].first, dv1 = uvs[3].second - uvs[0].second;
-			float du2 = uvs[1].first - uvs[0].first, dv2 = uvs[1].second - uvs[0].second;
-			Vector3 edge1 = poses[3] - poses[0];
-			Vector3 edge2 = poses[1] - poses[0];
-			float idet = 1.0f / (du1 * dv2 - du2 * dv1);
-			Vector3 tangent = (edge1 * dv2 - edge2 * dv1) * idet;
-			Vector3 bitangent = (edge2 * du1 - edge1 * du2) * idet;
-			uint32_t cmprTangent = NormalToR10G10B10A2(tangent.normal());
-			uint32_t cmprBitangent = NormalToR10G10B10A2(bitangent.normal());
-
-			auto getPrecomputedNormal = [this](int x, int z) { return _impl->trnNormals[z * (terrain->width + 1) + x]; };
-			D11NTRVtx *outvert; uint16_t *outindices; unsigned int firstindex;
-			batch->next(4, 6, &outvert, &outindices, &firstindex);
-			outvert[0].pos = poses[0];
-			outvert[0].normal = getPrecomputedNormal(x, terrain->height - z);
-			outvert[0].tangent = cmprTangent;
-			outvert[0].bitangent = cmprBitangent;
-			outvert[0].u = uvs[0].first;
-			outvert[0].v = uvs[0].second;
-			outvert[1].pos = poses[1];
-			outvert[1].normal = getPrecomputedNormal(x + 1, terrain->height - z);
-			outvert[1].tangent = cmprTangent;
-			outvert[1].bitangent = cmprBitangent;
-			outvert[1].u = uvs[1].first;
-			outvert[1].v = uvs[1].second;
-			outvert[2].pos = poses[2];
-			outvert[2].normal = getPrecomputedNormal(x + 1, terrain->height - z - 1);
-			outvert[2].tangent = cmprTangent;
-			outvert[2].bitangent = cmprBitangent;
-			outvert[2].u = uvs[2].first;
-			outvert[2].v = uvs[2].second;
-			outvert[3].pos = poses[3];
-			outvert[3].normal = getPrecomputedNormal(x, terrain->height - z - 1);
-			outvert[3].tangent = cmprTangent;
-			outvert[3].bitangent = cmprBitangent;
-			outvert[3].u = uvs[3].first;
-			outvert[3].v = uvs[3].second;
-
-			uint16_t *oix = outindices;
+			uint32_t firstindex = 4 * (z * terrain->width + x);
+			uint32_t* oix;
+			_impl->trnIndexBatch->next(6, &oix);
 			for (const int &c : { 0,3,1,1,3,2 })
 				*(oix++) = firstindex + c;
 		}
-		batch->flush();
+		_impl->trnIndexBatch->flush();
 	}
-	batch->end();
 
 	dimm->IASetInputLayout(((D3D11Renderer*)gfx)->ddInputLayout);
 

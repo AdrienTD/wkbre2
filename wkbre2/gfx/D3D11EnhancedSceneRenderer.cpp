@@ -213,6 +213,7 @@ struct EnhAnim
 			animTimesSet.insert(anim.coords[c].frameTimes.begin(), anim.coords[c].frameTimes.end());
 		}
 		enh.animTimes.assign(animTimesSet.begin(), animTimesSet.end());
+		enh.animTimes.back() -= 1; // prevents last frame from becoming first frame
 		enh.animVertices.resize(enh.animTimes.size());
 		enh.animNormals.resize(enh.animTimes.size());
 		for (size_t frame = 0; frame < enh.animTimes.size(); ++frame) {
