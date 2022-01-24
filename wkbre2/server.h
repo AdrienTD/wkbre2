@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <set>
 #include "MovementController.h"
+#include "AIController.h"
 
 struct GameSet;
 struct GSFileParser;
@@ -43,6 +44,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	bool isMusicPlaying = false;
 	float currentSpeed = 0.0f;
 	MovementController movementController{ this };
+	AIController aiController{ this };
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
 
@@ -76,6 +78,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void reportCurrentOrder(OrderBlueprint* orderBp);
 	void attachLoopingSpecialEffect(int sfxTag, const Vector3& position);
 	void detachLoopingSpecialEffect(int sfxTag);
+	void activatePlan(int planTag);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();

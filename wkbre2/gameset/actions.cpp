@@ -1259,6 +1259,19 @@ struct ActionSkipCameraPathPlayback : Action {
 	}
 };
 
+struct ActionActivatePlan : Action {
+	int planBlueprint;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			obj->activatePlan(planBlueprint);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		planBlueprint = gs.plans.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1341,6 +1354,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_ATTACH_LOOPING_SPECIAL_EFFECT: action = new ActionAttachLoopingSpecialEffect; break;
 	case Tags::ACTION_DETACH_LOOPING_SPECIAL_EFFECT: action = new ActionDetachLoopingSpecialEffect; break;
 	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK: action = new ActionSkipCameraPathPlayback; break;
+	case Tags::ACTION_ACTIVATE_PLAN: action = new ActionActivatePlan; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:

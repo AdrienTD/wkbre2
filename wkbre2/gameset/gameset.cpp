@@ -223,6 +223,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_PLAN: {
+				plans.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -412,6 +417,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				trn.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_PLAN: {
+				PlanNodeSequence& plan = plans.readRef(gsf);
+				plan.parse(gsf, *this, "END_PLAN");
+				break;
+			}
 			}
 		}
 
@@ -485,6 +495,7 @@ void GameSet::load(const char * fn)
 	specialEffectTags.pass();
 	footprints.pass();
 	terrains.pass();
+	plans.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

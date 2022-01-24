@@ -28,6 +28,7 @@
 #include "Sound.h"
 #include "Footprint.h"
 #include "GSTerrain.h"
+#include "Plan.h"
 
 struct GameObjBlueprint;
 
@@ -97,6 +98,7 @@ struct GameSet
 	GSBlueprintList<std::vector<Model*>> specialEffectTags;
 	GSBlueprintList<Footprint> footprints;
 	GSBlueprintList<GSTerrain> terrains;
+	GSBlueprintList<PlanNodeSequence> plans;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;
