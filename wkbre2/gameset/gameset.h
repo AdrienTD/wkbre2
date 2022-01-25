@@ -29,6 +29,7 @@
 #include "Footprint.h"
 #include "GSTerrain.h"
 #include "Plan.h"
+#include "ArmyCreationSchedule.h"
 
 struct GameObjBlueprint;
 
@@ -53,7 +54,7 @@ template<typename T> struct GSBlueprintList {
 
 	int getIndex(const T* ptr) { return (int)(ptr - blueprints.data()); }
 	const std::string& getString(int index) { return names.getString(index); }
-	const std::string& getString(T* ptr) { return getString(getIndex(ptr)); }
+	const std::string& getString(const T* ptr) { return getString(getIndex(ptr)); }
 };
 
 template<> struct GSBlueprintList<void> {
@@ -99,6 +100,7 @@ struct GameSet
 	GSBlueprintList<Footprint> footprints;
 	GSBlueprintList<GSTerrain> terrains;
 	GSBlueprintList<PlanNodeSequence> plans;
+	GSBlueprintList<ArmyCreationSchedule> armyCreationSchedules;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

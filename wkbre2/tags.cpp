@@ -1,10 +1,11 @@
 #include "tags.h" 
-TagDict<77> Tags::GAMESET_tagDict({
+TagDict<78> Tags::GAMESET_tagDict({
     "3D_CLIP",
     "ACTION_SEQUENCE",
     "ANIMATION_TAG",
     "APPEARANCE_TAG",
     "ARMY",
+    "ARMY_CREATION_SCHEDULE",
     "ARMY_EXTENSION",
     "ASSOCIATE_CATEGORY",
     "BUILDING",

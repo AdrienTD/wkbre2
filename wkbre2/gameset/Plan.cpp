@@ -7,6 +7,8 @@
 #include "gameset.h"
 #include "../util/util.h"
 #include "../server.h"
+#include "finder.h"
+#include "ScriptContext.h"
 
 struct PFNUnknown : PlanNodeBlueprint {
 	struct State : PlanNodeState {
@@ -116,6 +118,53 @@ struct PFNStartLoop : PlanNodeBlueprint {
 	}
 };
 
+struct PFNDeployArmyFrom : PlanNodeBlueprint {
+	struct State : PlanNodeState {
+	};
+	const ArmyCreationSchedule* schedule;
+	std::unique_ptr<ObjectFinder> finder;
+
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+		schedule = gs.armyCreationSchedules.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+	virtual PlanNodeState* createState() override {
+		return new State;
+	}
+	virtual void reset(PlanNodeState* state) override {
+	}
+	virtual bool execute(PlanNodeState* state, SrvScriptContext* ctx) override {
+		// very simple implementation for testing
+		// TODO redo it
+		printf("Army deployed using \"%s\" schedule!\n", ctx->server->gameSet->armyCreationSchedules.getString(schedule).c_str());
+
+		if (ServerGameObject* settlement = finder->getFirst(ctx)) {
+			// find the buildings to spawn the unit from
+			// TODO: spawn unit from the correct building
+			std::vector<ServerGameObject*> buildingCandidates;
+			for (auto& ct : settlement->children) {
+				if ((ct.first & 63) == Tags::GAMEOBJCLASS_BUILDING)
+					buildingCandidates.insert(buildingCandidates.end(), ct.second.begin(), ct.second.end());
+			}
+			// no buildings -> units can no longer spawn
+			if (buildingCandidates.empty())
+				return true;
+
+			ServerGameObject* army = ctx->server->createObject(schedule->armyType);
+			army->setParent(settlement->getPlayer());
+			for (auto& spawn : schedule->spawnCharacters) {
+				ServerGameObject* building = buildingCandidates[rand() % buildingCandidates.size()];
+				// create the unit
+				ServerGameObject* unit = ctx->server->createObject(spawn.type);
+				unit->setParent(army);
+				unit->setPosition(building->position);
+			}
+			schedule->armyReadySequence.run(army);
+		}
+		return true;
+	}
+};
+
 PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileParser& gsf, const GameSet& gs)
 {
 	PlanNodeBlueprint* node;
@@ -127,6 +176,8 @@ PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileP
 		node = new PFNWaitUntil;
 	else if (tag == "START_LOOP")
 		node = new PFNStartLoop;
+	else if (tag == "DEPLOY_ARMY_FROM")
+		node = new PFNDeployArmyFrom;
 	else {
 		auto unk = new PFNUnknown;
 		unk->name = tag;

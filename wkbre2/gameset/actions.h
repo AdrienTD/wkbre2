@@ -21,11 +21,11 @@ struct Action {
 struct ActionSequence {
 	std::vector<std::unique_ptr<Action>> actionList;
 	void init(GSFileParser& gsf, const GameSet& gs, const char* endtag);
-	void run(SrvScriptContext* ctx) {
+	void run(SrvScriptContext* ctx) const {
 		for (auto &action : actionList)
 			action->run(ctx);
 	}
-	void run(ServerGameObject* self);
+	void run(ServerGameObject* self) const;
 };
 
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs);

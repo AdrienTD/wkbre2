@@ -1418,7 +1418,7 @@ void ActionSequence::init(GSFileParser &gsf, const GameSet &gs, const char *endt
 	ferr("Action sequence reached end of file without END_ACTION_SEQUENCE!");
 }
 
-void ActionSequence::run(ServerGameObject* self) {
+void ActionSequence::run(ServerGameObject* self) const {
 	SrvScriptContext ctx(Server::instance, self);
 	run(&ctx);
 }
