@@ -165,6 +165,51 @@ struct PFNDeployArmyFrom : PlanNodeBlueprint {
 	}
 };
 
+struct PFNNoOperation : PlanNodeBlueprint {
+	struct State : PlanNodeState {
+	};
+	std::string name;
+
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	}
+	virtual PlanNodeState* createState() override {
+		return new State;
+	}
+	virtual void reset(PlanNodeState* state) override {
+	}
+	virtual bool execute(PlanNodeState* state, SrvScriptContext* ctx) override {
+		printf("Ignored plan node %s\n", name.c_str());
+		return true;
+	}
+};
+
+struct PFNChooseAtRandom : PlanNodeBlueprint {
+	struct State : PlanNodeState {
+		PlanNodeSequence::State seqState;
+		uint32_t index;
+	};
+	PlanNodeSequence sequence;
+
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+		sequence.parse(gsf, gs, "END_CHOOSE_AT_RANDOM");
+	}
+	virtual PlanNodeState* createState() override {
+		State* s = new State;
+		s->seqState = sequence.createState();
+		return s;
+	}
+	virtual void reset(PlanNodeState* state) override {
+		State* s = (State*)state;
+		s->index = rand() % sequence.nodes.size();
+		s->seqState.currentNode = s->index;
+		sequence.nodes[s->index]->reset(s->seqState.nodeStates[s->index]);
+	}
+	virtual bool execute(PlanNodeState* state, SrvScriptContext* ctx) override {
+		State* s = (State*)state;
+		return sequence.nodes[s->index]->execute(s->seqState.nodeStates[s->index], ctx);
+	}
+};
+
 PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileParser& gsf, const GameSet& gs)
 {
 	PlanNodeBlueprint* node;
@@ -178,6 +223,13 @@ PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileP
 		node = new PFNStartLoop;
 	else if (tag == "DEPLOY_ARMY_FROM")
 		node = new PFNDeployArmyFrom;
+	else if (tag == "CHOOSE_AT_RANDOM")
+		node = new PFNChooseAtRandom;
+	else if (tag == "EXPAND_SETTLEMENT" || tag == "REGISTER_EQUILIBRIUM_PROFILE" || tag == "REGISTER_WORK_ORDER") {
+		auto nop = new PFNNoOperation;
+		nop->name = tag;
+		node = nop;
+	}
 	else {
 		auto unk = new PFNUnknown;
 		unk->name = tag;
