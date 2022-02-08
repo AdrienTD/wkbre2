@@ -475,7 +475,7 @@ void MissileTask::onUpdate()
 	ServerGameObject* go = this->order->gameObject;
 
 	// unit collision
-	NNSearch nns;
+	NNSearch<Server, ServerGameObject> nns;
 	nns.start(Server::instance, go->position, 15.0f);
 	while (ServerGameObject* col = nns.next()) {
 		if (col->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING || col->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {

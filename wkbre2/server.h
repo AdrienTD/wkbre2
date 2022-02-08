@@ -36,7 +36,6 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	OrderConfiguration orderConfig;
 	std::unordered_set<Reaction*> individualReactions;
 	std::unordered_map<int, std::unordered_set<SrvGORef>> associates, associators;
-	int tileIndex = -1;
 	std::vector<SrvGORef> referencers;
 	std::unordered_set<SrvGORef> seenObjects;
 	std::set<std::pair<int, int>> zoneTiles;
@@ -104,14 +103,6 @@ struct Server : CommonGameState<Server, ServerGameObject>
 	ServerGameObject *level;
 	std::map<uint32_t, ServerGameObject*> idmap;
 	Terrain *terrain;
-	struct Tile {
-		std::vector<SrvGORef> objList;
-		//std::vector<SrvGORef> zoneList;
-		SrvGORef zone;
-		SrvGORef building;
-		bool buildingPassable;
-	};
-	std::unique_ptr<Tile[]> tiles;
 
 	struct DelayedSequence {
 		ActionSequence* actionSequence;

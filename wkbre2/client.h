@@ -31,6 +31,9 @@ struct ClientGameObject : CommonGameObject<ClientGameObject> {
 	using Program = Client;
 	ClientGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ClientGameObject>(id, blueprint) {}
 	SceneEntity sceneEntity;
+
+	void updatePosition(const Vector3& newposition);
+	void updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
 };
 
 struct Client : CommonGameState<Client, ClientGameObject>

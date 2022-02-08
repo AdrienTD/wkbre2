@@ -4,10 +4,12 @@
 
 #include "NNSearch.h"
 #include "server.h"
+#include "client.h"
 #include "terrain.h"
 #include <cassert>
 
-void NNSearch::start(Server *server, const Vector3 &center, float radius)
+template<typename Program, typename PrgGameObject>
+void NNSearch<Program, PrgGameObject>::start(Program *server, const Vector3 &center, float radius)
 {
 	this->server = server;
 	int tileradius = static_cast<int>(radius / 5.0f + 1.5f);
@@ -20,12 +22,13 @@ void NNSearch::start(Server *server, const Vector3 &center, float radius)
 	tx = minX; tz = minZ; it = 0;
 }
 
-ServerGameObject * NNSearch::next()
+template<typename Program, typename PrgGameObject>
+PrgGameObject* NNSearch<Program, PrgGameObject>::next()
 {
 	while (true) {
-		const std::vector<SrvGORef>& vec = server->tiles[tz * server->terrain->getNumPlayableTiles().first + tx].objList;
+		const auto& vec = server->tiles[tz * server->terrain->getNumPlayableTiles().first + tx].objList;
 		if (it < vec.size()) {
-			ServerGameObject* obj = vec[it++];
+			PrgGameObject* obj = vec[it++];
 			if (obj)
 				return obj;
 			else
@@ -38,3 +41,6 @@ ServerGameObject * NNSearch::next()
 		it = 0;
 	}
 }
+
+template struct NNSearch<Server, ServerGameObject>;
+template struct NNSearch<Client, ClientGameObject>;

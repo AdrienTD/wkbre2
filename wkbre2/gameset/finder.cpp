@@ -226,14 +226,14 @@ struct FinderSequenceExecutor : ObjectFinder {
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
 };
 
-struct FinderNearestToSatisfy : ObjectFinder {
+struct FinderNearestToSatisfy : CommonEval<FinderNearestToSatisfy, ObjectFinder> {
 	std::unique_ptr<ValueDeterminer> vdcond, vdradius;
-	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
 		float radius = vdradius->eval(ctx);
-		NNSearch search;
-		search.start(Server::instance, ctx->self.get()->position, radius);
-		std::vector<ServerGameObject*> res;
-		while (ServerGameObject *obj = search.next()) {
+		NNSearch<CTX::Program, CTX::AnyGO> search;
+		search.start(CTX::Program::instance, ctx->self.get()->position, radius);
+		std::vector<CTX::AnyGO*> res;
+		while (CTX::AnyGO* obj = search.next()) {
 			if (!obj->isInteractable()) continue;
 			auto _ = ctx->candidate.change(obj);
 			if (vdcond->eval(ctx) > 0.0f)
@@ -263,6 +263,10 @@ struct FinderDisabledAssociates : ObjectFinder {
 			if (ref && ref->disableCount > 0) // terminated?
 				vec.push_back(ref);
 		return vec;
+	}
+	virtual std::vector<ClientGameObject*> eval(CliScriptContext* ctx) override {
+		// TODO
+		return {};
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		category = gs.associations.readIndex(gsf);
@@ -509,17 +513,17 @@ struct FinderAlternative : CommonEval<FinderAlternative, FinderNSubs> {
 	}
 };
 
-struct FinderFilterFirst : ObjectFinder {
+struct FinderFilterFirst : CommonEval<FinderFilterFirst, ObjectFinder> {
 	int equation;
 	std::unique_ptr<ValueDeterminer> count;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
 		auto vec = finder->eval(ctx);
 		int limit = (int)count->eval(ctx), num = 0;
 		decltype(vec) res;
-		for (ServerGameObject *obj : vec) {
+		for (CTX::AnyGO *obj : vec) {
 			auto _ = ctx->candidate.change(obj);
-			if (Server::instance->gameSet->equations[equation]->eval(ctx) > 0.0f) {
+			if (CTX::Program::instance->gameSet->equations[equation]->eval(ctx) > 0.0f) {
 				res.push_back(obj);
 				if (++num >= limit)
 					break;
@@ -534,15 +538,15 @@ struct FinderFilterFirst : ObjectFinder {
 	}
 };
 
-struct FinderFilter : ObjectFinder {
+struct FinderFilter : CommonEval<FinderFilter, ObjectFinder> {
 	int equation;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
 		auto vec = finder->eval(ctx);
 		decltype(vec) res;
-		for (ServerGameObject *obj : vec) {
+		for (CTX::AnyGO *obj : vec) {
 			auto _ = ctx->candidate.change(obj);
-			if (Server::instance->gameSet->equations[equation]->eval(ctx) > 0.0f) {
+			if (CTX::Program::instance->gameSet->equations[equation]->eval(ctx) > 0.0f) {
 				res.push_back(obj);
 			}
 		}
@@ -554,18 +558,19 @@ struct FinderFilter : ObjectFinder {
 	}
 };
 
-struct FinderMetreRadius : ObjectFinder {
+struct FinderMetreRadius : CommonEval<FinderMetreRadius, ObjectFinder> {
 	std::unique_ptr<ValueDeterminer> vdradius;
 	bool useOriginalSelf = false;
 	int relationship = 0;
 	int classFilter = 0;
-	bool eligible(ServerGameObject* obj, ServerGameObject* refplayer) {
+
+	template<typename AnyGO> bool eligible(AnyGO* obj, AnyGO* refplayer) {
 		if (!obj->isInteractable()) return false;
-		ServerGameObject* objplayer = obj->getPlayer();
+		AnyGO* objplayer = obj->getPlayer();
 		switch (relationship) {
 		case 1: if (objplayer != refplayer) return false; break;
-		case 2: if (objplayer != refplayer && Server::instance->getDiplomaticStatus(objplayer, refplayer) >= 1) return false; break;
-		case 3: if (objplayer == refplayer || Server::instance->getDiplomaticStatus(objplayer, refplayer) < 2) return false; break;
+		case 2: if (objplayer != refplayer && AnyGO::Program::instance->getDiplomaticStatus(objplayer, refplayer) >= 1) return false; break;
+		case 3: if (objplayer == refplayer || AnyGO::Program::instance->getDiplomaticStatus(objplayer, refplayer) < 2) return false; break;
 		default:;
 		}
 		int objclass = obj->blueprint->bpClass;
@@ -577,13 +582,13 @@ struct FinderMetreRadius : ObjectFinder {
 		}
 		return true;
 	}
-	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
 		float radius = vdradius->eval(ctx);
-		ServerGameObject* player = (useOriginalSelf ? ctx->chainOriginalSelf.get() : ctx->self.get())->getPlayer();
-		NNSearch search;
-		search.start(Server::instance, ctx->self.get()->position, radius);
-		std::vector<ServerGameObject*> res;
-		while (ServerGameObject* obj = search.next())
+		CTX::AnyGO* player = (useOriginalSelf ? ctx->chainOriginalSelf.get() : ctx->self.get())->getPlayer();
+		NNSearch<CTX::Program, CTX::AnyGO> search;
+		search.start(CTX::Program::instance, ctx->self.get()->position, radius);
+		std::vector<CTX::AnyGO*> res;
+		while (CTX::AnyGO* obj = search.next())
 			if (eligible(obj, player))
 				res.push_back(obj);
 		return res;
@@ -671,14 +676,14 @@ struct FinderNearestCandidate : ObjectFinder {
 	}
 };
 
-struct FinderTileRadius : ObjectFinder {
+struct FinderTileRadius : CommonEval<FinderTileRadius, ObjectFinder> {
 	std::unique_ptr<ValueDeterminer> vdradius;
-	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
+	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
 		float radius = vdradius->eval(ctx);
-		NNSearch search;
-		search.start(Server::instance, ctx->self.get()->position, radius);
-		std::vector<ServerGameObject*> res;
-		while (ServerGameObject* obj = search.next())
+		NNSearch<CTX::Program, CTX::AnyGO> search;
+		search.start(CTX::Program::instance, ctx->self.get()->position, radius);
+		std::vector<CTX::AnyGO*> res;
+		while (CTX::AnyGO* obj = search.next())
 			if (obj->isInteractable())
 				res.push_back(obj);
 		return res;

@@ -27,13 +27,14 @@ void Client::tick()
 
 	const auto walkObj = [this](ClientGameObject *obj, auto &rec) -> void {
 		if (obj->movement.isMoving()) {
-			obj->position = obj->movement.getNewPosition(timeManager.currentTime);
-			obj->position.y = terrain->getHeightEx(obj->position.x, obj->position.z, obj->blueprint->canWalkOnWater());
+			Vector3 newPosition = obj->movement.getNewPosition(timeManager.currentTime);
+			newPosition.y = terrain->getHeightEx(newPosition.x, newPosition.z, obj->blueprint->canWalkOnWater());
+			obj->updatePosition(newPosition);
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
 		}
 		if (obj->trajectory.isMoving()) {
-			obj->position = obj->trajectory.getPosition(timeManager.currentTime);
+			obj->updatePosition(obj->trajectory.getPosition(timeManager.currentTime));
 			obj->orientation = obj->trajectory.getRotationAngles(timeManager.currentTime);
 		}
 		for (auto &it : obj->children)
@@ -205,7 +206,7 @@ void Client::tick()
 				Vector3 pos = br.readVector3();
 				info("Object %u teleported to (%f,%f,%f)\n", objid, pos.x, pos.y, pos.z);
 				if (ClientGameObject *obj = findObject(objid)) {
-					obj->position = pos;
+					obj->updatePosition(pos);
 				}
 				break;
 			}
@@ -630,4 +631,77 @@ ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t i
 	assert(idmap[id] == nullptr);
 	idmap[id] = obj;
 	return obj;
+}
+
+void ClientGameObject::updatePosition(const Vector3& newposition)
+{
+	// TODO: Generalize with server equivalent instead of duplicating code
+	Client* prog = Client::instance;
+	Vector3 oldposition = position;
+	position = newposition;
+	if (prog->tiles) {
+		int trnNumX, trnNumZ;
+		std::tie(trnNumX, trnNumZ) = prog->terrain->getNumPlayableTiles();
+		int tx = static_cast<int>(position.x / 5.0f), tz = static_cast<int>(position.z / 5.0f);
+		int newtileIndex;
+		if (tx >= 0 && tx < trnNumX && tz >= 0 && tz < trnNumZ)
+			newtileIndex = tz * trnNumX + tx;
+		else
+			newtileIndex = -1;
+		if (newtileIndex != tileIndex) {
+			int prevtileIndex = tileIndex;
+			tileIndex = newtileIndex;
+			if (prevtileIndex != -1) {
+				auto& vec = prog->tiles[prevtileIndex].objList;
+				vec.erase(std::find(vec.begin(), vec.end(), this));
+			}
+			if (newtileIndex != -1) {
+				prog->tiles[newtileIndex].objList.push_back(this);
+			}
+			updateOccupiedTiles(oldposition, orientation, newposition, orientation);
+		}
+	}
+}
+
+void ClientGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation)
+{
+	// TODO: Generalize with server equivalent instead of duplicating code
+	Client* prog = Client::instance;
+	if (!prog->tiles) return;
+	int trnNumX, trnNumZ;
+	std::tie(trnNumX, trnNumZ) = prog->terrain->getNumPlayableTiles();
+	if (blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING && blueprint->footprint) {
+		// free tiles from old position
+		auto rotOrigin = blueprint->footprint->rotateOrigin(oldorientation.y);
+		int ox = (int)((oldposition.x - rotOrigin.first) / 5.0f);
+		int oz = (int)((oldposition.z - rotOrigin.second) / 5.0f);
+		for (auto& to : blueprint->footprint->tiles) {
+			if (true /*!to.mode*/) {
+				auto ro = to.rotate(oldorientation.y);
+				int px = ox + ro.first, pz = oz + ro.second;
+				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
+					auto& tile = prog->tiles[pz * trnNumX + px];
+					if (tile.building == this)
+						tile.building = nullptr;
+				}
+			}
+		}
+		// take tiles from new position
+		rotOrigin = blueprint->footprint->rotateOrigin(neworientation.y);
+		ox = (int)((newposition.x - rotOrigin.first) / 5.0f);
+		oz = (int)((newposition.z - rotOrigin.second) / 5.0f);
+		for (auto& to : blueprint->footprint->tiles) {
+			if (true /*!to.mode*/) {
+				auto ro = to.rotate(neworientation.y);
+				int px = ox + ro.first, pz = oz + ro.second;
+				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
+					auto& tile = prog->tiles[pz * trnNumX + px];
+					if (!tile.building || tile.buildingPassable) {
+						tile.building = this;
+						tile.buildingPassable = to.mode;
+					}
+				}
+			}
+		}
+	}
 }

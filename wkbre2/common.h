@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -57,6 +58,8 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	int reportedCurrentOrder = -1;
 
+	int tileIndex = -1;
+
 	float getItem(int item)
 	{
 		auto it = items.find(item);
@@ -96,8 +99,19 @@ template<class AnyGameObject> struct CommonGameObject {
 };
 
 template<typename Program, typename AnyGameObject> struct CommonGameState {
-	std::map<int, std::unordered_set<GameObjectRef<Program, AnyGameObject>>> aliases;
+	using PrgGORef = GameObjectRef<Program, AnyGameObject>;
+
+	std::map<int, std::unordered_set<PrgGORef>> aliases;
 	std::map<std::pair<int, int>, int> diplomaticStatuses;
+
+	struct Tile {
+		std::vector<PrgGORef> objList;
+		//std::vector<PrgGORef> zoneList;
+		PrgGORef zone;
+		PrgGORef building;
+		bool buildingPassable;
+	};
+	std::unique_ptr<Tile[]> tiles;
 
 	int getDiplomaticStatus(AnyGameObject *a, AnyGameObject *b) const {
 		if (a == b) return 0; // player is always friendly with itself :)

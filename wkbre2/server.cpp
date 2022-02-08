@@ -847,7 +847,7 @@ void ServerGameObject::lookForSightRangeEvents()
 	if (dist <= 0.0f)
 		return;
 	std::unordered_set<SrvGORef> objfound;
-	NNSearch search;
+	NNSearch<Server, ServerGameObject> search;
 	search.start(Server::instance, this->position, dist * 5.0f);
 	while (ServerGameObject* nobj = search.next()) {
 		if (!nobj->blueprint->generateSightRangeEvents)
@@ -1224,9 +1224,9 @@ void Server::tick()
 		syncTime();
 	}
 
-	int clientIndex = 0;
+	int clientIndex = -1;
 	for (NetLink *cli : clientLinks) {
-		ServerGameObject* player = clientPlayerObjects[clientIndex++];
+		ServerGameObject* player = clientPlayerObjects[++clientIndex];
 		int pcnt = 20;
 		while (cli->available() && (pcnt--)) { // DDoS !!!
 			NetPacket packet = cli->receive();
