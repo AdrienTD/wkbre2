@@ -210,6 +210,34 @@ struct PFNChooseAtRandom : PlanNodeBlueprint {
 	}
 };
 
+struct PFNRegisterWorkOrder : PlanNodeBlueprint {
+	struct State : PlanNodeState {
+	};
+	int gsUnitFinder;
+	const WorkOrder* workOrder;
+	std::unique_ptr<ObjectFinder> cityFinder;
+
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+		auto str = gsf.nextString();
+		if (str != "FINDER_RESULTS")
+			ferr("REGISTER_WORK_ORDER must be followed by a FINDER_RESULTS!");
+		gsUnitFinder = gs.objectFinderDefinitions.readIndex(gsf);
+		workOrder = gs.workOrders.readPtr(gsf);
+		cityFinder.reset(ReadFinder(gsf, gs));
+	}
+	virtual PlanNodeState* createState() override {
+		return new State;
+	}
+	virtual void reset(PlanNodeState* state) override {
+	}
+	virtual bool execute(PlanNodeState* state, SrvScriptContext* ctx) override {
+		for (ServerGameObject* city : cityFinder->eval(ctx)) {
+			city->getPlayer()->aiController.registerWorkOrder(city, Server::instance->gameSet->objectFinderDefinitions[gsUnitFinder], workOrder);
+		}
+		return true;
+	}
+};
+
 PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileParser& gsf, const GameSet& gs)
 {
 	PlanNodeBlueprint* node;
@@ -225,7 +253,9 @@ PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileP
 		node = new PFNDeployArmyFrom;
 	else if (tag == "CHOOSE_AT_RANDOM")
 		node = new PFNChooseAtRandom;
-	else if (tag == "EXPAND_SETTLEMENT" || tag == "REGISTER_EQUILIBRIUM_PROFILE" || tag == "REGISTER_WORK_ORDER") {
+	else if (tag == "REGISTER_WORK_ORDER")
+		node = new PFNRegisterWorkOrder;
+	else if (tag == "EXPAND_SETTLEMENT" || tag == "REGISTER_EQUILIBRIUM_PROFILE") {
 		auto nop = new PFNNoOperation;
 		nop->name = tag;
 		node = nop;

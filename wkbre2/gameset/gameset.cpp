@@ -233,6 +233,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_WORK_ORDER: {
+				workOrders.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -432,6 +437,11 @@ void GameSet::parseFile(const char * fn, int pass)
 				acs.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_WORK_ORDER: {
+				WorkOrder& wo = workOrders.readRef(gsf);
+				wo.parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -507,6 +517,7 @@ void GameSet::load(const char * fn)
 	terrains.pass();
 	plans.pass();
 	armyCreationSchedules.pass();
+	workOrders.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);
