@@ -782,13 +782,6 @@ void ServerGameObject::detachLoopingSpecialEffect(int sfxTag)
 	Server::instance->sendToAll(npw);
 }
 
-void ServerGameObject::activatePlan(int planTag)
-{
-	auto& plan = Server::instance->gameSet->plans[planTag];
-	this->aiController.planBlueprint = &plan;
-	this->aiController.planState = plan.createState();
-}
-
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;

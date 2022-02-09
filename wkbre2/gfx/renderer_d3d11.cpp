@@ -442,7 +442,11 @@ void D3D11Renderer::BeginDrawing() {
 }
 
 void D3D11Renderer::EndDrawing() {
-	dxgiSwapChain->Present(1, 0);
+	HRESULT hres;
+	hres = dxgiSwapChain->Present(1, 0);
+	if (hres != S_OK) {
+		Sleep(100);
+	}
 }
 
 void D3D11Renderer::ClearFrame(bool clearColors, bool clearDepth, uint32_t color) {

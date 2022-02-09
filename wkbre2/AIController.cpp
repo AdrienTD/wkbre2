@@ -15,7 +15,7 @@ void AIController::parse(GSFileParser& gsf, const GameSet& gs)
 		if (strtag == "END_AI_CONTROLLER")
 			break;
 		else if (strtag == "MASTER_PLAN") {
-			gameObj->activatePlan(gs.plans.readIndex(gsf));
+			activatePlan(gs.plans.readIndex(gsf));
 		}
 		else if (strtag == "WORK_ORDER") {
 			// WKBattles work orders
@@ -124,6 +124,20 @@ void AIController::update()
 			}
 		}
 	}
+}
+
+void AIController::activatePlan(int planTag)
+{
+	auto& plan = Server::instance->gameSet->plans[planTag];
+	this->planBlueprint = &plan;
+	this->planState = plan.createState();
+}
+
+void AIController::abandonPlan()
+{
+	planBlueprint = nullptr;
+	planState = {};
+	// TODO: Free the state pointers
 }
 
 void AIController::registerWorkOrder(ServerGameObject* city, ObjectFinder* unitFinder, const WorkOrder* workOrder)

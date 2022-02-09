@@ -28,5 +28,7 @@ struct AIController {
 	void parse(GSFileParser& gsf, const GameSet& gs);
 	void update();
 
+	void activatePlan(int planTag);
+	void abandonPlan();
 	void registerWorkOrder(ServerGameObject* city, ObjectFinder* unitFinder, const WorkOrder* workOrder);
 };

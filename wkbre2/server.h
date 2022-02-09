@@ -77,7 +77,6 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	void reportCurrentOrder(OrderBlueprint* orderBp);
 	void attachLoopingSpecialEffect(int sfxTag, const Vector3& position);
 	void detachLoopingSpecialEffect(int sfxTag);
-	void activatePlan(int planTag);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();

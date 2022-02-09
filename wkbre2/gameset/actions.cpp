@@ -1268,7 +1268,7 @@ struct ActionActivatePlan : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject* obj : finder->eval(ctx))
-			obj->activatePlan(planBlueprint);
+			obj->aiController.activatePlan(planBlueprint);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		planBlueprint = gs.plans.readIndex(gsf);
@@ -1292,6 +1292,17 @@ struct ActionRegisterWorkOrder : Action {
 		gsUnitFinder = gs.objectFinderDefinitions.readIndex(gsf);
 		workOrder = gs.workOrders.readPtr(gsf);
 		cityFinder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionAbandonPlan : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			obj->aiController.abandonPlan();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
 	}
 };
 
@@ -1379,6 +1390,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK: action = new ActionSkipCameraPathPlayback; break;
 	case Tags::ACTION_ACTIVATE_PLAN: action = new ActionActivatePlan; break;
 	case Tags::ACTION_REGISTER_WORK_ORDER: action = new ActionRegisterWorkOrder; break;
+	case Tags::ACTION_ABANDON_PLAN: action = new ActionAbandonPlan; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:

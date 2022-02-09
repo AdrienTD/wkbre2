@@ -275,7 +275,8 @@ TagDict<19> Tags::POSITION_tagDict({
     "TOWARDS",
 });
 
-TagDict<123> Tags::ACTION_tagDict({
+TagDict<124> Tags::ACTION_tagDict({
+    "ABANDON_PLAN",
     "ACTIVATE_COMMISSION",
     "ACTIVATE_PLAN",
     "ADD_REACTION",

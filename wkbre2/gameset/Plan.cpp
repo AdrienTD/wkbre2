@@ -154,10 +154,15 @@ struct PFNDeployArmyFrom : PlanNodeBlueprint {
 			army->setParent(settlement->getPlayer());
 			for (auto& spawn : schedule->spawnCharacters) {
 				ServerGameObject* building = buildingCandidates[rand() % buildingCandidates.size()];
-				// create the unit
-				ServerGameObject* unit = ctx->server->createObject(spawn.type);
-				unit->setParent(army);
-				unit->setPosition(building->position);
+				// create the units
+				auto _ = ctx->self.change(army);
+				int numUnits = (int)spawn.count->eval(ctx); // Not sure what should be the SELF
+				numUnits = std::min(numUnits, 7); // prevent formations to be built until they are implemented
+				for (int i = 0; i < numUnits; i++) {
+					ServerGameObject* unit = ctx->server->createObject(spawn.type);
+					unit->setParent(army);
+					unit->setPosition(building->position);
+				}
 			}
 			schedule->armyReadySequence.run(army);
 		}
@@ -283,6 +288,30 @@ struct PFNIf : PlanNodeBlueprint {
 	}
 };
 
+struct PFNEmbeddedPlan : PlanNodeBlueprint {
+	struct State : PlanNodeState {
+		PlanNodeSequence::State seqState;
+	};
+	PlanNodeSequence* embeddedPlan;
+
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+		embeddedPlan = const_cast<PlanNodeSequence*>(gs.plans.readPtr(gsf));
+	}
+	virtual PlanNodeState* createState() override {
+		State* s = new State;
+		s->seqState = embeddedPlan->createState();
+		return s;
+	}
+	virtual void reset(PlanNodeState* state) override {
+		State* s = (State*)state;
+		embeddedPlan->reset(&s->seqState);
+	}
+	virtual bool execute(PlanNodeState* state, SrvScriptContext* ctx) override {
+		State* s = (State*)state;
+		return embeddedPlan->execute(&s->seqState, ctx);
+	}
+};
+
 PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileParser& gsf, const GameSet& gs)
 {
 	PlanNodeBlueprint* node;
@@ -302,6 +331,8 @@ PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileP
 		node = new PFNRegisterWorkOrder;
 	else if (tag == "IF")
 		node = new PFNIf;
+	else if (tag == "EMBEDDED_PLAN")
+		node = new PFNEmbeddedPlan;
 	else if (tag == "EXPAND_SETTLEMENT" || tag == "REGISTER_EQUILIBRIUM_PROFILE") {
 		auto nop = new PFNNoOperation;
 		nop->name = tag;
