@@ -697,6 +697,38 @@ struct ValueGradientInFront : ValueDeterminer {
 	}
 };
 
+struct ValueAverageEquationResult : CommonEval<ValueAverageEquationResult, ValueDeterminer> {
+	int equation;
+	std::unique_ptr<ObjectFinder> finder;
+	template<typename CTX> float common_eval(CTX* ctx) {
+		auto vec = finder->eval(ctx);
+		if (vec.empty())
+			return 0.0f;
+		float sum = 0.0f;
+		for (auto* obj : vec) {
+			auto _ = ctx->self.change(obj);
+			sum += CTX::Program::instance->gameSet->equations[equation]->eval(ctx);
+		}
+		return sum / (float)vec.size();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		equation = gs.equations.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueCanAffordCommission : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> fPlayer;
+	virtual float eval(SrvScriptContext* ctx) override {
+		// TODO
+		return 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		gsf.nextString(true);
+		fPlayer.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -745,6 +777,8 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_COULD_REACH: vd = new ValueCouldReach; break;
 	case Tags::VALUE_AI_CONTROLLED: vd = new ValueAiControlled; break;
 	case Tags::VALUE_GRADIENT_IN_FRONT: vd = new ValueGradientInFront; break;
+	case Tags::VALUE_AVERAGE_EQUATION_RESULT: vd = new ValueAverageEquationResult; break;
+	case Tags::VALUE_CAN_AFFORD_COMMISSION: vd = new ValueCanAffordCommission; break;
 	default: vd = new ValueUnknown(strtag); break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));
@@ -786,6 +820,10 @@ struct EnodeNegate : CommonEval<EnodeNegate, UnaryEnode> {
 
 struct EnodeRandomUpTo : CommonEval<EnodeRandomUpTo, UnaryEnode> {
 	template<typename CTX> float common_eval(CTX* ctx) { return RandomFromZeroToOne() * a->eval(ctx); }
+};
+
+struct EnodeRound : CommonEval<EnodeRound, UnaryEnode> {
+	template<typename CTX> float common_eval(CTX* ctx) { return std::round(a->eval(ctx)); }
 };
 
 // Binary equation nodes
@@ -953,6 +991,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_IS_NEGATIVE: vd = new EnodeIsNegative; break;
 			case Tags::ENODE_ABSOLUTE_VALUE: vd = new EnodeAbsoluteValue; break;
 			case Tags::ENODE_RANDOM_UP_TO: vd = new EnodeRandomUpTo; break;
+			case Tags::ENODE_ROUND: vd = new EnodeRound; break;
 			case Tags::ENODE_AND: vd = new EnodeAnd; break;
 			case Tags::ENODE_OR: vd = new EnodeOr; break;
 			case Tags::ENODE_LESS_THAN: vd = new EnodeLessThan; break;

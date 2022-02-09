@@ -262,6 +262,10 @@ struct ActionTransferControl : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		auto objs = togiveFinder->eval(ctx);
 		ServerGameObject *recipient = recipientFinder->getFirst(ctx);
+		if (!recipient) {
+			printf("WARNING: Attempt to transfer %zu objects to non-existent parent!\n", objs.size());
+			return;
+		}
 		for (ServerGameObject* obj : objs) {
 			obj->setParent(recipient);
 			obj->sendEvent(Tags::PDEVENT_ON_CONTROL_TRANSFERRED);
@@ -1272,6 +1276,25 @@ struct ActionActivatePlan : Action {
 	}
 };
 
+struct ActionRegisterWorkOrder : Action {
+	int gsUnitFinder;
+	const WorkOrder* workOrder;
+	std::unique_ptr<ObjectFinder> cityFinder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* city : cityFinder->eval(ctx)) {
+			city->getPlayer()->aiController.registerWorkOrder(city, Server::instance->gameSet->objectFinderDefinitions[gsUnitFinder], workOrder);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		auto str = gsf.nextString();
+		if (str != "FINDER_RESULTS")
+			ferr("REGISTER_WORK_ORDER must be followed by a FINDER_RESULTS!");
+		gsUnitFinder = gs.objectFinderDefinitions.readIndex(gsf);
+		workOrder = gs.workOrders.readPtr(gsf);
+		cityFinder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1355,6 +1378,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_DETACH_LOOPING_SPECIAL_EFFECT: action = new ActionDetachLoopingSpecialEffect; break;
 	case Tags::ACTION_SKIP_CAMERA_PATH_PLAYBACK: action = new ActionSkipCameraPathPlayback; break;
 	case Tags::ACTION_ACTIVATE_PLAN: action = new ActionActivatePlan; break;
+	case Tags::ACTION_REGISTER_WORK_ORDER: action = new ActionRegisterWorkOrder; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:
@@ -1395,6 +1419,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_DISABLE_TRIBUTES_WINDOW:
 	case Tags::ACTION_SET_RECONNAISSANCE:
 	case Tags::ACTION_REMOVE_MULTIPLAYER_PLAYER:
+	case Tags::ACTION_RESERVE_TILE_FOR_CONSTRUCTION:
+	case Tags::ACTION_RESERVE_SPACE_FOR_CONSTRUCTION:
 		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown(name, gsf.locate()); printf("WARNING: Unknown ACTION %s at %s\n", name.c_str(), gsf.locate().c_str()); break;

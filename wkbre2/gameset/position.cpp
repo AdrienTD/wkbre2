@@ -30,14 +30,16 @@ namespace {
 }
 
 struct PDUnknown : PositionDeterminer {
+	std::string name;
 	virtual OrientedPosition eval(SrvScriptContext* ctx) override
 	{
-		ferr("Unknown position determiner called from Server!");
+		ferr("Unknown position determiner %s called from Server!", name.c_str());
 		return OrientedPosition();
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override
 	{
 	}
+	PDUnknown(const std::string& name) : name(name) {}
 };
 
 struct PDLocationOf : PositionDeterminer {
@@ -414,6 +416,36 @@ struct PDRandomAttachmentPoint : public PositionDeterminer {
 	}
 };
 
+struct PDNearestConstructionSite : public PDNearestValidStampdownPos {
+	std::unique_ptr<ValueDeterminer> val1, val2, val3;
+	std::unique_ptr<ObjectFinder> fExemptTilesReservedBy;
+	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+		auto po = p->eval(ctx);
+		if (!objbp->footprint)
+			return po;
+		int ox = (int)((po.position.x - objbp->footprint->originX) / 5.0f);
+		int oz = (int)((po.position.z - objbp->footprint->originZ) / 5.0f);
+		std::tie(ox, oz) = findPos(ctx->server, ox, oz);
+		float fx = ox * 5 + objbp->footprint->originX + 2.5f;
+		float fz = oz * 5 + objbp->footprint->originZ + 2.5f;
+		return { Vector3(fx, ctx->server->terrain->getHeight(fx, fz), fz) };
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		p.reset(PositionDeterminer::createFrom(gsf, gs));
+		objbp = gs.objBlueprints[Tags::GAMEOBJCLASS_BUILDING].readPtr(gsf);
+		val1.reset(ReadValueDeterminer(gsf, gs));
+		val2.reset(ReadValueDeterminer(gsf, gs));
+		val3.reset(ReadValueDeterminer(gsf, gs));
+		auto cursor = gsf.cursor;
+		if (gsf.nextString() == "EXEMPT_TILES_RESERVED_BY") {
+			fExemptTilesReservedBy.reset(ReadFinder(gsf, gs));
+		}
+		else {
+			gsf.cursor = cursor;
+		}
+	}
+};
+
 PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet & gs)
 {
 	PositionDeterminer *pos;
@@ -436,7 +468,8 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet 
 	case Tags::POSITION_FIRING_ATTACHMENT_POINT: pos = new PDFiringAttachmentPoint; break;
 	case Tags::POSITION_NEAREST_VALID_STAMPDOWN_POS: pos = new PDNearestValidStampdownPos; break;
 	case Tags::POSITION_RANDOM_ATTACHMENT_POINT: pos = new PDRandomAttachmentPoint; break;
-	default: pos = new PDUnknown; break;
+	case Tags::POSITION_NEAREST_CONSTRUCTION_SITE: pos = new PDNearestConstructionSite; break;
+	default: pos = new PDUnknown(tag); break;
 	}
 	pos->parse(gsf, gs);
 	return pos;

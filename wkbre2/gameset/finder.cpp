@@ -12,6 +12,7 @@
 #include "../NNSearch.h"
 #include "ScriptContext.h"
 #include <cassert>
+#include <iterator>
 
 std::vector<ClientGameObject*> ObjectFinder::eval(CliScriptContext* ctx)
 {
@@ -488,6 +489,23 @@ struct FinderUnion : CommonEval<FinderUnion, FinderNSubs> {
 	}
 };
 
+struct FinderIntersection : CommonEval<FinderIntersection, FinderNSubs> {
+	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
+		auto objs = finders[0]->eval(ctx);
+		decltype(objs) intersected;
+		std::sort(objs.begin(), objs.end());
+		intersected.reserve(objs.size());
+		for (size_t f = 1; f < finders.size(); ++f) {
+			auto next = finders[f]->eval(ctx);
+			std::sort(next.begin(), next.end());
+			std::set_intersection(objs.begin(), objs.end(), next.begin(), next.end(), std::back_inserter(intersected));
+			std::swap(objs, intersected);
+			intersected.clear();
+		}
+		return objs;
+	}
+};
+
 struct FinderChain : CommonEval<FinderChain, FinderNSubs> {
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
 		auto _ = ctx->chainOriginalSelf.change(ctx->self.get());
@@ -720,6 +738,26 @@ struct FinderRandomSelection : ObjectFinder {
 	}
 };
 
+struct FinderFilterCandidates : CommonEval<FinderFilterCandidates, ObjectFinder> {
+	std::unique_ptr<ValueDeterminer> condition;
+	std::unique_ptr<ObjectFinder> finder;
+	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
+		auto vec = finder->eval(ctx);
+		decltype(vec) res;
+		for (CTX::AnyGO* obj : vec) {
+			auto _ = ctx->candidate.change(obj);
+			if (condition->eval(ctx) > 0.0f) {
+				res.push_back(obj);
+			}
+		}
+		return res;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		condition.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinderNode(gsf, gs));
+	}
+};
+
 ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	gsf.advanceLine();
@@ -735,6 +773,7 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 			switch (Tags::FINDER_tagDict.getTagID(strtag.substr(7).c_str())) {
 			case Tags::FINDER_SUBORDINATES: finder = new FinderSubordinates; break;
 			case Tags::FINDER_UNION: finder = new FinderUnion; break;
+			case Tags::FINDER_INTERSECTION: finder = new FinderIntersection; break;
 			case Tags::FINDER_CHAIN: finder = new FinderChain; break;
 			case Tags::FINDER_ALTERNATIVE: finder = new FinderAlternative; break;
 			case Tags::FINDER_FILTER_FIRST: finder = new FinderFilterFirst; break;
@@ -745,6 +784,7 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::FINDER_TILE_RADIUS: finder = new FinderTileRadius; break;
 			case Tags::FINDER_DISCOVERED_UNITS: finder = new FinderDiscoveredUnits; break;
 			case Tags::FINDER_RANDOM_SELECTION: finder = new FinderRandomSelection; break;
+			case Tags::FINDER_FILTER_CANDIDATES: finder = new FinderFilterCandidates; break;
 			default:
 				gsf.cursor = oldcur;
 				return ReadFinder(gsf, gs);

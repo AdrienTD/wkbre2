@@ -238,6 +238,51 @@ struct PFNRegisterWorkOrder : PlanNodeBlueprint {
 	}
 };
 
+struct PFNIf : PlanNodeBlueprint {
+	struct State : PlanNodeState {
+		PlanNodeSequence::State seqStateTrue, seqStateFalse;
+		PlanNodeSequence* chosenSequence = nullptr;
+	};
+	std::unique_ptr<ValueDeterminer> condition;
+	PlanNodeSequence sequenceTrue, sequenceFalse;
+
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+		condition.reset(ReadValueDeterminer(gsf, gs));
+
+		gsf.advanceLine();
+		PlanNodeSequence* curSequence = &sequenceTrue;
+		while (!gsf.eof) {
+			std::string strtag = gsf.nextTag();
+			if (strtag == "END_IF")
+				return;
+			else if (strtag == "ELSE")
+				curSequence = &sequenceFalse;
+			else if (!strtag.empty() && strtag.substr(0, 2) != "//")
+				curSequence->nodes.emplace_back(PlanNodeBlueprint::createFrom(strtag, gsf, gs));
+			gsf.advanceLine();
+		}
+		ferr("Plan node IF sequence reached end of file without END_IF!");
+	}
+	virtual PlanNodeState* createState() override {
+		State* s = new State;
+		s->seqStateTrue = sequenceTrue.createState();
+		s->seqStateFalse = sequenceFalse.createState();
+		return s;
+	}
+	virtual void reset(PlanNodeState* state) override {
+		State* s = (State*)state;
+		s->chosenSequence = nullptr;
+	}
+	virtual bool execute(PlanNodeState* state, SrvScriptContext* ctx) override {
+		State* s = (State*)state;
+		if (!s->chosenSequence) {
+			s->chosenSequence = condition->booleval(ctx) ? &sequenceTrue : &sequenceFalse;
+		}
+		bool done = s->chosenSequence->execute((s->chosenSequence == &sequenceTrue) ? &s->seqStateTrue : &s->seqStateFalse, ctx);
+		return done;
+	}
+};
+
 PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileParser& gsf, const GameSet& gs)
 {
 	PlanNodeBlueprint* node;
@@ -255,6 +300,8 @@ PlanNodeBlueprint* PlanNodeBlueprint::createFrom(const std::string& tag, GSFileP
 		node = new PFNChooseAtRandom;
 	else if (tag == "REGISTER_WORK_ORDER")
 		node = new PFNRegisterWorkOrder;
+	else if (tag == "IF")
+		node = new PFNIf;
 	else if (tag == "EXPAND_SETTLEMENT" || tag == "REGISTER_EQUILIBRIUM_PROFILE") {
 		auto nop = new PFNNoOperation;
 		nop->name = tag;

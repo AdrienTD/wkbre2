@@ -17,6 +17,15 @@ void AIController::parse(GSFileParser& gsf, const GameSet& gs)
 		else if (strtag == "MASTER_PLAN") {
 			gameObj->activatePlan(gs.plans.readIndex(gsf));
 		}
+		else if (strtag == "WORK_ORDER") {
+			// WKBattles work orders
+			ServerGameObject* city = Server::instance->findObject(gsf.nextInt());
+			ObjectFinder* unitFinder = gs.objectFinderDefinitions.readRef(gsf);
+			const WorkOrder* workOrder = gs.workOrders.readPtr(gsf);
+			registerWorkOrder(city, unitFinder, workOrder);
+			// normally a block ending with END_WORK_ORDER comes afterwards, but apparently it is empty, no need to parse
+		}
+		// TODO: SETTLEMENT_CONTROLLER for WK1 work orders
 		gsf.advanceLine();
 	}
 }
