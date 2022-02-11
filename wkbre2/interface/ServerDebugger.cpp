@@ -36,8 +36,8 @@ void ServerDebugger::draw() {
 			selectedObject = obj;
 		if (b) {
 			for (auto typechildren : obj->children)
-				for (ServerGameObject *child : typechildren.second)
-					walkOnObj(walkOnObj, child);
+				for (CommonGameObject* child : typechildren.second)
+					walkOnObj(walkOnObj, (ServerGameObject*)child);
 			ImGui::TreePop();
 		}
 	};

@@ -7,36 +7,55 @@
 #include <cstdint>
 #include <functional>
 
-template<typename Program, typename AnyGameObject> struct GameObjectRef {
-	static const uint32_t NULL_GOREF = 0;
+struct CommonGameObject;
+
+struct GameObjectRef {
+	static constexpr uint32_t NULL_GOREF = 0;
 
 	uint32_t objid;
 
-	AnyGameObject *get() const { if (objid != NULL_GOREF) return Program::instance->findObject(objid); else return nullptr; }
-	AnyGameObject *operator->() const { return get(); }
-	explicit operator bool() const { return get() != nullptr; }
-	operator AnyGameObject *() const { return get(); }
+	template<typename Program, typename AnyGameObject = Program::GameObject>
+	AnyGameObject* getFrom() const {
+		if (objid != NULL_GOREF)
+			return Program::instance->findObject(objid);
+		else
+			return nullptr;
+	}
 
-	void set(AnyGameObject *obj) { if (obj) objid = obj->id; else objid = NULL_GOREF; }
 	void set(uint32_t id) { objid = id; }
-	GameObjectRef &operator=(AnyGameObject *obj) { set(obj); return *this; }
-	GameObjectRef &operator=(uint32_t id) { set(id); return *this; }
-	GameObjectRef &operator=(const GameObjectRef &ref) { set(ref.objid); return *this; }
-	GameObjectRef &operator=(GameObjectRef&& ref) { objid = ref.objid; ref.objid = NULL_GOREF; return *this; }
 
-	bool operator<(const GameObjectRef &other) const { return objid < other.objid; }
-	bool operator==(const GameObjectRef &other) const { return objid == other.objid; }
-	bool operator==(AnyGameObject *obj) const { return objid == obj->id; }
-
-	GameObjectRef() { objid = NULL_GOREF; }
-	GameObjectRef(AnyGameObject *obj) { set(obj); }
-	GameObjectRef(uint32_t id) { set(id); }
-	GameObjectRef(const GameObjectRef &other) { set(other.objid); }
-	GameObjectRef(GameObjectRef&& other) { objid = other.objid; other.objid = NULL_GOREF; }
+	GameObjectRef() noexcept : objid(NULL_GOREF) {}
+	GameObjectRef(uint32_t id) noexcept : objid(id) {}
+	GameObjectRef(const GameObjectRef& other) noexcept : objid(other.objid) {}
+	GameObjectRef(GameObjectRef&& other) noexcept { objid = other.objid; other.objid = NULL_GOREF; }
 };
 
-template<typename S, typename T> struct std::hash<GameObjectRef<S, T>> {
-	size_t operator()(const GameObjectRef<S, T> &ref) const { return ref.objid; }
+template<typename Program, typename AnyGameObject> struct SpecificGORef : GameObjectRef {
+	AnyGameObject* get() const { return getFrom<Program, AnyGameObject>(); }
+	AnyGameObject* operator->() const { return get(); }
+	explicit operator bool() const { return get() != nullptr; }
+	operator AnyGameObject*() const { return get(); }
+	
+	void set(AnyGameObject* obj) { if (obj) objid = obj->id; else objid = NULL_GOREF; }
+	void set(uint32_t id) { objid = id; }
+	SpecificGORef& operator=(AnyGameObject* obj) noexcept { set(obj); return *this; }
+	SpecificGORef& operator=(uint32_t id) noexcept { set(id); return *this; }
+	SpecificGORef& operator=(const SpecificGORef& ref) noexcept { set(ref.objid); return *this; }
+	SpecificGORef& operator=(SpecificGORef&& ref) noexcept { objid = ref.objid; ref.objid = NULL_GOREF; return *this; }
+
+	bool operator<(const SpecificGORef& other) const { return objid < other.objid; }
+	bool operator==(const SpecificGORef& other) const { return objid == other.objid; }
+	bool operator==(AnyGameObject* obj) const { return objid == obj->id; }
+
+	SpecificGORef() noexcept {}
+	SpecificGORef(AnyGameObject* obj) noexcept { set(obj); }
+	SpecificGORef(uint32_t id) noexcept : GameObjectRef(id) {}
+	SpecificGORef(const SpecificGORef& other) noexcept : GameObjectRef(other) {}
+	SpecificGORef(SpecificGORef&& other) noexcept : GameObjectRef(other) {}
+};
+
+template<typename S, typename T> struct std::hash<SpecificGORef<S, T>> {
+	size_t operator()(const SpecificGORef<S, T>& ref) const { return ref.objid; }
 };
 
 struct Server;
@@ -44,5 +63,5 @@ struct Client;
 struct ServerGameObject;
 struct ClientGameObject;
 
-typedef GameObjectRef<Server, ServerGameObject> SrvGORef;
-typedef GameObjectRef<Client, ClientGameObject> CliGORef;
+typedef SpecificGORef<Server, ServerGameObject> SrvGORef;
+typedef SpecificGORef<Client, ClientGameObject> CliGORef;

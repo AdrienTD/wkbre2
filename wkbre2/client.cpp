@@ -38,8 +38,8 @@ void Client::tick()
 			obj->orientation = obj->trajectory.getRotationAngles(timeManager.currentTime);
 		}
 		for (auto &it : obj->children)
-			for (ClientGameObject *obj : it.second)
-				rec(obj, rec);
+			for (CommonGameObject *obj : it.second)
+				rec((ClientGameObject*)obj, rec);
 	};
 	if(level)
 		walkObj(level, walkObj);

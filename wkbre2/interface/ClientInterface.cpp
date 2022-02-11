@@ -241,8 +241,8 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 drawsub:
 	for (auto &typechildren : obj->children) {
 		GameObjBlueprint* blueprint = client->gameSet->getBlueprint(typechildren.first);
-		for (ClientGameObject* child : typechildren.second) {
-			drawObject(child);
+		for (CommonGameObject* child : typechildren.second) {
+			drawObject((ClientGameObject*)child);
 		}
 	}
 }

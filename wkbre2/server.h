@@ -28,7 +28,7 @@ struct ActionSequence;
 struct Server;
 struct Reaction;
 
-struct ServerGameObject : CommonGameObject<ServerGameObject> {
+struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	using Program = Server;
 
 	bool deleted = false; ServerGameObject* nextDeleted = nullptr;
@@ -45,7 +45,7 @@ struct ServerGameObject : CommonGameObject<ServerGameObject> {
 	MovementController movementController{ this };
 	AIController aiController{ this };
 
-	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ServerGameObject>(id, blueprint), orderConfig(this) {}
+	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : SpecificGameObject<Server, ServerGameObject>(id, blueprint), orderConfig(this) {}
 
 	void setItem(int index, float value);
 	void setParent(ServerGameObject *newParent);

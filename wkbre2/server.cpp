@@ -116,8 +116,8 @@ void Server::deleteObject(ServerGameObject * obj)
 	obj->deleted = true;
 	// delete subordinates first
 	for (auto& st : obj->children) {
-		for (ServerGameObject* child : st.second) {
-			deleteObject(child);
+		for (CommonGameObject* child : st.second) {
+			deleteObject((ServerGameObject*)child);
 		}
 	}
 	if (objToDeleteLast) {
@@ -1159,8 +1159,8 @@ void Server::tick()
 			Vector3 avg(0,0,0);
 			size_t cnt = 0;
 			for (auto& childtype : obj->children) {
-				for (ServerGameObject* child : childtype.second) {
-					avg += child->position;
+				for (CommonGameObject* child : childtype.second) {
+					avg += ((ServerGameObject*)child)->position;
 					cnt += 1;
 				}
 			}
@@ -1173,8 +1173,8 @@ void Server::tick()
 			obj->aiController.update();
 		}
 		for (auto &childtype : obj->children) {
-			for (ServerGameObject *child : childtype.second)
-				func(child, func);
+			for (CommonGameObject* child : childtype.second)
+				func((ServerGameObject*)child, func);
 		}
 	};
 	if(level)
@@ -1280,8 +1280,8 @@ void Server::tick()
 				auto walk = [](ServerGameObject* obj, auto rec) -> void {
 					obj->sendEvent(Tags::PDEVENT_ON_LEVEL_START);
 					for (auto& t : obj->children) {
-						for (ServerGameObject* child : t.second)
-							rec(child, rec);
+						for (CommonGameObject* child : t.second)
+							rec((ServerGameObject*)child, rec);
 					}
 				};
 				walk(level, walk);

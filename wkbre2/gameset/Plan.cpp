@@ -144,7 +144,8 @@ struct PFNDeployArmyFrom : PlanNodeBlueprint {
 			std::vector<ServerGameObject*> buildingCandidates;
 			for (auto& ct : settlement->children) {
 				if ((ct.first & 63) == Tags::GAMEOBJCLASS_BUILDING)
-					buildingCandidates.insert(buildingCandidates.end(), ct.second.begin(), ct.second.end());
+					for(CommonGameObject* obj : ct.second)
+						buildingCandidates.push_back((ServerGameObject*)obj);
 			}
 			// no buildings -> units can no longer spawn
 			if (buildingCandidates.empty())

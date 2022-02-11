@@ -107,7 +107,7 @@ struct FinderAlias : ObjectFinder {
 
 struct FinderController : CommonEval<FinderController, ObjectFinder> {
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
-		return { ctx->self.get()->parent };
+		return { ctx->self.get()->getParent() };
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 	}
@@ -179,10 +179,10 @@ struct FinderPlayers : ObjectFinder {
 		std::vector<ServerGameObject*> res;
 		for (auto &it : server->level->children) {
 			if ((it.first & 63) == Tags::GAMEOBJCLASS_PLAYER)
-				for (ServerGameObject *player : it.second)
-					if (auto _ = ctx->candidate.change(player))
+				for (CommonGameObject *player : it.second)
+					if (auto _ = ctx->candidate.change(player->dyncast<ServerGameObject>()))
 						if (server->gameSet->equations[equation]->eval(ctx))
-							res.push_back(player);
+							res.push_back(player->dyncast<ServerGameObject>());
 		}
 		return res;
 	}
@@ -346,15 +346,15 @@ struct FinderAgAllOfType : ObjectFinder {
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
 		uint32_t bpid = blueprint->getFullId();
 		std::vector<ServerGameObject*> vec;
-		auto walk = [this, bpid, &vec](ServerGameObject* obj, auto& rec) -> void {
+		auto walk = [this, bpid, &vec](CommonGameObject* obj, auto& rec) -> void {
 			for (const auto& subords : obj->children) {
 				if (subords.first == bpid) {
-					for (ServerGameObject* sub : subords.second) {
-						vec.push_back(sub);
+					for (CommonGameObject* sub : subords.second) {
+						vec.push_back((ServerGameObject*)sub);
 					}
 				}
 				else {
-					for (ServerGameObject* sub : subords.second) {
+					for (CommonGameObject* sub : subords.second) {
 						rec(sub, rec);
 					}
 				}
@@ -427,7 +427,8 @@ struct FinderSubordinates : ObjectFinder {
 	}
 	void walk(ServerGameObject *obj, SrvScriptContext* ctx) {
 		for (auto &it : obj->children) {
-			for (ServerGameObject *child : it.second) {
+			for (CommonGameObject* cchild : it.second) {
+				ServerGameObject* child = cchild->dyncast<ServerGameObject>();
 				if (eligible(child, ctx))
 					results.push_back(child);
 				if (!immediateLevel)

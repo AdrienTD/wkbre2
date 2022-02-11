@@ -35,7 +35,8 @@ namespace {
 		{
 			for (auto &type : client->level->children) {
 				if ((type.first & 63) == Tags::GAMEOBJCLASS_PLAYER) {
-					for (ClientGameObject *player : type.second) {
+					for (CommonGameObject* _player : type.second) {
+						ClientGameObject* player = (ClientGameObject*)_player;
 						ImGui::PushID(player->id);
 						if (ImGui::Selectable("##PlayerSelectable")) {
 							ref = player;
@@ -110,8 +111,8 @@ void ClientDebugger::draw()
 			selectedObject = obj;
 		if (b) {
 			for (auto typechildren : obj->children)
-				for (ClientGameObject *child : typechildren.second)
-					walkOnObj(walkOnObj, child);
+				for (CommonGameObject *child : typechildren.second)
+					walkOnObj(walkOnObj, (ClientGameObject*)child);
 			ImGui::TreePop();
 		}
 	};

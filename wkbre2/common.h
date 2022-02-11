@@ -20,12 +20,12 @@
 struct GameObjBlueprint;
 struct Model;
 
-template<class AnyGameObject> struct CommonGameObject {
+struct CommonGameObject {
 	uint32_t id;
-	GameObjBlueprint *blueprint;
+	GameObjBlueprint* blueprint;
 
-	AnyGameObject *parent;
-	std::map<int, std::vector<AnyGameObject*>> children;
+	CommonGameObject* parent;
+	std::map<int, std::vector<CommonGameObject*>> children;
 
 	std::map<int, float> items;
 	std::map<std::pair<int, int>, float> indexedItems;
@@ -34,8 +34,6 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	int subtype = 0, appearance = 0;
 	int color = 0;
-
-	//AnyGameObject *player = nullptr;
 
 	float animStartTime = 0.0f; // should be game_time_t?
 	int animationIndex = 0, animationVariant = 0;
@@ -60,28 +58,13 @@ template<class AnyGameObject> struct CommonGameObject {
 
 	int tileIndex = -1;
 
-	float getItem(int item)
-	{
-		auto it = items.find(item);
-		if (it != items.end())
-			return it->second;
-		auto bt = blueprint->startItemValues.find(item);
-		if (bt != blueprint->startItemValues.end())
-			return bt->second;
-		return 0.0f;
-	}
+	float getItem(int item) const;
+	float getIndexedItem(int item, int index) const;
 
-	float getIndexedItem(int item, int index) { return indexedItems[std::make_pair(item, index)]; }
+	CommonGameObject* getParent() const { return parent; }
+	CommonGameObject* getPlayer() const;
 
-	AnyGameObject *getPlayer() {
-		for (CommonGameObject* obj = this; obj; obj = obj->parent) {
-			if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER)
-				return (AnyGameObject*)obj;
-		}
-		return nullptr;
-	}
-
-	Matrix getWorldMatrix() {
+	Matrix getWorldMatrix() const {
 		return Matrix::getScaleMatrix(scale)
 			* Matrix::getRotationXMatrix(-orientation.x)
 			* Matrix::getRotationYMatrix(-orientation.y)
@@ -89,17 +72,24 @@ template<class AnyGameObject> struct CommonGameObject {
 			* Matrix::getTranslationMatrix(position);
 	}
 
-	bool isInteractable() { return (disableCount <= 0) && !(flags & fTerminated); }
+	bool isInteractable() const { return (disableCount <= 0) && !(flags & fTerminated); }
 
-	Model* getModel() {
-		return blueprint->getModel(subtype, appearance, animationIndex, animationVariant);
-	}
+	Model* getModel() const;
+
+	template<typename AnyGameObject> AnyGameObject* dyncast() { return (AnyGameObject*)this; }
+	template<typename AnyGameObject> const AnyGameObject* dyncast() const { return (const AnyGameObject*)this; }
 
 	CommonGameObject(uint32_t id, GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr) {}
 };
 
+template<typename Program, typename AnyGameObject> struct SpecificGameObject : CommonGameObject {
+	using CommonGameObject::CommonGameObject;
+	AnyGameObject* getParent() const { return (AnyGameObject*)CommonGameObject::getParent(); }
+	AnyGameObject* getPlayer() const { return (AnyGameObject*)CommonGameObject::getPlayer(); }
+};
+
 template<typename Program, typename AnyGameObject> struct CommonGameState {
-	using PrgGORef = GameObjectRef<Program, AnyGameObject>;
+	using PrgGORef = SpecificGORef<Program, AnyGameObject>;
 
 	std::map<int, std::unordered_set<PrgGORef>> aliases;
 	std::map<std::pair<int, int>, int> diplomaticStatuses;

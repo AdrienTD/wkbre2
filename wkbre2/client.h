@@ -27,9 +27,9 @@ struct ClientInterface;
 struct Client;
 struct CameraPath;
 
-struct ClientGameObject : CommonGameObject<ClientGameObject> {
+struct ClientGameObject : SpecificGameObject<Client, ClientGameObject> {
 	using Program = Client;
-	ClientGameObject(uint32_t id, GameObjBlueprint *blueprint) : CommonGameObject<ClientGameObject>(id, blueprint) {}
+	ClientGameObject(uint32_t id, GameObjBlueprint *blueprint) : SpecificGameObject<Client, ClientGameObject>(id, blueprint) {}
 	SceneEntity sceneEntity;
 
 	void updatePosition(const Vector3& newposition);
