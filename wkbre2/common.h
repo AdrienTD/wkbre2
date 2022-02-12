@@ -19,6 +19,7 @@
 
 struct GameObjBlueprint;
 struct Model;
+struct GameSet;
 
 struct CommonGameObject {
 	uint32_t id;
@@ -88,28 +89,31 @@ template<typename Program, typename AnyGameObject> struct SpecificGameObject : C
 	AnyGameObject* getPlayer() const { return (AnyGameObject*)CommonGameObject::getPlayer(); }
 };
 
-template<typename Program, typename AnyGameObject> struct CommonGameState {
-	using PrgGORef = SpecificGORef<Program, AnyGameObject>;
+struct CommonGameState {
+	GameSet* gameSet = nullptr;
 
-	std::map<int, std::unordered_set<PrgGORef>> aliases;
+	CommonGameObject* level = nullptr;
+	std::map<uint32_t, CommonGameObject*> idmap;
+
+	std::map<int, std::unordered_set<CmnGORef>> aliases;
 	std::map<std::pair<int, int>, int> diplomaticStatuses;
 
 	struct Tile {
-		std::vector<PrgGORef> objList;
-		//std::vector<PrgGORef> zoneList;
-		PrgGORef zone;
-		PrgGORef building;
+		std::vector<CmnGORef> objList;
+		//std::vector<CmnGORef> zoneList;
+		CmnGORef zone;
+		CmnGORef building;
 		bool buildingPassable;
 	};
 	std::unique_ptr<Tile[]> tiles;
 
-	int getDiplomaticStatus(AnyGameObject *a, AnyGameObject *b) const {
-		if (a == b) return 0; // player is always friendly with itself :)
-		auto it = (a->id <= b->id) ? diplomaticStatuses.find({ a->id, b->id }) : diplomaticStatuses.find({ b->id, a->id });
-		if (it != diplomaticStatuses.end())
-			return it->second;
-		else
-			return ((Program*)this)->gameSet->defaultDiplomaticStatus;
-	}
+	CommonGameObject* getLevel() const { return level; }
+	CommonGameObject* findObject(uint32_t id) { auto it = idmap.find(id); return (it != idmap.end()) ? it->second : nullptr; }
 
+	int getDiplomaticStatus(CommonGameObject* a, CommonGameObject* b) const;
+};
+
+template<typename AnyGameObject> struct SpecificGameState : CommonGameState {
+	AnyGameObject* getLevel() const { return (AnyGameObject*)level; }
+	AnyGameObject* findObject(uint32_t id) { return (AnyGameObject*)CommonGameState::findObject(id); }
 };

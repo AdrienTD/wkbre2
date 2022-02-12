@@ -316,7 +316,7 @@ struct ActionAssignAlias : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		auto &alias = Server::instance->aliases[aliasIndex];
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			alias.insert(obj);
+			alias.insert(obj->id);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -333,7 +333,7 @@ struct ActionUnassignAlias : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		auto &alias = Server::instance->aliases[aliasIndex];
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			alias.erase(obj);
+			alias.erase(obj->id);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {

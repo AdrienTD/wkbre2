@@ -23,8 +23,17 @@ struct GameObjectRef {
 	}
 
 	void set(uint32_t id) { objid = id; }
+	GameObjectRef& operator=(uint32_t id) noexcept { set(id); return *this; }
+	GameObjectRef& operator=(decltype(nullptr)) { set(NULL_GOREF); return *this; }
+	GameObjectRef& operator=(const GameObjectRef& ref) noexcept { set(ref.objid); return *this; }
+	GameObjectRef& operator=(GameObjectRef&& ref) noexcept { objid = ref.objid; ref.objid = NULL_GOREF; return *this; }
+
+	bool operator<(const GameObjectRef& other) const { return objid < other.objid; }
+	bool operator==(const GameObjectRef& other) const { return objid == other.objid; }
+	bool operator!=(const GameObjectRef& other) const { return objid != other.objid; }
 
 	GameObjectRef() noexcept : objid(NULL_GOREF) {}
+	//GameObjectRef(CommonGameObject* obj) noexcept { set(obj->id); }
 	GameObjectRef(uint32_t id) noexcept : objid(id) {}
 	GameObjectRef(const GameObjectRef& other) noexcept : objid(other.objid) {}
 	GameObjectRef(GameObjectRef&& other) noexcept { objid = other.objid; other.objid = NULL_GOREF; }
@@ -54,6 +63,9 @@ template<typename Program, typename AnyGameObject> struct SpecificGORef : GameOb
 	SpecificGORef(SpecificGORef&& other) noexcept : GameObjectRef(other) {}
 };
 
+template<> struct std::hash<GameObjectRef> {
+	size_t operator()(const GameObjectRef& ref) const { return ref.objid; }
+};
 template<typename S, typename T> struct std::hash<SpecificGORef<S, T>> {
 	size_t operator()(const SpecificGORef<S, T>& ref) const { return ref.objid; }
 };
@@ -63,5 +75,6 @@ struct Client;
 struct ServerGameObject;
 struct ClientGameObject;
 
+typedef GameObjectRef CmnGORef;
 typedef SpecificGORef<Server, ServerGameObject> SrvGORef;
 typedef SpecificGORef<Client, ClientGameObject> CliGORef;

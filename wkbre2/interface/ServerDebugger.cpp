@@ -41,8 +41,8 @@ void ServerDebugger::draw() {
 			ImGui::TreePop();
 		}
 	};
-	if (server->level)
-		walkOnObj(walkOnObj, server->level);
+	if (server->getLevel())
+		walkOnObj(walkOnObj, server->getLevel());
 	else
 		ImGui::Text("No level loaded");
 	ImGui::End();
@@ -121,7 +121,7 @@ void ServerDebugger::draw() {
 		for (int z = Z-1; z >= 0; z--) {
 			int y = Z - 1 - z;
 			for (int x = 0; x < X; x++) {
-				uint32_t color = server->tiles[z * X + x].building ? (server->tiles[z * X + x].buildingPassable ? 0xFFFFFF00 : 0xFFFF00FF) : 0xFF00FFFF;
+				uint32_t color = server->tiles[z * X + x].building.getFrom<Server>() ? (server->tiles[z * X + x].buildingPassable ? 0xFFFFFF00 : 0xFFFF00FF) : 0xFF00FFFF;
 				auto p1 = ImVec2(scr.x + x * rectsize, scr.y + y * rectsize);
 				auto p2 = ImVec2(scr.x + (x + 1) * rectsize - 1, scr.y + (y + 1) * rectsize - 1);
 				if (ImGui::IsRectVisible(p1, p2))

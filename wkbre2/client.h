@@ -36,17 +36,17 @@ struct ClientGameObject : SpecificGameObject<Client, ClientGameObject> {
 	void updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
 };
 
-struct Client : CommonGameState<Client, ClientGameObject>
+struct Client : SpecificGameState<ClientGameObject>
 {
 	using GameObject = ClientGameObject;
 	static Client *instance;
 
-	GameSet *gameSet;
+	//GameSet *gameSet;
 
 	TimeManager timeManager;
 
-	ClientGameObject *level;
-	std::map<uint32_t, ClientGameObject*> idmap;
+	//ClientGameObject *level;
+	//std::map<uint32_t, ClientGameObject*> idmap;
 	Terrain *terrain;
 
 	std::vector<std::string> chatMessages;
@@ -84,10 +84,10 @@ struct Client : CommonGameState<Client, ClientGameObject>
 	//void loadSaveGame(const char *filename);
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 
-	Client(bool localServer = false) : gameSet(nullptr), level(nullptr),
+	Client(bool localServer = false) : 
 		serverLink(nullptr), terrain(nullptr), cliInterface(nullptr), localServer(localServer) {instance = this;}
 
-	ClientGameObject* findObject(uint32_t id) { auto it = idmap.find(id); if (it != idmap.end()) return it->second; else return nullptr; }
+	//ClientGameObject* findObject(uint32_t id) { auto it = idmap.find(id); if (it != idmap.end()) return it->second; else return nullptr; }
 
 	void loadFromServerObject(Server &server);
 

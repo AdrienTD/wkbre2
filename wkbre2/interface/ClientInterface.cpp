@@ -545,8 +545,8 @@ void ClientInterface::iter()
 
 		numObjectsDrawn = 0;
 		attachSceneEntities.clear();
-		if (client->level)
-			drawObject(client->level);
+		if (client->getLevel())
+			drawObject(client->getLevel());
 		if (nextSelectedObject)
 			nextSelectedObject->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
 		// test

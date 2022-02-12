@@ -41,8 +41,8 @@ void Client::tick()
 			for (CommonGameObject *obj : it.second)
 				rec((ClientGameObject*)obj, rec);
 	};
-	if(level)
-		walkObj(level, walkObj);
+	if(getLevel())
+		walkObj(getLevel(), walkObj);
 
 	// Camera paths
 	auto resetCameraMode = [this](bool skipActions = false) {
@@ -653,10 +653,10 @@ void ClientGameObject::updatePosition(const Vector3& newposition)
 			tileIndex = newtileIndex;
 			if (prevtileIndex != -1) {
 				auto& vec = prog->tiles[prevtileIndex].objList;
-				vec.erase(std::find(vec.begin(), vec.end(), this));
+				vec.erase(std::find(vec.begin(), vec.end(), this->id));
 			}
 			if (newtileIndex != -1) {
-				prog->tiles[newtileIndex].objList.push_back(this);
+				prog->tiles[newtileIndex].objList.push_back(this->id);
 			}
 			updateOccupiedTiles(oldposition, orientation, newposition, orientation);
 		}
@@ -681,7 +681,7 @@ void ClientGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 				int px = ox + ro.first, pz = oz + ro.second;
 				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
 					auto& tile = prog->tiles[pz * trnNumX + px];
-					if (tile.building == this)
+					if (tile.building == this->id)
 						tile.building = nullptr;
 				}
 			}
@@ -696,8 +696,8 @@ void ClientGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 				int px = ox + ro.first, pz = oz + ro.second;
 				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
 					auto& tile = prog->tiles[pz * trnNumX + px];
-					if (!tile.building || tile.buildingPassable) {
-						tile.building = this;
+					if (!tile.building.getFrom<Client>() || tile.buildingPassable) {
+						tile.building = this->id;
 						tile.buildingPassable = to.mode;
 					}
 				}

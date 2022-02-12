@@ -52,7 +52,7 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 	auto pred = [&](PFPos pfp) -> bool {
 		if (pfp.x >= 0 && pfp.x < trnsize.first && pfp.z >= 0 && pfp.z < trnsize.second) {
 			const auto& tile = tiles[pfp.z * trnsize.first + pfp.x];
-			if (tile.building && !tile.buildingPassable)
+			if (tile.building.getFrom<Server>() && !tile.buildingPassable)
 				return true;
 			else
 				return false;

@@ -88,19 +88,19 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	float computeSpeed();
 };
 
-struct Server : CommonGameState<Server, ServerGameObject>
+struct Server : SpecificGameState<ServerGameObject>
 {
 	using GameObject = ServerGameObject;
 	static Server *instance;
 
-	GameSet *gameSet;
+	//GameSet *gameSet;
 
 	uint32_t randomSeed;
 	TimeManager timeManager;
 	uint32_t nextUniqueId;
 
-	ServerGameObject *level;
-	std::map<uint32_t, ServerGameObject*> idmap;
+	//ServerGameObject *level;
+	//std::map<uint32_t, ServerGameObject*> idmap;
 	Terrain *terrain;
 
 	struct DelayedSequence {
@@ -135,14 +135,14 @@ struct Server : CommonGameState<Server, ServerGameObject>
 
 	ServerGameObject* objToDelete = nullptr, * objToDeleteLast = nullptr;
 
-	Server() : gameSet(nullptr), level(nullptr), terrain(nullptr) { instance = this; }
+	Server() : terrain(nullptr) { instance = this; }
 
 	void loadSaveGame(const char *filename);
 	ServerGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 	void deleteObject(ServerGameObject *obj);
 	void destroyObject(ServerGameObject* obj);
 
-	ServerGameObject* findObject(uint32_t id) { auto it = idmap.find(id); return (it != idmap.end()) ? it->second : nullptr; }
+	//ServerGameObject* findObject(uint32_t id) { auto it = idmap.find(id); return (it != idmap.end()) ? it->second : nullptr; }
 
 	void addClient(NetLink* link);
 	void removeClient(NetLink* link);

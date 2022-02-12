@@ -801,22 +801,22 @@ void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 			tileIndex = newtileIndex;
 			if (prevtileIndex != -1) {
 				auto &vec = server->tiles[prevtileIndex].objList;
-				vec.erase(std::find(vec.begin(), vec.end(), this));
+				vec.erase(std::find(vec.begin(), vec.end(), this->id));
 			}
 			if (newtileIndex != -1) {
-				server->tiles[newtileIndex].objList.push_back(this);
+				server->tiles[newtileIndex].objList.push_back(this->id);
 				if (events) {
 					for (auto& no : server->tiles[newtileIndex].objList) {
-						if (no)
-							no->sendEvent(Tags::PDEVENT_ON_SHARE_TILE, this);
+						if (ServerGameObject* nobj = no.getFrom<Server>())
+							nobj->sendEvent(Tags::PDEVENT_ON_SHARE_TILE, this);
 					}
 				}
 			}
 			if (events && prevtileIndex != -1 && newtileIndex != -1 && blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
 				if (server->tiles[prevtileIndex].zone != server->tiles[newtileIndex].zone) {
-					if (ServerGameObject* leavingZone = server->tiles[prevtileIndex].zone.get())
+					if (ServerGameObject* leavingZone = server->tiles[prevtileIndex].zone.getFrom<Server>())
 						leavingZone->sendEvent(Tags::PDEVENT_ON_OBJECT_EXITS, this);
-					if (ServerGameObject* enteringZone = server->tiles[newtileIndex].zone.get())
+					if (ServerGameObject* enteringZone = server->tiles[newtileIndex].zone.getFrom<Server>())
 						enteringZone->sendEvent(Tags::PDEVENT_ON_OBJECT_ENTERS, this);
 				}
 			}
@@ -863,7 +863,7 @@ void ServerGameObject::addZoneTile(int tx, int tz)
 	Server* server = Server::instance;
 	auto areaSize = server->terrain->getNumPlayableTiles();
 	int tileIndex = tz * areaSize.first + tx;
-	server->tiles[tileIndex].zone = this;
+	server->tiles[tileIndex].zone = this->id;
 	//auto& zl = server->tiles[tileIndex].zoneList;
 	//if (std::find(zl.begin(), zl.end(), this) == zl.end())
 	//	zl.emplace_back(this);
@@ -894,7 +894,7 @@ void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 				int px = ox + ro.first, pz = oz + ro.second;
 				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
 					auto& tile = server->tiles[pz * trnNumX + px];
-					if (tile.building == this)
+					if (tile.building == this->id)
 						tile.building = nullptr;
 				}
 			}
@@ -909,8 +909,8 @@ void ServerGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 				int px = ox + ro.first, pz = oz + ro.second;
 				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
 					auto& tile = server->tiles[pz * trnNumX + px];
-					if (!tile.building || tile.buildingPassable) {
-						tile.building = this;
+					if (!tile.building.getFrom<Server>() || tile.buildingPassable) {
+						tile.building = this->id;
 						tile.buildingPassable = to.mode;
 					}
 				}
@@ -1177,8 +1177,8 @@ void Server::tick()
 				func((ServerGameObject*)child, func);
 		}
 	};
-	if(level)
-		processObjOrders(level, processObjOrders);
+	if(getLevel())
+		processObjOrders(getLevel(), processObjOrders);
 	for (const SrvGORef& ref : toprocess) {
 		ServerGameObject* obj = ref.get();
 		if (!obj) continue;
@@ -1284,7 +1284,7 @@ void Server::tick()
 							rec((ServerGameObject*)child, rec);
 					}
 				};
-				walk(level, walk);
+				walk(getLevel(), walk);
 				break;
 			}
 			case NETSRVMSG_GAME_TEXT_WINDOW_BUTTON_CLICKED: {

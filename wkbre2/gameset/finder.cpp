@@ -90,8 +90,8 @@ struct FinderAlias : ObjectFinder {
 		auto &alias = Server::instance->aliases[aliasIndex];
 		std::vector<ServerGameObject*> res;
 		for (auto &ref : alias)
-			if (ref && ref->isInteractable())
-				res.push_back(ref);
+			if (auto* obj = ref.getFrom<Server>(); obj && obj->isInteractable())
+				res.push_back(obj);
 		return res;
 	}
 	virtual std::vector<ClientGameObject*> eval(CliScriptContext* ctx) override {
@@ -177,7 +177,7 @@ struct FinderPlayers : ObjectFinder {
 	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) override {
 		Server *server = Server::instance;
 		std::vector<ServerGameObject*> res;
-		for (auto &it : server->level->children) {
+		for (auto &it : server->getLevel()->children) {
 			if ((it.first & 63) == Tags::GAMEOBJCLASS_PLAYER)
 				for (CommonGameObject *player : it.second)
 					if (auto _ = ctx->change(ctx->candidate, player->dyncast<ServerGameObject>()))
@@ -252,7 +252,7 @@ struct FinderNearestToSatisfy : CommonEval<FinderNearestToSatisfy, ObjectFinder>
 
 struct FinderLevel : CommonEval<FinderLevel, ObjectFinder> {
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
-		return { CTX::Program::instance->level };
+		return { CTX::Program::instance->getLevel() };
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
 };
@@ -362,7 +362,7 @@ struct FinderAgAllOfType : ObjectFinder {
 				}
 			}
 		};
-		walk(Server::instance->level, walk);
+		walk(Server::instance->getLevel(), walk);
 		return vec;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {

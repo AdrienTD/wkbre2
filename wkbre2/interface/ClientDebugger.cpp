@@ -33,7 +33,7 @@ namespace {
 		int tlh = ImGui::GetTextLineHeight();
 		if (ImGui::BeginCombo("##Combo", "", 0))
 		{
-			for (auto &type : client->level->children) {
+			for (auto &type : client->getLevel()->children) {
 				if ((type.first & 63) == Tags::GAMEOBJCLASS_PLAYER) {
 					for (CommonGameObject* _player : type.second) {
 						ClientGameObject* player = (ClientGameObject*)_player;
@@ -116,8 +116,8 @@ void ClientDebugger::draw()
 			ImGui::TreePop();
 		}
 	};
-	if (client->level)
-		walkOnObj(walkOnObj, client->level);
+	if (client->getLevel())
+		walkOnObj(walkOnObj, client->getLevel());
 	else
 		ImGui::Text("No level loaded");
 	ImGui::End();

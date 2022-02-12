@@ -320,7 +320,7 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 		int sx, sz;
 		std::tie(sx, sz) = server->terrain->getNumPlayableTiles();
 		if (tx >= 0 && tx < sx && tz >= 0 && tz < sz)
-			return !server->tiles[tz * sx + tx].building;
+			return !server->tiles[tz * sx + tx].building.getFrom<Server>();
 		return false;
 	}
 	bool canBuildOn(Server* server, int tx, int tz) {

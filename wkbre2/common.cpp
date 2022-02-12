@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "gameset/GameObjBlueprint.h"
+#include "gameset/gameset.h"
 
 float CommonGameObject::getItem(int item) const
 {
@@ -33,4 +34,13 @@ CommonGameObject* CommonGameObject::getPlayer() const {
 
 Model* CommonGameObject::getModel() const {
 	return blueprint->getModel(subtype, appearance, animationIndex, animationVariant);
+}
+
+int CommonGameState::getDiplomaticStatus(CommonGameObject* a, CommonGameObject* b) const {
+	if (a == b) return 0; // player is always friendly with itself :)
+	auto it = (a->id <= b->id) ? diplomaticStatuses.find({ a->id, b->id }) : diplomaticStatuses.find({ b->id, a->id });
+	if (it != diplomaticStatuses.end())
+		return it->second;
+	else
+		return gameSet->defaultDiplomaticStatus;
 }
