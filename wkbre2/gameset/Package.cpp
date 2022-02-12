@@ -51,5 +51,5 @@ void GSPackage::send(ServerGameObject* obj, SrvScriptContext* ctx)
 		}
 	}
 	for (int evt : gameEvents)
-		obj->sendEvent(evt, ctx->self.get());
+		obj->sendEvent(evt, ctx->getSelf());
 }

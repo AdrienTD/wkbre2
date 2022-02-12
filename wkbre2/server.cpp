@@ -593,7 +593,7 @@ void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 {
 	// Problem: reaction can be executed twice if it is in both intrinsics and individuals, but is it worth checking that?
 	SrvScriptContext ctx(Server::instance, this);
-	auto _ = ctx.packageSender.change(sender);
+	auto _ = ctx.change(ctx.packageSender, sender);
 	const auto ircopy = individualReactions;
 	for (Reaction* r : ircopy)
 		if (r->canBeTriggeredBy(evt, this, sender))
@@ -1115,10 +1115,10 @@ void Server::tick()
 		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
 		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
 		SrvScriptContext ctx(this);
-		auto _ = ctx.sequenceExecutor.change(ops.executor);
+		auto _ = ctx.change(ctx.sequenceExecutor, ops.executor);
 		for (; ops.numExecutionsDone < predictedExec; ops.numExecutionsDone++) {
 			if (ServerGameObject* obj = ops.remainingObjects.back().get()) {
-				auto _2 = ctx.self.change(obj);
+				auto _2 = ctx.changeSelf(obj);
 				ops.actionSequence->run(&ctx);
 			}
 			ops.remainingObjects.pop_back();
@@ -1134,11 +1134,11 @@ void Server::tick()
 		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
 		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
 		SrvScriptContext ctx(this);
-		auto _ = ctx.sequenceExecutor.change(ops.executor);
+		auto _ = ctx.change(ctx.sequenceExecutor, ops.executor);
 		for (; ops.numExecutionsDone < predictedExec; ops.numExecutionsDone++) {
 			for (auto& ref : ops.remainingObjects) {
 				if (ServerGameObject* obj = ref.get()) {
-					auto _2 = ctx.self.change(obj);
+					auto _2 = ctx.changeSelf(obj);
 					ops.actionSequence->run(&ctx);
 				}
 			}

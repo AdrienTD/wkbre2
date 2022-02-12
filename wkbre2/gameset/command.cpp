@@ -62,7 +62,7 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 
 void Command::execute(ServerGameObject *self, ServerGameObject *target, int assignmentMode, const Vector3 &destination) {
 	SrvScriptContext ctx(Server::instance, self);
-	auto _ = ctx.target.change(target);
+	auto _ = ctx.change(ctx.target, target);
 	this->startSequence.run(&ctx);
 	// TODO: order (what to do first?)
 	if (this->order) {

@@ -113,7 +113,7 @@ struct ValueEquationResult : CommonEval<ValueEquationResult, ValueDeterminer> {
 	template<typename CTX> float common_eval(CTX *ctx) {
 		typename CTX::AnyGO *obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
-		auto _ = ctx->self.change(obj);
+		auto _ = ctx->changeSelf(obj);
 		return CTX::Program::instance->gameSet->equations[equation]->eval(ctx);
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
@@ -269,7 +269,7 @@ struct ValueValueTagInterpretation : ValueDeterminer {
 		else
 			vd = ctx->server->gameSet->valueTags[valueTag].get();
 		if (!vd) return 0.0f;
-		auto _ = ctx->self.change(obj);
+		auto _ = ctx->changeSelf(obj);
 		return vd->eval(ctx);
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
@@ -363,7 +363,7 @@ struct ValueFinderResultsCount : ValueDeterminer {
 	virtual float eval(SrvScriptContext* ctx) override {
 		ServerGameObject* obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
-		auto _ = ctx->self.change(obj);
+		auto _ = ctx->changeSelf(obj);
 		return Server::instance->gameSet->objectFinderDefinitions[ofd]->eval(ctx).size();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -706,7 +706,7 @@ struct ValueAverageEquationResult : CommonEval<ValueAverageEquationResult, Value
 			return 0.0f;
 		float sum = 0.0f;
 		for (auto* obj : vec) {
-			auto _ = ctx->self.change(obj);
+			auto _ = ctx->changeSelf(obj);
 			sum += CTX::Program::instance->gameSet->equations[equation]->eval(ctx);
 		}
 		return sum / (float)vec.size();

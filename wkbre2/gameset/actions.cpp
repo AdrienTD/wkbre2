@@ -150,8 +150,8 @@ struct ActionExecuteSequence : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject* obj : finder->eval(ctx)) {
-			auto _1 = ctx->sequenceExecutor.change(ctx->self.get());
-			auto _2 = ctx->self.change(obj);
+			auto _1 = ctx->change(ctx->sequenceExecutor, ctx->getSelf());
+			auto _2 = ctx->changeSelf(obj);
 			sequence->run(ctx);
 		}
 	}
@@ -169,7 +169,7 @@ struct ActionExecuteSequenceAfterDelay : Action {
 	std::unique_ptr<ValueDeterminer> delay;
 	virtual void run(SrvScriptContext* ctx) override {
 		Server::DelayedSequence ds;
-		ds.executor = ctx->self.get();
+		ds.executor = ctx->getSelf();
 		ds.actionSequence = sequence;
 		//ds.selfs = finder->eval(ctx);
 		for (ServerGameObject *obj : finder->eval(ctx))
@@ -219,7 +219,7 @@ struct ActionExecuteOneAtRandom : Action {
 
 struct ActionTerminateThisTask : Action {
 	virtual void run(SrvScriptContext* ctx) override {
-		if (Order *order = ctx->self.get()->orderConfig.getCurrentOrder())
+		if (Order *order = ctx->getSelf()->orderConfig.getCurrentOrder())
 			order->getCurrentTask()->terminate();
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
@@ -227,7 +227,7 @@ struct ActionTerminateThisTask : Action {
 
 struct ActionTerminateThisOrder : Action {
 	virtual void run(SrvScriptContext* ctx) override {
-		if (Order *order = ctx->self.get()->orderConfig.getCurrentOrder())
+		if (Order *order = ctx->getSelf()->orderConfig.getCurrentOrder())
 			order->terminate();
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
@@ -285,7 +285,7 @@ struct ActionAssignOrderVia : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			oabp->assignTo(obj, ctx, ctx->self.get());
+			oabp->assignTo(obj, ctx, ctx->getSelf());
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -389,7 +389,7 @@ struct ActionSendEvent : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		if (event == -1) return;
 		for (ServerGameObject *obj : finder->eval(ctx))
-			obj->sendEvent(event, ctx->self.get());
+			obj->sendEvent(event, ctx->getSelf());
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		event = gs.events.readIndex(gsf);
@@ -517,8 +517,8 @@ struct ActionRepeatSequence : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		int count = (int)vdcount->eval(ctx);
 		for (ServerGameObject* obj : finder->eval(ctx)) {
-			auto _1 = ctx->sequenceExecutor.change(ctx->self.get());
-			auto _2 = ctx->self.change(obj);
+			auto _1 = ctx->change(ctx->sequenceExecutor, ctx->getSelf());
+			auto _2 = ctx->changeSelf(obj);
 			for (int i = 0; i < count; i++)
 				sequence->run(ctx);
 		}
@@ -537,7 +537,7 @@ struct ActionIdentifyAndMarkClusters : Action {
 	std::unique_ptr<ValueDeterminer> vir;
 	std::unique_ptr<ValueDeterminer> vmr;
 	virtual void run(SrvScriptContext* ctx) override {
-		ServerGameObject* player = ctx->self.get()->getPlayer();
+		ServerGameObject* player = ctx->getSelf()->getPlayer();
 		auto gl = finder->eval(ctx);
 		float rad = vcr->eval(ctx);
 		float fmr = vmr->eval(ctx);
@@ -553,7 +553,7 @@ struct ActionIdentifyAndMarkClusters : Action {
 				if (taken[j]) continue;
 				ServerGameObject* p = gl[j];
 				if ((p->position - o->position).sqlen2xz() < sqrad) {
-					auto _ = ctx->self.change(p);
+					auto _ = ctx->changeSelf(p);
 					clrat += vir->eval(ctx);
 				}
 			}
@@ -589,7 +589,7 @@ struct ActionExecuteSequenceOverPeriod : Action {
 		auto vec = finder->eval(ctx);
 		Server::OverPeriodSequence ops;
 		ops.actionSequence = sequence;
-		ops.executor = ctx->self.get();
+		ops.executor = ctx->getSelf();
 		ops.startTime = Server::instance->timeManager.currentTime;
 		ops.period = vdperiod->eval(ctx);
 		ops.remainingObjects = std::vector<SrvGORef>(vec.begin(), vec.end());
@@ -613,7 +613,7 @@ struct ActionRepeatSequenceOverPeriod : Action {
 		auto vec = finder->eval(ctx);
 		Server::OverPeriodSequence ops;
 		ops.actionSequence = sequence;
-		ops.executor = ctx->self.get();
+		ops.executor = ctx->getSelf();
 		ops.startTime = Server::instance->timeManager.currentTime;
 		ops.period = vdperiod->eval(ctx);
 		ops.remainingObjects = std::vector<SrvGORef>(vec.begin(), vec.end());
@@ -850,7 +850,7 @@ struct ActionPlayClip : Action {
 	int clip;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
-		auto _ = ctx->self.change(ctx->self.get()->getPlayer());
+		auto _ = ctx->changeSelf(ctx->getSelf()->getPlayer());
 		Server::instance->gameSet->clips[clip].postClipSequence.run(ctx);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -912,7 +912,7 @@ struct ActionCreateFormation : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		ServerGameObject* formation = ctx->server->createObject(formationType);
-		formation->setParent(ctx->self.get());
+		formation->setParent(ctx->getSelf());
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->setParent(formation);
 	}
@@ -1079,7 +1079,7 @@ struct ActionPlaySoundAtPosition_WKO : Action {
 	int soundTag;
 	std::unique_ptr<ObjectFinder> objPlayers;
 	virtual void run(SrvScriptContext* ctx) override {
-		auto* from = ctx->self.get();
+		auto* from = ctx->getSelf();
 		from->playSoundAtPosition(soundTag, from->position);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -1092,7 +1092,7 @@ struct ActionPlaySoundAtPosition_Battles : Action {
 	int soundTag;
 	std::unique_ptr<PositionDeterminer> pPosition;
 	virtual void run(SrvScriptContext* ctx) override {
-		auto* from = ctx->self.get();
+		auto* from = ctx->getSelf();
 		from->playSoundAtPosition(soundTag, pPosition->eval(ctx).position);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -1209,7 +1209,7 @@ struct ActionCreateObject : Action {
 	std::unique_ptr<PositionDeterminer> pPosition;
 	virtual void run(SrvScriptContext* ctx) override {
 		ServerGameObject* obj = ctx->server->createObject(objbp);
-		obj->setParent(ctx->self.get()->getPlayer());
+		obj->setParent(ctx->getSelf()->getPlayer());
 		auto posori = pPosition->eval(ctx);
 		obj->setPosition(posori.position);
 		obj->setOrientation(posori.rotation);
@@ -1227,7 +1227,7 @@ struct ActionAttachLoopingSpecialEffect : Action {
 	std::unique_ptr<PositionDeterminer> pPosition;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (auto* obj : fObject->eval(ctx)) {
-			auto tvSelf = ctx->self.change(obj);
+			auto tvSelf = ctx->changeSelf(obj);
 			obj->attachLoopingSpecialEffect(sfxTag, pPosition->eval(ctx).position);
 		}
 	}

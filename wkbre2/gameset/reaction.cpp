@@ -73,7 +73,7 @@ bool PackageReceiptTrigger::canBeTriggeredBy(int evt, ServerGameObject *obj, Ser
 	if(std::find(events.begin(), events.end(), evt) == events.end())
 		return false;
 	SrvScriptContext ctx(Server::instance, obj);
-	auto senderChange = ctx.packageSender.change(sender);
+	auto senderChange = ctx.change(ctx.packageSender, sender);
 	for (int ass : assessments)
 		if (Server::instance->gameSet->equations[ass]->eval(&ctx) <= 0.0f)
 			return false;

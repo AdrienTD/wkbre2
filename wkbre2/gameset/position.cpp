@@ -296,7 +296,7 @@ struct PDMatchingOffset : PositionDeterminer {
 
 struct PDFiringAttachmentPoint : PositionDeterminer {
 	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
-		ServerGameObject* obj = ctx->self.get();
+		ServerGameObject* obj = ctx->getSelf();
 		Model* model = obj->blueprint->getModel(obj->subtype, obj->appearance, obj->animationIndex, obj->animationVariant);
 		if (model) {
 			size_t numAPs = model->getNumAPs();

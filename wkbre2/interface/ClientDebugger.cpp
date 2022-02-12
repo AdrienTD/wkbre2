@@ -197,7 +197,7 @@ void ClientDebugger::draw()
 			if (sel) {
 				ImGui::BeginChild("CommandButtonArea", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 				CliScriptContext ctx{ client, sel };
-				auto _tv = ctx.selectedObject.change(sel);
+				auto _tv = ctx.change(ctx.selectedObject, sel);
 				for (Command* cmd : sel->blueprint->offeredCommands) {
 					const std::string cmdname = client->gameSet->commands.names.getString(cmd->id);
 					if (!whichButton(cmdname))

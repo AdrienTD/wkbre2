@@ -156,7 +156,7 @@ struct PFNDeployArmyFrom : PlanNodeBlueprint {
 			for (auto& spawn : schedule->spawnCharacters) {
 				ServerGameObject* building = buildingCandidates[rand() % buildingCandidates.size()];
 				// create the units
-				auto _ = ctx->self.change(army);
+				auto _ = ctx->changeSelf(army);
 				int numUnits = (int)spawn.count->eval(ctx); // Not sure what should be the SELF
 				numUnits = std::min(numUnits, 7); // prevent formations to be built until they are implemented
 				for (int i = 0; i < numUnits; i++) {

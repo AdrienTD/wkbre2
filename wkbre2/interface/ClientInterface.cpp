@@ -299,7 +299,7 @@ void ClientInterface::iter()
 	for (ClientGameObject *sel : selection) {
 		if (sel) {
 			CliScriptContext ctx(client, sel);
-			auto _ = ctx.target.change(nextSelectedObject);
+			auto _ = ctx.change(ctx.target, nextSelectedObject);
 			for (Command* cmd : sel->blueprint->offeredCommands) {
 				WndCursor* cmdCursor = nullptr;
 				for (auto& avcond : cmd->cursorAvailable) {

@@ -486,7 +486,7 @@ void MissileTask::onUpdate()
 					float squareDistance = (go->position - sCenter).sqlen3();
 					if (squareDistance <= sRadius*sRadius) {
 						SrvScriptContext ctx(Server::instance, go);
-						auto _ = ctx.collisionSubject.change(col);
+						auto _ = ctx.change(ctx.collisionSubject, col);
 						this->blueprint->collisionTrigger.run(&ctx);
 						return;
 					}
