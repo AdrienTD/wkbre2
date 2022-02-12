@@ -14,7 +14,7 @@ struct GameObjectRef {
 
 	uint32_t objid;
 
-	template<typename Program, typename AnyGameObject = Program::GameObject>
+	template<typename Program, typename AnyGameObject = typename Program::GameObject>
 	AnyGameObject* getFrom() const {
 		if (objid != NULL_GOREF)
 			return Program::instance->findObject(objid);

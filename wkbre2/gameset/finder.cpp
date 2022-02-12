@@ -230,11 +230,13 @@ struct FinderSequenceExecutor : ObjectFinder {
 struct FinderNearestToSatisfy : CommonEval<FinderNearestToSatisfy, ObjectFinder> {
 	std::unique_ptr<ValueDeterminer> vdcond, vdradius;
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
+		using Program = typename CTX::Program;
+		using AnyGO = typename CTX::AnyGO;
 		float radius = vdradius->eval(ctx);
-		NNSearch<CTX::Program, CTX::AnyGO> search;
-		search.start(CTX::Program::instance, ctx->getSelf()->position, radius);
-		std::vector<CTX::AnyGO*> res;
-		while (CTX::AnyGO* obj = search.next()) {
+		NNSearch<Program, AnyGO> search;
+		search.start(Program::instance, ctx->getSelf()->position, radius);
+		std::vector<AnyGO*> res;
+		while (AnyGO* obj = search.next()) {
 			if (!obj->isInteractable()) continue;
 			auto _ = ctx->change(ctx->candidate, obj);
 			if (vdcond->eval(ctx) > 0.0f)
@@ -540,7 +542,7 @@ struct FinderFilterFirst : CommonEval<FinderFilterFirst, ObjectFinder> {
 		auto vec = finder->eval(ctx);
 		int limit = (int)count->eval(ctx), num = 0;
 		decltype(vec) res;
-		for (CTX::AnyGO *obj : vec) {
+		for (typename CTX::AnyGO *obj : vec) {
 			auto _ = ctx->change(ctx->candidate, obj);
 			if (CTX::Program::instance->gameSet->equations[equation]->eval(ctx) > 0.0f) {
 				res.push_back(obj);
@@ -563,7 +565,7 @@ struct FinderFilter : CommonEval<FinderFilter, ObjectFinder> {
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
 		auto vec = finder->eval(ctx);
 		decltype(vec) res;
-		for (CTX::AnyGO *obj : vec) {
+		for (typename CTX::AnyGO *obj : vec) {
 			auto _ = ctx->change(ctx->candidate, obj);
 			if (CTX::Program::instance->gameSet->equations[equation]->eval(ctx) > 0.0f) {
 				res.push_back(obj);
@@ -602,12 +604,14 @@ struct FinderMetreRadius : CommonEval<FinderMetreRadius, ObjectFinder> {
 		return true;
 	}
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
+		using Program = typename CTX::Program;
+		using AnyGO = typename CTX::AnyGO;
 		float radius = vdradius->eval(ctx);
-		CTX::AnyGO* player = (useOriginalSelf ? ctx->get(ctx->chainOriginalSelf) : ctx->getSelf())->getPlayer();
-		NNSearch<CTX::Program, CTX::AnyGO> search;
-		search.start(CTX::Program::instance, ctx->getSelf()->position, radius);
-		std::vector<CTX::AnyGO*> res;
-		while (CTX::AnyGO* obj = search.next())
+		AnyGO* player = (useOriginalSelf ? ctx->get(ctx->chainOriginalSelf) : ctx->getSelf())->getPlayer();
+		NNSearch<Program, AnyGO> search;
+		search.start(Program::instance, ctx->getSelf()->position, radius);
+		std::vector<AnyGO*> res;
+		while (AnyGO* obj = search.next())
 			if (eligible(obj, player))
 				res.push_back(obj);
 		return res;
@@ -698,11 +702,13 @@ struct FinderNearestCandidate : ObjectFinder {
 struct FinderTileRadius : CommonEval<FinderTileRadius, ObjectFinder> {
 	std::unique_ptr<ValueDeterminer> vdradius;
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
+		using Program = typename CTX::Program;
+		using AnyGO = typename CTX::AnyGO;
 		float radius = vdradius->eval(ctx);
-		NNSearch<CTX::Program, CTX::AnyGO> search;
-		search.start(CTX::Program::instance, ctx->getSelf()->position, radius);
-		std::vector<CTX::AnyGO*> res;
-		while (CTX::AnyGO* obj = search.next())
+		NNSearch<Program, AnyGO> search;
+		search.start(Program::instance, ctx->getSelf()->position, radius);
+		std::vector<AnyGO*> res;
+		while (AnyGO* obj = search.next())
 			if (obj->isInteractable())
 				res.push_back(obj);
 		return res;
@@ -745,7 +751,7 @@ struct FinderFilterCandidates : CommonEval<FinderFilterCandidates, ObjectFinder>
 	template<typename CTX> std::vector<typename CTX::AnyGO*> common_eval(CTX* ctx) {
 		auto vec = finder->eval(ctx);
 		decltype(vec) res;
-		for (CTX::AnyGO* obj : vec) {
+		for (typename CTX::AnyGO* obj : vec) {
 			auto _ = ctx->change(ctx->candidate, obj);
 			if (condition->eval(ctx) > 0.0f) {
 				res.push_back(obj);
