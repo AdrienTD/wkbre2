@@ -32,7 +32,7 @@ struct IndexedStringList
 
 	void insertString(const std::string &str)
 	{
-		int nextid = id2strVector.size();
+		int nextid = static_cast<int>(id2strVector.size());
 		auto p = str2idMap.insert({ str, nextid });
 		if (p.second) // If the string was inserted correctly
 			id2strVector.push_back(p.first);

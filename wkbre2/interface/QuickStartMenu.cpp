@@ -239,6 +239,7 @@ void QuickStartMenu::launchGame()
 	}
 	else {
 		updateDiscordRPC((modeChosen == MODE_MULTIPLAYER_HOST) ? "Multiplayer (Host)" : "Singleplayer", savegames.at(savselected).c_str());
+		client->localServer = true;
 		std::string savfile = std::string("Save_Games\\") + savegames.at(savselected);
 		std::mutex srvMutex;
 		std::thread srvThread([this, savfile, &srvMutex]() {
