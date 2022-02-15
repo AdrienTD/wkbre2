@@ -63,7 +63,7 @@ int main()
 	printf("Hello! :)\n");
 
 	LoadSettings();
-	strcpy_s(gamedir, g_settings["game_path"].get<std::string>().c_str());
+	g_gamePath = g_settings["game_path"].get<std::string>();
 
 	if (g_settings.value<bool>("test", false))
 		LaunchTest();

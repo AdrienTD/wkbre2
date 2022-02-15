@@ -37,22 +37,22 @@ public:
 		std::string name;
 		BCPWriter *writer;
 
-		WDirectory* addDir(char *name);
-		void insertFile(uint32_t id, char *name);
+		WDirectory* addDir(const char *name);
+		void insertFile(uint32_t id, const char *name);
 		~WDirectory();
 
 		void write();
 	};
 	WDirectory root;
 
-	BCPWriter(char *fn);
+	BCPWriter(const char *fn);
 	uint32_t createFile(void *pnt, uint32_t siz);
 	void finalize();
-	void copyFile(char *fn);
+	void copyFile(const char *fn);
 };
 
-extern char gamedir[384];
-extern bool allowBCPPatches, allowDataDirectory, macFileNamesFallbackEnabled;
+extern std::string g_gamePath;
+extern bool g_allowBCPPatches, g_allowDataDirectory, g_macFileNamesFallbackEnabled;
 
 void LoadBCP(const char *fn);
 void LoadFile(const char *fn, char **out, int *outsize, int extraBytes = 0);

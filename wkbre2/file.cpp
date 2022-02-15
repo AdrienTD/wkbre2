@@ -34,8 +34,9 @@ extern "C" {
 
 void compress(unsigned short action, unsigned char *wrk_mem, unsigned char *src_adr, unsigned int src_len, unsigned char *dst_adr, unsigned int *p_dst_len);
 
-#include <bzlib.h>
 }
+
+#include <bzlib.h>
 
 // Fixs for wkbre2 until refactor of file.cpp
 uint32_t readInt(FILE *f) { uint32_t temp; fread(&temp, 4, 1, f); return temp; } 
@@ -71,9 +72,8 @@ struct BCPReader
 	void listDirectories(const char *dn, std::vector<std::string>* gsl);
 };
 
-char gamedir[384] = "C:\\Users\\Adrien\\Desktop\\WKMods\\wkbre2_data"; //".";
-//char gamedir[384] = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Warrior Kings";
-bool allowBCPPatches = false, allowDataDirectory = true, macFileNamesFallbackEnabled = true;
+std::string g_gamePath = ".";
+bool g_allowBCPPatches = false, g_allowDataDirectory = true, g_macFileNamesFallbackEnabled = true;
 std::vector<BCPReader*> bcpacks;
 
 std::string BCPReader::BCPReadString()
@@ -118,12 +118,9 @@ BCPReader::BCPReader(const char *fn)
 {
 	nfiles = 0;
 
-	char abuf[384]; unsigned char c;
-	strcpy(abuf, gamedir);
-	strcat(abuf, "/");
-	strcat(abuf, fn);
-	//strcpy(abuf, fn);
-	bcpfile = fopen(abuf, "rb");
+	unsigned char c;
+	std::string abuf = g_gamePath + '/' + fn;
+	bcpfile = fopen(abuf.c_str(), "rb");
 	if(!bcpfile) ferr("Cannot load BCP file.");
 	fseek(bcpfile, 9, SEEK_SET);
 	bcpver = fgetc(bcpfile) - '0';
@@ -329,13 +326,12 @@ void LoadBCP(const char *fn)
 {
 	//mainbcp = new BCPack(fn);
 
-	if(!allowBCPPatches)
+	if(!g_allowBCPPatches)
 		{bcpacks.push_back(new BCPReader(fn)); return;}
 #ifdef _WIN32
-	char sn[384]; HANDLE hf; WIN32_FIND_DATA fnd;
-	strcpy(sn, gamedir);
-	strcat(sn, "\\*.bcp");
-	hf = FindFirstFile(sn, &fnd);
+	HANDLE hf; WIN32_FIND_DATA fnd;
+	std::string sn = g_gamePath + "\\*.bcp";
+	hf = FindFirstFile(sn.c_str(), &fnd);
 	if(hf == INVALID_HANDLE_VALUE) return;
 	do {
 		bcpacks.push_back(new BCPReader(fnd.cFileName));
@@ -359,29 +355,21 @@ BCPReader *GetBCPWithMostRecentFile(const char *fn)
 	return bestpack;
 }
 
-char *GetMacName(const char *fn)
+std::string GetMacName(const char *fn)
 {
 	if (const char *sh = strrchr(fn, '\\'))
 	{
 		sh += 1;
 		if (strlen(sh) > 31)
 		{
-			char nsh[32];
 			const char *ext = strrchr(sh, '.');
 			int mmplen = 31 - (ext ? strlen(ext) : 0) - 1;
 			if (mmplen < 0) mmplen = 0;
-			strncpy(nsh, sh, mmplen);
-			nsh[mmplen] = 0;
-			strcat(nsh, "_");
-			strcat(nsh, ext);
-			char *nfn = strdup(fn);
-			nsh[31] = 0;
-			*(strrchr(nfn, '\\') + 1) = 0;
-			strcat(nfn, nsh);
-			return nfn;
+
+			return std::string(fn, sh) + std::string(sh, mmplen) + '_' + ext;
 		}
 	}
-	return 0;
+	return {};
 }
 
 void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
@@ -390,20 +378,16 @@ void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 	if(bp) if(bp->loadFile(fn, out, outsize, extraBytes)) return;
 
 	// File not found in the BCPs. Find it in the "data", "saved" and "redata" directories.
-	char sn[384]; FILE *sf = 0;
-	if(allowDataDirectory)
+	std::string sn; FILE *sf = 0;
+	if(g_allowDataDirectory)
 	{
-		strcpy(sn, gamedir);
-		strcat(sn, "/data/");
-		strcat(sn, fn);
-		sf = fopen(sn, "rb");
+		sn = g_gamePath + "/data/" + fn;
+		sf = fopen(sn.c_str(), "rb");
 	}
 	if(!sf)
 	{
-		strcpy(sn, gamedir);
-		strcat(sn, "/saved/");
-		strcat(sn, fn);
-		sf = fopen(sn, "rb");
+		sn = g_gamePath + "/saved/" + fn;
+		sf = fopen(sn.c_str(), "rb");
 	}
 #ifdef _WIN32
 	if (!sf)
@@ -421,15 +405,13 @@ void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 #endif
 	if (!sf)
 	{
-		strcpy(sn, "redata/");
-		strcat(sn, fn);
-		sf = fopen(sn, "rb");
+		sn = std::string("redata/") + fn;
+		sf = fopen(sn.c_str(), "rb");
 	}
-	if (!sf && macFileNamesFallbackEnabled)
-		if (char *nfn = GetMacName(fn))
+	if (!sf && g_macFileNamesFallbackEnabled)
+		if (auto nfn = GetMacName(fn); !nfn.empty())
 		{
-			LoadFile(nfn, out, outsize, extraBytes);
-			free(nfn);
+			LoadFile(nfn.c_str(), out, outsize, extraBytes);
 			return;
 		}
 	if(!sf)
@@ -454,32 +436,25 @@ int FileExists(const char *fn)
 			return 1;
 
 	// File not found in the BCPs. Find it in the "saved" and "redata" folder.
-	char sn[384];
-	strcpy(sn, gamedir);
-	strcat(sn, "/saved/");
-	strcat(sn, fn);
-	if (_access(sn, 0) != -1) return 1;
+	std::string sn = g_gamePath + "/saved/" + fn;
+	if (_access(sn.c_str(), 0) != -1) return 1;
 
 #ifdef _WIN32
 	if (FindResourceA(NULL, fn, "REDATA"))
 		return 1;
 #endif
 
-	strcpy(sn, "redata/");
-	strcat(sn, fn);
-	if (_access(sn, 0) != -1) return 1;
+	sn = std::string("redata/") + fn;
+	if (_access(sn.c_str(), 0) != -1) return 1;
 
-	if (allowDataDirectory) {
-		strcpy(sn, gamedir);
-		strcat(sn, "/data/");
-		strcat(sn, fn);
-		if (_access(sn, 0) != -1) return 1;
+	if (g_allowDataDirectory) {
+		sn = g_gamePath + "/data/" + fn;
+		if (_access(sn.c_str(), 0) != -1) return 1;
 	}
 
-	if (macFileNamesFallbackEnabled)
-		if (char *nfn = GetMacName(fn)) {
-			auto r = FileExists(nfn);
-			free(nfn);
+	if (g_macFileNamesFallbackEnabled)
+		if (auto nfn = GetMacName(fn); !nfn.empty()) {
+			auto r = FileExists(nfn.c_str());
 			return r;
 		}
 	return 0;
@@ -507,18 +482,16 @@ std::vector<std::string>* ListFiles(const char *dn, std::vector<std::string>* gs
 	for (BCPReader* bcp : bcpacks)
 		bcp->listFileNames(dn, gsl);
 
-	char sn[384];
+	std::string sn;
 
-	if(allowDataDirectory)
+	if(g_allowDataDirectory)
 	{
-		strcpy(sn, gamedir); strcat(sn, "/data/");
-		strcat(sn, dn); strcat(sn, "/*.*");
-		FindFiles(sn, gsl);
+		sn = g_gamePath + "/data/" + dn + "/*.*";
+		FindFiles(sn.c_str(), gsl);
 	}
 
-	strcpy(sn, gamedir); strcat(sn, "/saved/");
-	strcat(sn, dn); strcat(sn, "/*.*");
-	FindFiles(sn, gsl);
+	g_gamePath + "/saved/" + dn + "/*.*";
+	FindFiles(sn.c_str(), gsl);
 
 	return gsl;
 }
@@ -531,7 +504,7 @@ std::vector<std::string>* ListDirectories(const char *dn)
 	return gsl;
 }
 
-BCPWriter::WDirectory* BCPWriter::WDirectory::addDir(char *name)
+BCPWriter::WDirectory* BCPWriter::WDirectory::addDir(const char *name)
 {
 	WDirectory* nwd = new WDirectory;
 	nwd->writer = writer;
@@ -540,12 +513,12 @@ BCPWriter::WDirectory* BCPWriter::WDirectory::addDir(char *name)
 	return nwd;
 }
 
-void BCPWriter::WDirectory::insertFile(uint id, char *name)
+void BCPWriter::WDirectory::insertFile(uint id, const char *name)
 {
 	files.emplace_back();
 	BCPFile* wf = &files.back();
 	wf->id = id;
-	wf->name = strdup(name);
+	wf->name = name;
 	wf->time = 0;
 }
 
@@ -555,7 +528,7 @@ BCPWriter::WDirectory::~WDirectory()
 		delete dirs[i];
 }
 
-BCPWriter::BCPWriter(char *fn)
+BCPWriter::BCPWriter(const char *fn)
 {
 	file = fopen(fn, "wb");
 	if (!file) ferr("Failed to create BCP for writing.");
@@ -646,11 +619,11 @@ void BCPWriter::WDirectory::write()
 	}
 }
 
-void BCPWriter::copyFile(char *fn)
+void BCPWriter::copyFile(const char *fn)
 {
 	BCPWriter::WDirectory *d = &root;
-	char *fncopy = strdup(fn);
-	char *p = fncopy;
+	std::string fncopy = fn;
+	char *p = const_cast<char*>(fncopy.data());
 	while (char *s = strchr(p, '\\')) {
 		*s = 0;
 		for (uint i = 0; i < (uint)d->dirs.size(); i++)
