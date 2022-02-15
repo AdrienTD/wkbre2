@@ -94,7 +94,7 @@ void ServerDebugger::draw() {
 			}
 		}
 		if (ImGui::Button("Move to center")) {
-			sel->startMovement(Vector3(server->terrain->width - 2 * server->terrain->edge, 0.0f, server->terrain->height - 2 * server->terrain->edge) * 5.0f);
+			sel->startMovement(Vector3((float)(server->terrain->width - 2 * server->terrain->edge), 0.0f, (float)(server->terrain->height - 2 * server->terrain->edge)) * 5.0f);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Stop movement")) {
@@ -114,7 +114,7 @@ void ServerDebugger::draw() {
 		ImGui::Begin("Tiles", &showTilesWnd, ImGuiWindowFlags_HorizontalScrollbar);
 		int X, Z;
 		std::tie(X, Z) = server->terrain->getNumPlayableTiles();
-		static constexpr int rectsize = 8;
+		static constexpr float rectsize = 8.0f;
 		ImDrawList* drawList = ImGui::GetWindowDrawList();
 		ImVec2 scr = ImGui::GetCursorScreenPos();
 		//drawList->PrimReserve(6 * X * Z, 4 * X * Z);
@@ -128,7 +128,7 @@ void ServerDebugger::draw() {
 					drawList->AddRectFilled(p1, p2, color);
 			}
 		}
-		ImGui::Dummy(ImVec2(X* rectsize, Z* rectsize));
+		ImGui::Dummy(ImVec2(X * rectsize, Z * rectsize));
 		ImGui::End();
 	}
 

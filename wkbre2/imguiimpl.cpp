@@ -59,9 +59,9 @@ void ImGuiImpl_RenderDrawLists(ImDrawData *dr, IRenderer *renderer)
 				renderer->SetTexture(0, (texture)cmd->TextureId);
 			//else
 			//	renderer->NoTexture(0);
-			renderer->SetScissorRect(cmd->ClipRect.x, cmd->ClipRect.y,
-						cmd->ClipRect.z - cmd->ClipRect.x,
-						cmd->ClipRect.w - cmd->ClipRect.y);
+			renderer->SetScissorRect((int)cmd->ClipRect.x, (int)cmd->ClipRect.y,
+						(int)(cmd->ClipRect.z - cmd->ClipRect.x),
+						(int)(cmd->ClipRect.w - cmd->ClipRect.y));
 			renderer->DrawBuffer(e, cmd->ElemCount);
 			e += cmd->ElemCount;
 		}
@@ -126,7 +126,7 @@ void ImGuiImpl_Init()
 void ImGuiImpl_NewFrame()
 {
 	ImGuiIO &io = ImGui::GetIO();
-	io.DisplaySize = ImVec2(g_windowWidth, g_windowHeight);
+	io.DisplaySize = ImVec2((float)g_windowWidth, (float)g_windowHeight);
 
 	uint32_t newtime = SDL_GetTicks();
 	io.DeltaTime = (newtime - iglasttime) / 1000.f;

@@ -1112,7 +1112,7 @@ void Server::tick()
 
 	for (size_t i = 0; i < overPeriodSequences.size(); i++) {
 		OverPeriodSequence& ops = overPeriodSequences[i];
-		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
+		int predictedExec = static_cast<int>((timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period);
 		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
 		SrvScriptContext ctx(this);
 		auto _ = ctx.change(ctx.sequenceExecutor, ops.executor);
@@ -1131,7 +1131,7 @@ void Server::tick()
 	}
 	for (size_t i = 0; i < repeatOverPeriodSequences.size(); i++) {
 		OverPeriodSequence& ops = repeatOverPeriodSequences[i];
-		int predictedExec = (timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period;
+		int predictedExec = static_cast<int>((timeManager.currentTime - ops.startTime) * ops.numTotalExecutions / ops.period);
 		if (predictedExec > ops.numTotalExecutions) predictedExec = ops.numTotalExecutions;
 		SrvScriptContext ctx(this);
 		auto _ = ctx.change(ctx.sequenceExecutor, ops.executor);
@@ -1165,7 +1165,7 @@ void Server::tick()
 				}
 			}
 			if (cnt > 0u) {
-				avg /= cnt;
+				avg /= (float)cnt;
 				obj->updatePosition(avg, false);
 			}
 		}

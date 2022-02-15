@@ -55,7 +55,7 @@ void Client::tick()
 	if (cameraMode == 1) {
 		float camTime = (float)(SDL_GetTicks() - cameraStartTime) / 1000.0f;
 		float prevTime = 0.0f, nextTime = 0.0f;
-		int nextNode;
+		size_t nextNode;
 		for (nextNode = 1; nextNode < cameraPathPos.size(); nextNode++) {
 			prevTime = nextTime;
 			nextTime += cameraPathDur[nextNode];
@@ -69,20 +69,21 @@ void Client::tick()
 			auto p0 = cameraPathPos[nextNode - 1];
 			auto p1 = cameraPathPos[nextNode];
 			// Limit angles to [0;2pi)
+			constexpr float pi = (float)M_PI;
 			for (auto& p : { &p0, &p1 }) {
 				for (float& c : p->second) {
-					c = fmodf(c, 2*M_PI);
-					if (c < 0.0f) c += 2*M_PI;
+					c = fmodf(c, 2*pi);
+					if (c < 0.0f) c += 2*pi;
 				}
 			}
 			// Try to make distances between angles as small as possible (< pi radians)
 			for (int i = 0; i < 3; i++) {
 				float d = p1.second.coord[i] - p0.second.coord[i];
-				if (fabs(d) > M_PI) {
+				if (fabs(d) > pi) {
 					if (d > 0)
-						p1.second.coord[i] -= 2 * M_PI;
+						p1.second.coord[i] -= 2 * pi;
 					else
-						p1.second.coord[i] += 2 * M_PI;
+						p1.second.coord[i] += 2 * pi;
 				}
 			}
 			float dt = (camTime - prevTime) / (nextTime - prevTime);

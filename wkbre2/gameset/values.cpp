@@ -82,7 +82,7 @@ struct ValueObjectId_Battles : CommonEval<ValueObjectId_Battles, ValueDeterminer
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX *ctx) {
 		if (typename CTX::AnyGO *obj = finder->getFirst(ctx))
-			return obj->id;
+			return (float)obj->id;
 		return 0.0f;
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
@@ -145,7 +145,7 @@ struct ValueIsSubsetOf : CommonEval<ValueIsSubsetOf, ValueDeterminer> {
 struct ValueNumObjects : CommonEval<ValueNumObjects, ValueDeterminer> {
 	std::unique_ptr<ObjectFinder> finder;
 	template<typename CTX> float common_eval(CTX *ctx) {
-		return finder->eval(ctx).size();
+		return (float)finder->eval(ctx).size();
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 		finder.reset(ReadFinder(gsf, gs));
@@ -236,7 +236,7 @@ struct ValueDistanceBetween : CommonEval<ValueDistanceBetween, ValueDeterminer> 
 		Vector3 sum;
 		for (T *obj : vec)
 			sum += obj->position;
-		return sum / vec.size();
+		return sum / (float)vec.size();
 	}
 	template<typename CTX> float common_eval(CTX* ctx) {
 		Vector3 v = centre(fnd1->eval(ctx)) - centre(fnd2->eval(ctx));
@@ -364,7 +364,7 @@ struct ValueFinderResultsCount : ValueDeterminer {
 		ServerGameObject* obj = finder->getFirst(ctx);
 		if (!obj) return 0.0f;
 		auto _ = ctx->changeSelf(obj);
-		return Server::instance->gameSet->objectFinderDefinitions[ofd]->eval(ctx).size();
+		return (float)Server::instance->gameSet->objectFinderDefinitions[ofd]->eval(ctx).size();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		ofd = gs.objectFinderDefinitions.readIndex(gsf);
@@ -505,7 +505,7 @@ struct ValueNumAssociates : ValueDeterminer {
 		auto it = obj->associates.find(category);
 		if (it == obj->associates.end())
 			return 0.0f;
-		return it->second.size();
+		return (float)it->second.size();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		category = gs.associations.readIndex(gsf);
@@ -522,7 +522,7 @@ struct ValueNumAssociators : ValueDeterminer {
 		auto it = obj->associators.find(category);
 		if (it == obj->associators.end())
 			return 0.0f;
-		return it->second.size();
+		return (float)it->second.size();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		category = gs.associations.readIndex(gsf);

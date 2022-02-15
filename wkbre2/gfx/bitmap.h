@@ -16,7 +16,7 @@
 
 struct Bitmap
 {
-	unsigned int width, height, format; DynArray<unsigned char> pixels, palette;
+	int width, height, format; DynArray<unsigned char> pixels, palette;
 
 	Bitmap() : width(0), height(0), format(0) {}
 	~Bitmap();

@@ -21,7 +21,7 @@ template<int N> struct TagDict
 		auto it = std::lower_bound(tags.begin(), tags.end(), tag, CharStrCompare);
 		if (it == tags.end()) return -1;
 		if (strcmp(*it, tag) != 0) return -1;
-		return it - tags.begin();
+		return static_cast<int>(it - tags.begin());
 	}
 
 	const char *getStringFromID(int id)

@@ -389,7 +389,7 @@ void Test_Mesh()
 		gfx->BeginBatchDrawing();
 		batch->begin();
 
-		pers = Matrix::getLHPerspectiveMatrix(0.9, (float)g_windowWidth / (float)g_windowHeight, 1.0f, 400.0f);
+		pers = Matrix::getLHPerspectiveMatrix(0.9f, (float)g_windowWidth / (float)g_windowHeight, 1.0f, 400.0f);
 		cammat = Matrix::getLHLookAtViewMatrix(campos, campos + camdir, Vector3(0, 1, 0));
 		persandcam = cammat * pers;
 		gfx->SetTransformMatrix(&persandcam);
@@ -398,7 +398,7 @@ void Test_Mesh()
 
 		int plcnt = 0;
 		for (PolygonList &polylist : mesh.polyLists) {
-			for (int g = 0; g < polylist.groups.size(); g++) {
+			for (size_t g = 0; g < polylist.groups.size(); g++) {
 				PolyListGroup &group = polylist.groups[g];
 				if (curtex != mesh.materials[g].textureFilename) {
 					batch->flush();
@@ -697,8 +697,8 @@ void Test_Scene()
 	float scalestart[numents], xpos[numents], zpos[numents];
 	for (int i = 0; i < numents; i++) {
 		scalestart[i] = (rand() % 628) / 100.0f;
-		xpos[i] = rand() % 40 - 20;
-		zpos[i] = rand() % 40 - 20;
+		xpos[i] = (float)(rand() % 40 - 20);
+		zpos[i] = (float)(rand() % 40 - 20);
 	}
 
 	Scene scene(gfx, &modcache);
@@ -946,14 +946,14 @@ const std::vector<std::pair<void(*)(), const char*> > testList = {
 void LaunchTest()
 {
 	printf("Tests available:\n");
-	for (int i = 0; i < testList.size(); i++) {
-		printf(" %2i: %s\n", i, testList[i].second);
+	for (size_t i = 0; i < testList.size(); i++) {
+		printf(" %2zu: %s\n", i, testList[i].second);
 	}
 	printf("Launch test number? ");
 	char inp[12];
 	gets_s(inp);
 	printf("\n");
-	uint testnum = (uint)atoi(inp);
+	size_t testnum = (size_t)atoi(inp);
 	if (testnum >= testList.size()) testnum = 0;
 	testList[testnum].first();
 }

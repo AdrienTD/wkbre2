@@ -30,7 +30,7 @@ namespace {
 		ImGui::PushID(popupid);
 		ImGui::PushItemWidth(-1);
 		ImVec2 bpos = ImGui::GetCursorPos();
-		int tlh = ImGui::GetTextLineHeight();
+		float tlh = ImGui::GetTextLineHeight();
 		if (ImGui::BeginCombo("##Combo", "", 0))
 		{
 			for (auto &type : client->getLevel()->children) {

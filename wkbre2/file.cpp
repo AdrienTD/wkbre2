@@ -118,7 +118,6 @@ BCPReader::BCPReader(const char *fn)
 {
 	nfiles = 0;
 
-	unsigned char c;
 	std::string abuf = g_gamePath + '/' + fn;
 	bcpfile = fopen(abuf.c_str(), "rb");
 	if(!bcpfile) ferr("Cannot load BCP file.");
@@ -140,14 +139,13 @@ BCPReader::BCPReader(const char *fn)
 
 void BCPReader::ExtractFile(int id, char **out, int *outsize, int extraBytes)
 {
-	uint i, s;
-	char *min, *mout, *ws; uint os, sws;
+	char *min, *mout, *ws;
 
 	static std::mutex bcpmutex;
 	const std::lock_guard<std::mutex> bml(bcpmutex);
 
 	fseek(bcpfile, fent[id].offset, SEEK_SET);
-	s = fent[id].endos - fent[id].offset;
+	uint s = fent[id].endos - fent[id].offset;
 	mout = (char*)malloc(fent[id].size+extraBytes); if(!mout) ferr("Cannot alloc mem for loading a file.");
 	*out = mout;
 
@@ -490,7 +488,7 @@ std::vector<std::string>* ListFiles(const char *dn, std::vector<std::string>* gs
 		FindFiles(sn.c_str(), gsl);
 	}
 
-	g_gamePath + "/saved/" + dn + "/*.*";
+	sn = g_gamePath + "/saved/" + dn + "/*.*";
 	FindFiles(sn.c_str(), gsl);
 
 	return gsl;

@@ -86,7 +86,7 @@ void Mesh::load(const char * filename)
 	// Materials
 	uint32_t nmat = br.readUint16();
 	this->materials.resize(nmat);
-	for (int i = 0; i < nmat; i++)
+	for (uint32_t i = 0; i < nmat; i++)
 	{
 		Material &mat = this->materials[i];
 		mat.alphaTest = br.readUint8();

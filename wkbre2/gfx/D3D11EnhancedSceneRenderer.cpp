@@ -244,7 +244,7 @@ struct D3D11EnhancedSceneRenderer::Impl {
 	ComPtr<ID3D11VertexShader> meshVS, animVS;
 	ComPtr<ID3D11PixelShader> defPS, alphaPS;
 	ComPtr<ID3D11Buffer> sceneConstBuffer, sunConstBuffer;
-	const int MAX_INSTANCES = 16;
+	const size_t MAX_INSTANCES = 16;
 	ComPtr<ID3D11Buffer> instanceBuffer;
 };
 
@@ -433,7 +433,7 @@ void D3D11EnhancedSceneRenderer::render()
 
 			PolygonList& polylist = staticModel->mesh.polyLists[0];
 			uint32_t startIndex = 0, startVertex = 0;
-			for (int g = 0; g < polylist.groups.size(); g++) {
+			for (size_t g = 0; g < polylist.groups.size(); g++) {
 				uint32_t numIndices = 3 * polylist.groups[g].tupleIndex.size();
 				uint32_t numVertices = staticModel->mesh.groupIndices[g].size();
 				if (staticModel->matIds[g] == it.first.first) {

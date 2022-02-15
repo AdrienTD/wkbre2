@@ -120,7 +120,7 @@ struct OALSoundPlayer : SoundPlayer {
 			if (val != AL_PLAYING) {
 				auto src = sources[i];
 				alSourcei(src, AL_BUFFER, buf);
-				alSourcei(src, AL_MIN_GAIN, 1.0f);
+				alSourcef(src, AL_MIN_GAIN, 1.0f);
 				alSourcei(src, AL_SOURCE_RELATIVE, AL_TRUE);
 				alSource3f(src, AL_POSITION, 0.0f, 0.0f, 0.0f);
 				alSourcePlay(src);
@@ -147,7 +147,7 @@ struct OALSoundPlayer : SoundPlayer {
 			if (val != AL_PLAYING) {
 				auto src = sources[i];
 				alSourcei(src, AL_BUFFER, buf);
-				alSourcei(src, AL_MIN_GAIN, 0.0f);
+				alSourcef(src, AL_MIN_GAIN, 0.0f);
 				alSourcei(src, AL_SOURCE_RELATIVE, AL_FALSE);
 				alSourcef(src, AL_REFERENCE_DISTANCE, refDist);
 				//alSourcef(src, AL_MAX_DISTANCE, maxDist);
@@ -208,7 +208,7 @@ struct OALSoundPlayer : SoundPlayer {
 		mpg123_format_none(mHandle);
 		mpg123_format(mHandle, mRate, mChannels, mEncoding);
 
-		char* music; int numSamples;
+		int numSamples;
 		numSamples = mpg123_length(mHandle);
 		int16_t* samples = new int16_t[numSamples * mChannels];
 		size_t rread = 0;

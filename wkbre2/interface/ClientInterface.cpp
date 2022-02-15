@@ -71,7 +71,7 @@ namespace {
 
 		float h;
 		const float farzvalue = 250.0f;
-		int nlp = farzvalue * 1.5f / lv;
+		int nlp = static_cast<int>(farzvalue * 1.5f / lv);
 		int m = (ptt.y < terrain.getHeight(ptt.x, ptt.z)) ? 0 : 1;
 
 		for (int i = 0; i < nlp; i++) {
@@ -227,8 +227,8 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				}
 				// Box selection check
 				if (selBoxOn) {
-					int bx = (ttpp.x + 1.0f) * g_windowWidth / 2.0f;
-					int by = (-ttpp.y + 1.0f) * g_windowHeight / 2.0f;
+					int bx = static_cast<int>((ttpp.x + 1.0f) * g_windowWidth / 2.0f);
+					int by = static_cast<int>((-ttpp.y + 1.0f) * g_windowHeight / 2.0f);
 					bool inBox = ((selBoxStartX < bx) && (bx < selBoxEndX)) || ((selBoxEndX < bx) && (bx < selBoxStartX));
 					inBox = inBox && (((selBoxStartY < by) && (by < selBoxEndY)) || ((selBoxEndY < by) && (by < selBoxStartY)));
 					if (inBox) {
@@ -504,7 +504,7 @@ void ClientInterface::iter()
 				case Tags::GTW_BUTTON_WINDOW_ACTION_MOVE_FIRST_PAGE:
 					activeGtw.second = 0; break;
 				case Tags::GTW_BUTTON_WINDOW_ACTION_MOVE_NEXT_PAGE:
-					if (activeGtw.second < gtw.pages.size() - 1) activeGtw.second++; break;
+					if (activeGtw.second < (int)gtw.pages.size() - 1) activeGtw.second++; break;
 				case Tags::GTW_BUTTON_WINDOW_ACTION_MOVE_PREVIOUS_PAGE:
 					if (activeGtw.second > 0) activeGtw.second--; break;
 				}

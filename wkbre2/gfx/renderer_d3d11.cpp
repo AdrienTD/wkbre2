@@ -266,7 +266,7 @@ void D3D11Renderer::Init() {
 	dxgiAdapter0.Reset();
 	D3D_DRIVER_TYPE driverType = D3D_DRIVER_TYPE_HARDWARE;
 	adapterIndex = g_settings.value<int>("d3d11AdapterIndex", -1);
-	if (adapterIndex >= 0 && adapterIndex < dxgiAdapters.size()) {
+	if (adapterIndex >= 0 && (size_t)adapterIndex < dxgiAdapters.size()) {
 		dxgiAdapter0 = dxgiAdapters[adapterIndex];
 		driverType = D3D_DRIVER_TYPE_UNKNOWN;
 	}
@@ -425,8 +425,8 @@ void D3D11Renderer::Reset() {
 
 void D3D11Renderer::BeginDrawing() {
 	D3D11_VIEWPORT vp;
-	vp.Width = g_windowWidth;
-	vp.Height = g_windowHeight;
+	vp.Width = (float)g_windowWidth;
+	vp.Height = (float)g_windowHeight;
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	vp.TopLeftX = 0;
@@ -501,7 +501,7 @@ texture D3D11Renderer::CreateTexture(const Bitmap& bm, int mipmaps) {
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
 	D3D11_SUBRESOURCE_DATA sub[std::size(mmbmp)];
-	for (size_t i = 0; i < numMipmaps; i++) {
+	for (size_t i = 0; i < (size_t)numMipmaps; i++) {
 		sub[i].pSysMem = mmbmp[i].pixels.data();
 		sub[i].SysMemPitch = mmbmp[i].width * 4u;
 		sub[i].SysMemSlicePitch = sub[i].SysMemPitch * mmbmp[i].height;
@@ -632,10 +632,11 @@ void D3D11Renderer::DrawRect(int x, int y, int w, int h, int c, float u, float v
 	hres = ddImmediateContext->Map(shapeVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
 	assert(!FAILED(hres));
 	batchVertex* verts = (batchVertex*)ms.pData;
-	verts[0].x = x;		verts[0].y = y;		verts[0].u = u;		verts[0].v = v;
-	verts[1].x = x + w;	verts[1].y = y;		verts[1].u = u + o;	verts[1].v = v;
-	verts[2].x = x;		verts[2].y = y + h;	verts[2].u = u;		verts[2].v = v + p;
-	verts[3].x = x + w;	verts[3].y = y + h;	verts[3].u = u + o;	verts[3].v = v + p;
+	auto f = [](int n) {return (float)n; };
+	verts[0].x = f(x);		verts[0].y = f(y);		verts[0].u = u;		verts[0].v = v;
+	verts[1].x = f(x + w);	verts[1].y = f(y);		verts[1].u = u + o;	verts[1].v = v;
+	verts[2].x = f(x);		verts[2].y = f(y + h);	verts[2].u = u;		verts[2].v = v + p;
+	verts[3].x = f(x + w);	verts[3].y = f(y + h);	verts[3].u = u + o;	verts[3].v = v + p;
 	for (int i = 0; i < 4; i++) { verts[i].color = c; verts[i].x -= 0.5f; verts[i].y -= 0.5f; }
 	ddImmediateContext->Unmap(shapeVertexBuffer, 0);
 	UINT stride = sizeof(batchVertex); UINT offset = 0;
@@ -654,11 +655,12 @@ void D3D11Renderer::DrawFrame(int x, int y, int w, int h, int c) {
 	hres = ddImmediateContext->Map(shapeVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
 	assert(!FAILED(hres));
 	batchVertex* verts = (batchVertex*)ms.pData;
-	verts[0].x = x; verts[0].y = y; verts[0].z = 0.0f; verts[0].color = c; verts[0].u = 0.0f; verts[0].v = 0.0f;
-	verts[1].x = x + w; verts[1].y = y; verts[1].z = 0.0f; verts[1].color = c; verts[1].u = 0.0f; verts[1].v = 0.0f;
-	verts[2].x = x + w; verts[2].y = y + h; verts[2].z = 0.0f; verts[2].color = c; verts[2].u = 0.0f; verts[2].v = 0.0f;
-	verts[3].x = x; verts[3].y = y + h; verts[3].z = 0.0f; verts[3].color = c; verts[3].u = 0.0f; verts[3].v = 0.0f;
-	verts[4].x = x; verts[4].y = y; verts[4].z = 0.0f; verts[4].color = c; verts[4].u = 0.0f; verts[4].v = 0.0f;
+	auto f = [](int n) {return (float)n; };
+	verts[0].x = f(x); verts[0].y = f(y); verts[0].z = 0.0f; verts[0].color = c; verts[0].u = 0.0f; verts[0].v = 0.0f;
+	verts[1].x = f(x + w); verts[1].y = f(y); verts[1].z = 0.0f; verts[1].color = c; verts[1].u = 0.0f; verts[1].v = 0.0f;
+	verts[2].x = f(x + w); verts[2].y = f(y + h); verts[2].z = 0.0f; verts[2].color = c; verts[2].u = 0.0f; verts[2].v = 0.0f;
+	verts[3].x = f(x); verts[3].y = f(y + h); verts[3].z = 0.0f; verts[3].color = c; verts[3].u = 0.0f; verts[3].v = 0.0f;
+	verts[4].x = f(x); verts[4].y = f(y); verts[4].z = 0.0f; verts[4].color = c; verts[4].u = 0.0f; verts[4].v = 0.0f;
 	ddImmediateContext->Unmap(shapeVertexBuffer, 0);
 	UINT stride = sizeof(batchVertex); UINT offset = 0;
 	ddImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP);

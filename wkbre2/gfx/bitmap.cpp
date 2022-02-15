@@ -21,6 +21,7 @@ Bitmap Bitmap::loadBitmap(const char *fn)
 	if(!_stricmp(e, ".pcx"))
 		return loadPCX(d, s);
 	ferr("Unknown bitmap file extension.");
+	return {};
 }
 
 Bitmap Bitmap::loadTGA(const void* _data, size_t length)
@@ -65,7 +66,7 @@ Bitmap Bitmap::loadTGA(const void* _data, size_t length)
 		while((y >= 0) || (y < bm.height))
 		{
 			uint8_t ua = *(c++);
-			uint32_t us = ((uint8_t)ua & 127) + 1;
+			int us = ((uint8_t)ua & 127) + 1;
 
 			for(int i = 0; i < us; i++)
 			{

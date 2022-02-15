@@ -501,11 +501,12 @@ struct OGL3Renderer : IRenderer {
 		glBindBuffer(GL_ARRAY_BUFFER, shapeBuffer);
 		batchVertex* verts = (batchVertex*)glMapBufferRange(GL_ARRAY_BUFFER, 0, 5*sizeof(batchVertex), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
 		assert(verts);
-		verts[0].x = x; verts[0].y = y; verts[0].z = 0.0f; verts[0].color = c; verts[0].u = 0.0f; verts[0].v = 0.0f;
-		verts[1].x = x + w; verts[1].y = y; verts[1].z = 0.0f; verts[1].color = c; verts[1].u = 0.0f; verts[1].v = 0.0f;
-		verts[2].x = x + w; verts[2].y = y + h; verts[2].z = 0.0f; verts[2].color = c; verts[2].u = 0.0f; verts[2].v = 0.0f;
-		verts[3].x = x; verts[3].y = y + h; verts[3].z = 0.0f; verts[3].color = c; verts[3].u = 0.0f; verts[3].v = 0.0f;
-		verts[4].x = x; verts[4].y = y; verts[4].z = 0.0f; verts[4].color = c; verts[4].u = 0.0f; verts[4].v = 0.0f;
+		auto f = [](int n) {return (float)n; };
+		verts[0].x = f(x);		verts[0].y = f(y);		verts[0].z = 0.0f; verts[0].color = c; verts[0].u = 0.0f; verts[0].v = 0.0f;
+		verts[1].x = f(x + w);	verts[1].y = f(y);		verts[1].z = 0.0f; verts[1].color = c; verts[1].u = 0.0f; verts[1].v = 0.0f;
+		verts[2].x = f(x + w);	verts[2].y = f(y + h);	verts[2].z = 0.0f; verts[2].color = c; verts[2].u = 0.0f; verts[2].v = 0.0f;
+		verts[3].x = f(x);		verts[3].y = f(y + h);	verts[3].z = 0.0f; verts[3].color = c; verts[3].u = 0.0f; verts[3].v = 0.0f;
+		verts[4].x = f(x);		verts[4].y = f(y);		verts[4].z = 0.0f; verts[4].color = c; verts[4].u = 0.0f; verts[4].v = 0.0f;
 		glUnmapBuffer(GL_ARRAY_BUFFER);
 		glBindVertexArray(shapeVAO);
 		glDrawArrays(GL_LINE_STRIP, 0, 5);

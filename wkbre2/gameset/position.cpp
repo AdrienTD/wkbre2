@@ -25,7 +25,7 @@ namespace {
 		OrientedPosition sum;
 		for (ServerGameObject *obj : vec)
 			sum += {obj->position, obj->orientation};
-		return vec.empty() ? OrientedPosition() : (sum / vec.size());
+		return vec.empty() ? OrientedPosition() : (sum / (float)vec.size());
 	}
 }
 
@@ -135,11 +135,11 @@ struct PDOutAtAngle : public PositionDeterminer
 	std::unique_ptr<ValueDeterminer> u, v;
 	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
 		OrientedPosition po = PosFromObjVec(f->eval(ctx));
-		po.rotation.y -= u->eval(ctx) * M_PI / 180;
+		po.rotation.y -= u->eval(ctx) * (float)M_PI / 180;
 		float l = v->eval(ctx);
 		po.position.x += l * sin(po.rotation.y);
 		po.position.z -= l * cos(po.rotation.y);
-		po.rotation.y += M_PI;
+		po.rotation.y += (float)M_PI;
 		return po;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {

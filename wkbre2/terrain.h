@@ -49,7 +49,7 @@ struct Terrain
 {
 	typedef TerrainTile Tile;
 
-	unsigned int width, height, edge;
+	int width, height, edge;
 	float scale;
 	uint32_t fogColor, sunColor;
 	Vector3 sunVector;

@@ -37,7 +37,7 @@ void HandleImGui(const SDL_Event &event)
 	ImGuiIO &igio = ImGui::GetIO();
 	switch (event.type) {
 	case SDL_MOUSEMOTION:
-		igio.MousePos = ImVec2(event.motion.x, event.motion.y);
+		igio.MousePos = ImVec2((float)event.motion.x, (float)event.motion.y);
 		break;
 	case SDL_MOUSEBUTTONDOWN:
 		igio.MouseDown[0] = true;

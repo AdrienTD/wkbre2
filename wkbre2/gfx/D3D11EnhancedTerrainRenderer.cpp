@@ -416,8 +416,8 @@ void D3D11EnhancedTerrainRenderer::init()
 	// Precompute terrain normals
 	_impl->trnNormals.resize((terrain->width + 1) * (terrain->height + 1));
 	size_t ni = 0;
-	for (unsigned int z = 0; z <= terrain->height; z++) {
-		for (unsigned int x = 0; x <= terrain->width; x++) {
+	for (int z = 0; z <= terrain->height; z++) {
+		for (int x = 0; x <= terrain->width; x++) {
 			_impl->trnNormals[ni++] = NormalToR10G10B10A2(terrain->getNormal(x, z));
 		}
 	}
@@ -425,8 +425,8 @@ void D3D11EnhancedTerrainRenderer::init()
 	// Terrain vertex buffer
 	std::vector<D11NTRVtx> trnVertices;
 	assert(terrain != nullptr);
-	for (unsigned int z = 0; z < terrain->height; z++) {
-		for (unsigned int x = 0; x < terrain->width; x++) {
+	for (int z = 0; z < terrain->height; z++) {
+		for (int x = 0; x < terrain->width; x++) {
 			int lx = x - terrain->edge, lz = z - terrain->edge;
 			Terrain::Tile* tile = &terrain->tiles[(terrain->height - 1 - z) * terrain->width + x];
 

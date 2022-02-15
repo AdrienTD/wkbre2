@@ -20,7 +20,7 @@ float Terrain::getHeight(float ipx, float ipy) const {
 	if (y < 0) y = 0; if (y >= height) y = height - 0.001f;
 	float h1 = getVertex((int)x, (int)y), h2 = getVertex((int)x + 1, (int)y);
 	float h3 = getVertex((int)x, (int)y + 1), h4 = getVertex((int)x + 1, (int)y + 1);
-	int rx = x; int ry = y;
+	int rx = (int)x; int ry = (int)y;
 	float qx = x - rx, qy = y - ry;
 	float h5 = h1 * (1.0f - qx) + h2 * qx;
 	float h6 = h3 * (1.0f - qx) + h4 * qx;

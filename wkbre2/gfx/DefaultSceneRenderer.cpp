@@ -49,7 +49,7 @@ void DefaultSceneRenderer::render()
 			const float* verts = ent->model->interpolate(ent->animTime);
 			const Vector3* norms = ent->model->interpolateNormals(ent->animTime);
 
-			for (int g = 0; g < polylist.groups.size(); g++) {
+			for (size_t g = 0; g < polylist.groups.size(); g++) {
 				if (model->matIds[g] != it.first.first)
 					continue;
 				batchVertex *bver; uint16_t *bind; uint32_t bstart;

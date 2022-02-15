@@ -91,7 +91,7 @@ void Order::advanceToNextTask()
 Task::Task(int id, TaskBlueprint * blueprint, Order * order) : id(id), blueprint(blueprint), order(order)
 {
 	this->triggers.resize(blueprint->triggers.size());
-	for (int i = 0; i < this->triggers.size(); i++) {
+	for (size_t i = 0; i < this->triggers.size(); i++) {
 		auto &trigbp = blueprint->triggers[i];
 		Trigger *trigger;
 		if (trigbp.type == Tags::TASKTRIGGER_TIMER)

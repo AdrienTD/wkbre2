@@ -345,20 +345,22 @@ struct D3D9Renderer : public IRenderer
 
 	void DrawRect(int x, int y, int w, int h, int c, float u, float v, float o, float p)
 	{
-		verts[0].x = x;		verts[0].y = y;		verts[0].u = u;		verts[0].v = v;
-		verts[1].x = x + w;	verts[1].y = y;		verts[1].u = u+o;	verts[1].v = v;
-		verts[2].x = x;		verts[2].y = y + h;	verts[2].u = u;		verts[2].v = v+p;
-		verts[3].x = x + w;	verts[3].y = y + h;	verts[3].u = u+o;	verts[3].v = v+p;
+		auto f = [](int n) {return (float)n; };
+		verts[0].x = f(x);		verts[0].y = f(y);		verts[0].u = u;		verts[0].v = v;
+		verts[1].x = f(x + w);	verts[1].y = f(y);		verts[1].u = u+o;	verts[1].v = v;
+		verts[2].x = f(x);		verts[2].y = f(y + h);	verts[2].u = u;		verts[2].v = v+p;
+		verts[3].x = f(x + w);	verts[3].y = f(y + h);	verts[3].u = u+o;	verts[3].v = v+p;
 		for(int i = 0; i < 4; i++) {verts[i].color = c; verts[i].x -= 0.5f; verts[i].y -= 0.5f;}
 		ddev->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, verts, sizeof(MYVERTEX));
 	}
 
 	void DrawGradientRect(int x, int y, int w, int h, int c0, int c1, int c2, int c3)
 	{
-		verts[0].x = x;		verts[0].y = y;		verts[0].u = 0;	verts[0].v = 0;
-		verts[1].x = x + w;	verts[1].y = y;		verts[1].u = 1;	verts[1].v = 0;
-		verts[2].x = x;		verts[2].y = y + h;	verts[2].u = 0;	verts[2].v = 1;
-		verts[3].x = x + w;	verts[3].y = y + h;	verts[3].u = 1;	verts[3].v = 1;
+		auto f = [](int n) {return (float)n; };
+		verts[0].x = f(x);		verts[0].y = f(y);		verts[0].u = 0.0f;	verts[0].v = 0.0f;
+		verts[1].x = f(x + w);	verts[1].y = f(y);		verts[1].u = 1.0f;	verts[1].v = 0.0f;
+		verts[2].x = f(x);		verts[2].y = f(y + h);	verts[2].u = 0.0f;	verts[2].v = 1.0f;
+		verts[3].x = f(x + w);	verts[3].y = f(y + h);	verts[3].u = 1.0f;	verts[3].v = 1.0f;
 		for(int i = 0; i < 4; i++) {verts[i].x -= 0.5f; verts[i].y -= 0.5f;}
 		verts[0].color = c0;	verts[1].color = c1;
 		verts[2].color = c2;	verts[3].color = c3;
@@ -367,11 +369,12 @@ struct D3D9Renderer : public IRenderer
 
 	void DrawFrame(int x, int y, int w, int h, int c)
 	{
-		verts[0].x = x;		verts[0].y = y;
-		verts[1].x = x + w;	verts[1].y = y;
-		verts[2].x = x + w;	verts[2].y = y + h;
-		verts[3].x = x;		verts[3].y = y + h;
-		verts[4].x = x;		verts[4].y = y;
+		auto f = [](int n) {return (float)n; };
+		verts[0].x = f(x);		verts[0].y = f(y);
+		verts[1].x = f(x + w);	verts[1].y = f(y);
+		verts[2].x = f(x + w);	verts[2].y = f(y + h);
+		verts[3].x = f(x);		verts[3].y = f(y + h);
+		verts[4].x = f(x);		verts[4].y = f(y);
 		for(int i = 0; i < 5; i++) {verts[i].color = c; verts[i].x -= 0.5f; verts[i].y -= 0.5f;}
 		ddev->DrawPrimitiveUP(D3DPT_LINESTRIP, 4, verts, sizeof(MYVERTEX));
 	}

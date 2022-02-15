@@ -654,7 +654,7 @@ struct FinderGradeSelect : ObjectFinder {
 			values[i] = { vd->eval(ctx), vec[i] };
 		}
 		std::sort(values.begin(), values.end(), [this](auto & a, auto & b) {return byHighest ? (a.first > b.first) : (a.first < b.first); });
-		if (count <= 0 || count > vec.size())
+		if (count <= 0 || (size_t)count > vec.size())
 			count = vec.size();
 		std::vector<ServerGameObject*> res(count);
 		for (size_t i = 0; i < res.size(); i++)
