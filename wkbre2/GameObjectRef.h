@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <functional>
 
+struct CommonGameState;
 struct CommonGameObject;
 
 struct GameObjectRef {
@@ -14,12 +15,17 @@ struct GameObjectRef {
 
 	uint32_t objid;
 
-	template<typename Program, typename AnyGameObject = typename Program::GameObject>
-	AnyGameObject* getFrom() const {
+	template<int I = 1>
+	CommonGameObject* getFrom(CommonGameState* program) const {
 		if (objid != NULL_GOREF)
-			return Program::instance->findObject(objid);
+			return program->findObject(objid);
 		else
 			return nullptr;
+	}
+
+	template<typename Program, typename AnyGameObject = typename Program::GameObject>
+	AnyGameObject* getFrom() const {
+		return (AnyGameObject*)getFrom(Program::instance);
 	}
 
 	void set(uint32_t id) { objid = id; }

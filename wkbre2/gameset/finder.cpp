@@ -233,10 +233,10 @@ struct FinderNearestToSatisfy : CommonEval<FinderNearestToSatisfy, ObjectFinder>
 		using Program = typename CTX::Program;
 		using AnyGO = typename CTX::AnyGO;
 		float radius = vdradius->eval(ctx);
-		NNSearch<Program, AnyGO> search;
-		search.start(Program::instance, ctx->getSelf()->position, radius);
+		NNSearch search;
+		search.start(Program::instance, Program::instance->terrain, ctx->getSelf()->position, radius);
 		std::vector<AnyGO*> res;
-		while (AnyGO* obj = search.next()) {
+		while (AnyGO* obj = (AnyGO*)search.next()) {
 			if (!obj->isInteractable()) continue;
 			auto _ = ctx->change(ctx->candidate, obj);
 			if (vdcond->eval(ctx) > 0.0f)
@@ -608,10 +608,10 @@ struct FinderMetreRadius : CommonEval<FinderMetreRadius, ObjectFinder> {
 		using AnyGO = typename CTX::AnyGO;
 		float radius = vdradius->eval(ctx);
 		AnyGO* player = (useOriginalSelf ? ctx->get(ctx->chainOriginalSelf) : ctx->getSelf())->getPlayer();
-		NNSearch<Program, AnyGO> search;
-		search.start(Program::instance, ctx->getSelf()->position, radius);
+		NNSearch search;
+		search.start(Program::instance, Program::instance->terrain, ctx->getSelf()->position, radius);
 		std::vector<AnyGO*> res;
-		while (AnyGO* obj = search.next())
+		while (AnyGO* obj = (AnyGO*)search.next())
 			if (eligible(obj, player))
 				res.push_back(obj);
 		return res;
@@ -705,10 +705,10 @@ struct FinderTileRadius : CommonEval<FinderTileRadius, ObjectFinder> {
 		using Program = typename CTX::Program;
 		using AnyGO = typename CTX::AnyGO;
 		float radius = vdradius->eval(ctx);
-		NNSearch<Program, AnyGO> search;
-		search.start(Program::instance, ctx->getSelf()->position, radius);
+		NNSearch search;
+		search.start(Program::instance, Program::instance->terrain, ctx->getSelf()->position, radius);
 		std::vector<AnyGO*> res;
-		while (AnyGO* obj = search.next())
+		while (AnyGO* obj = (AnyGO*)search.next())
 			if (obj->isInteractable())
 				res.push_back(obj);
 		return res;

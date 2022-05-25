@@ -475,9 +475,9 @@ void MissileTask::onUpdate()
 	ServerGameObject* go = this->order->gameObject;
 
 	// unit collision
-	NNSearch<Server, ServerGameObject> nns;
-	nns.start(Server::instance, go->position, 15.0f);
-	while (ServerGameObject* col = nns.next()) {
+	NNSearch nns;
+	nns.start(Server::instance, Server::instance->terrain, go->position, 15.0f);
+	while (ServerGameObject* col = (ServerGameObject*)nns.next()) {
 		if (col->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING || col->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
 			if (col->getPlayer() != go->getPlayer() && col->isInteractable()) {
 				if (Model* model = col->blueprint->getModel(col->subtype, col->appearance, col->animationIndex, col->animationVariant)) {
