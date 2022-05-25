@@ -15,6 +15,7 @@
 #include <nlohmann/json.hpp>
 #include <codecvt>
 #include <atomic>
+#include <locale>
 
 Server *Server::instance = nullptr;
 

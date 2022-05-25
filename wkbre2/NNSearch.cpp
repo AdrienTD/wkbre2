@@ -28,7 +28,7 @@ PrgGameObject* NNSearch<Program, PrgGameObject>::next()
 	while (true) {
 		const auto& vec = server->tiles[tz * server->terrain->getNumPlayableTiles().first + tx].objList;
 		if ((size_t)it < vec.size()) {
-			PrgGameObject* obj = vec[it++].getFrom<Program>();
+			PrgGameObject* obj = vec[it++].template getFrom<Program>();
 			if (obj)
 				return obj;
 			else

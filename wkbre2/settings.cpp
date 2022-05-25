@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <codecvt>
+#include <locale>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
