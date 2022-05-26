@@ -115,12 +115,6 @@ namespace {
 		return true;
 	}
 
-	Matrix CreateWorldMatrix(const Vector3 &is, const Vector3 &ir, const Vector3 &it)
-	{
-		return Matrix::getScaleMatrix(is) * Matrix::getRotationYMatrix(ir.y) * Matrix::getRotationXMatrix(ir.x)
-			* Matrix::getRotationZMatrix(ir.z) * Matrix::getTranslationMatrix(it);
-	}
-
 	std::pair<bool, Vector3> getRayTriangleIntersection(const Vector3& rayStart, const Vector3& _rayDir, const Vector3& p1, const Vector3& p2, const Vector3& p3) {
 		Vector3 rayDir = _rayDir.normal();
 		Vector3 v2 = p2 - p1, v3 = p3 - p1;
@@ -240,7 +234,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 	}
 drawsub:
 	for (auto &typechildren : obj->children) {
-		GameObjBlueprint* blueprint = client->gameSet->getBlueprint(typechildren.first);
+		//GameObjBlueprint* blueprint = client->gameSet->getBlueprint(typechildren.first);
 		for (CommonGameObject* child : typechildren.second) {
 			drawObject((ClientGameObject*)child);
 		}

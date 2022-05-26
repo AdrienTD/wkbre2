@@ -530,7 +530,7 @@ struct OGL3Renderer : IRenderer {
 	}
 
 	// 3D Mesh drawing
-	virtual void BeginMeshDrawing() {
+	virtual void BeginMeshDrawing() override {
 		glDisable(GL_BLEND);
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_TRUE);

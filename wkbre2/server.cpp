@@ -1153,7 +1153,7 @@ void Server::tick()
 
 	static std::vector<SrvGORef> toprocess;
 	toprocess.clear();
-	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
+	const auto processObjOrders = [](ServerGameObject *obj, auto &func) -> void {
 		if (!obj->orderConfig.orders.empty() || obj->blueprint->receiveSightRangeEvents || obj->blueprint->removeWhenNotReferenced)
 			toprocess.emplace_back(obj);
 		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_ARMY) {

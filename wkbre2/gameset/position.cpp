@@ -358,6 +358,7 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 				x++; z++;
 			}
 		}
+		return { ox, oz }; // in the unfortunate case where no free tile was found
 	}
 	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		auto po = p->eval(ctx);

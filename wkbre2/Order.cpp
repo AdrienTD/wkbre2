@@ -88,7 +88,7 @@ void Order::advanceToNextTask()
 	}
 }
 
-Task::Task(int id, TaskBlueprint * blueprint, Order * order) : id(id), blueprint(blueprint), order(order)
+Task::Task(int id, TaskBlueprint * blueprint, Order * order) : order(order), id(id), blueprint(blueprint)
 {
 	this->triggers.resize(blueprint->triggers.size());
 	for (size_t i = 0; i < this->triggers.size(); i++) {

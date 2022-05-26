@@ -45,8 +45,8 @@ uint32_t readInt(FILE *f) { uint32_t temp; fread(&temp, 4, 1, f); return temp; }
 
 struct BCPDirectory
 {
-	BCPDirectory *dirs; uint ndirs;
-	BCPFile *files; uint nfiles;
+	BCPDirectory *dirs; int ndirs;
+	BCPFile *files; int nfiles;
 	std::string name;
 	BCPDirectory *parent;
 };
@@ -54,8 +54,8 @@ struct BCPDirectory
 struct BCPReader
 {
 	FILE *bcpfile;
-	uint fentof;
-	uint nfiles, ftsize;
+	int fentof;
+	int nfiles, ftsize;
 	BCPFileData *fent;
 	int bcpver;
 	BCPDirectory bcproot;
@@ -145,7 +145,7 @@ void BCPReader::ExtractFile(int id, char **out, int *outsize, int extraBytes)
 	const std::lock_guard<std::mutex> bml(bcpmutex);
 
 	fseek(bcpfile, fent[id].offset, SEEK_SET);
-	uint s = fent[id].endos - fent[id].offset;
+	int s = fent[id].endos - fent[id].offset;
 	mout = (char*)malloc(fent[id].size+extraBytes); if(!mout) ferr("Cannot alloc mem for loading a file.");
 	*out = mout;
 
@@ -393,7 +393,7 @@ void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 			if (HGLOBAL g = LoadResource(NULL, h))
 			{
 				void *p = LockResource(g);
-				uint siz = SizeofResource(NULL, h);
+				uint32_t siz = SizeofResource(NULL, h);
 				void *mout = malloc(siz+extraBytes);
 				memcpy(mout, p, siz);
 				*out = (char*)mout;
@@ -511,7 +511,7 @@ BCPWriter::WDirectory* BCPWriter::WDirectory::addDir(const char *name)
 	return nwd;
 }
 
-void BCPWriter::WDirectory::insertFile(uint id, const char *name)
+void BCPWriter::WDirectory::insertFile(uint32_t id, const char *name)
 {
 	files.emplace_back();
 	BCPFile* wf = &files.back();
@@ -540,7 +540,7 @@ BCPWriter::BCPWriter(const char *fn)
 	root.writer = this;
 }
 
-uint BCPWriter::createFile(void *pnt, uint siz)
+uint32_t BCPWriter::createFile(void *pnt, uint32_t siz)
 {
 	uint id = (uint)ftable.size();
 	ftable.emplace_back();

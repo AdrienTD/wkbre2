@@ -3,6 +3,7 @@
 // Licensed under the GNU General Public License 3
 
 #include "Model.h"
+#include "util/util.h"
 #include <mutex>
 
 static std::recursive_mutex g_modelPreparationMutex;
@@ -26,6 +27,9 @@ Model * ModelCache::getModel(const std::string & filename) {
 		AnimatedModel *m = new AnimatedModel(this, filename);
 		models[filename].reset(m);
 		return m;
+	}
+	else {
+		ferr("Model file %s has wrong extension.", filename.c_str());
 	}
 }
 

@@ -183,7 +183,7 @@ struct D3D9Renderer : public IRenderer
 
 	int maxvbi;
 
-	void Init()
+	void Init() override
 	{
 		SDL_SysWMinfo syswm;
 		SDL_VERSION(&syswm.version);
@@ -235,7 +235,7 @@ struct D3D9Renderer : public IRenderer
 		ddev->CreateVertexDeclaration(batchvdecl, &dvdbatch);
 	}
 
-	void Reset()
+	void Reset() override
 	{
 		// Release batches
 		for(RBatchD3D9 *b : rblist)
@@ -262,7 +262,7 @@ struct D3D9Renderer : public IRenderer
 
 	//***********************************//
 
-	void BeginMeshDrawing()
+	void BeginMeshDrawing() override
 	{
 		ddev->SetVertexDeclaration(meshddvd);
 		ddev->SetRenderState(D3DRS_LIGHTING, FALSE);
@@ -281,23 +281,23 @@ struct D3D9Renderer : public IRenderer
 
 	//***********************************//
 
-	void SetTransformMatrix(const Matrix *m)
+	void SetTransformMatrix(const Matrix *m) override
 	{
 		//ddev->SetTransform(D3DTS_VIEW, (D3DMATRIX*)m);
 		ddev->SetTransform(D3DTS_PROJECTION, (const D3DMATRIX*)m);
 	}
 
-	void SetTexture(uint x, texture t)
+	void SetTexture(uint x, texture t) override
 	{
 		ddev->SetTexture(x, (IDirect3DTexture9*)t);
 	}
 
-	void NoTexture(uint x)
+	void NoTexture(uint x) override
 	{
 		ddev->SetTexture(x, 0);
 	}
 
-	void BeginDrawing()
+	void BeginDrawing() override
 	{
 		static D3DMATRIX idmx = { 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1 };
 		ddev->BeginScene();
@@ -306,7 +306,7 @@ struct D3D9Renderer : public IRenderer
 		//ddev->SetTransform(D3DTS_PROJECTION, (D3DMATRIX*)&idmx);
 	}
 
-	void EndDrawing()
+	void EndDrawing() override
 	{
 		ddev->EndScene();
 		//drawframes++;
@@ -320,14 +320,14 @@ struct D3D9Renderer : public IRenderer
 		}
 	}
 
-	void ClearFrame(bool clearColors, bool clearDepth, uint32_t color) {
+	void ClearFrame(bool clearColors, bool clearDepth, uint32_t color) override {
 		DWORD flags = 0;
 		if (clearColors) flags |= D3DCLEAR_TARGET;
 		if (clearDepth) flags |= D3DCLEAR_ZBUFFER;
 		ddev->Clear(NULL, NULL, flags, color, 1.0f, 0);
 	}
 
-	void InitRectDrawing()
+	void InitRectDrawing() override
 	{
 		ddev->SetFVF(FVF_MYVERTEX);
 		ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
@@ -343,7 +343,7 @@ struct D3D9Renderer : public IRenderer
 		ddev->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
 	}
 
-	void DrawRect(int x, int y, int w, int h, int c, float u, float v, float o, float p)
+	void DrawRect(int x, int y, int w, int h, int c, float u, float v, float o, float p) override
 	{
 		auto f = [](int n) {return (float)n; };
 		verts[0].x = f(x);		verts[0].y = f(y);		verts[0].u = u;		verts[0].v = v;
@@ -354,7 +354,7 @@ struct D3D9Renderer : public IRenderer
 		ddev->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, verts, sizeof(MYVERTEX));
 	}
 
-	void DrawGradientRect(int x, int y, int w, int h, int c0, int c1, int c2, int c3)
+	void DrawGradientRect(int x, int y, int w, int h, int c0, int c1, int c2, int c3) override
 	{
 		auto f = [](int n) {return (float)n; };
 		verts[0].x = f(x);		verts[0].y = f(y);		verts[0].u = 0.0f;	verts[0].v = 0.0f;
@@ -367,7 +367,7 @@ struct D3D9Renderer : public IRenderer
 		ddev->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, verts, sizeof(MYVERTEX));
 	}
 
-	void DrawFrame(int x, int y, int w, int h, int c)
+	void DrawFrame(int x, int y, int w, int h, int c) override
 	{
 		auto f = [](int n) {return (float)n; };
 		verts[0].x = f(x);		verts[0].y = f(y);
@@ -381,7 +381,7 @@ struct D3D9Renderer : public IRenderer
 
 	//***********************************//
 
-	texture CreateTexture(const Bitmap& bm, int mipmaps)
+	texture CreateTexture(const Bitmap& bm, int mipmaps) override
 	{
 		const Bitmap *c = &bm;
 		Bitmap cvtbmp;
@@ -402,14 +402,14 @@ struct D3D9Renderer : public IRenderer
 		return (texture)dt;
 	}
 
-	void FreeTexture(texture t)
+	void FreeTexture(texture t) override
 	{
 		((IDirect3DTexture9*)t)->Release();
 	}
 
 	//***********************************//
 
-	void BeginMapDrawing()
+	void BeginMapDrawing() override
 	{
 		ddev->SetRenderState(D3DRS_LIGHTING, FALSE);
 		ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
@@ -427,7 +427,7 @@ struct D3D9Renderer : public IRenderer
 
 	//***********************************//
 
-	void SetFog(uint32_t color, float farz)
+	void SetFog(uint32_t color, float farz) override
 	{
 		float f;
 		ddev->SetRenderState(D3DRS_FOGENABLE, TRUE);
@@ -437,51 +437,51 @@ struct D3D9Renderer : public IRenderer
 		f = farz-8; ddev->SetRenderState(D3DRS_FOGEND, *(int*)&f);
 	}
 
-	void DisableFog()
+	void DisableFog() override
 	{
 		ddev->SetRenderState(D3DRS_FOGENABLE, FALSE);
 	}
 
-	void EnableAlphaTest()
+	void EnableAlphaTest() override
 	{
 		ddev->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
 	}
 
-	void DisableAlphaTest()
+	void DisableAlphaTest() override
 	{
 		ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 	}
 
-	void EnableColorBlend()
+	void EnableColorBlend() override
 	{
 		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
 		ddev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
 		ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
 	}
 
-	void DisableColorBlend()
+	void DisableColorBlend() override
 	{
 		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
 	}
 
-	void SetBlendColor(int c)
+	void SetBlendColor(int c) override
 	{
 		ddev->SetRenderState(D3DRS_BLENDFACTOR, c);
 	}
 
-	void EnableAlphaBlend()
+	void EnableAlphaBlend() override
 	{
 		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
 		ddev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 		ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 	}
 
-	void DisableAlphaBlend()
+	void DisableAlphaBlend() override
 	{
 		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
 	}
 
-	RBatch *CreateBatch(int mv, int mi)
+	RBatch *CreateBatch(int mv, int mi) override
 	{
 		RBatchD3D9* b = new RBatchD3D9;
 		b->maxverts = mv; b->maxindis = mi;
@@ -493,12 +493,12 @@ struct D3D9Renderer : public IRenderer
 		return b;
 	}
 
-	void BeginBatchDrawing()
+	void BeginBatchDrawing() override
 	{
 		ddev->SetVertexDeclaration(dvdbatch);
 	}
 
-	RVertexBuffer *CreateVertexBuffer(int nv)
+	RVertexBuffer *CreateVertexBuffer(int nv) override
 	{
 		RVertexBufferD3D9 *r = new RVertexBufferD3D9;
 		r->size = nv;
@@ -506,7 +506,7 @@ struct D3D9Renderer : public IRenderer
 		return r;
 	}
 
-	RIndexBuffer *CreateIndexBuffer(int ni)
+	RIndexBuffer *CreateIndexBuffer(int ni) override
 	{
 		RIndexBufferD3D9 *r = new RIndexBufferD3D9;
 		r->size = ni;
@@ -514,40 +514,40 @@ struct D3D9Renderer : public IRenderer
 		return r;
 	}
 
-	void SetVertexBuffer(RVertexBuffer *_rv)
+	void SetVertexBuffer(RVertexBuffer *_rv) override
 	{
 		maxvbi = ((RVertexBufferD3D9*)_rv)->size;
 		ddev->SetStreamSource(0, ((RVertexBufferD3D9*)_rv)->b, 0, sizeof(batchVertex));
 	}
 
-	void SetIndexBuffer(RIndexBuffer *_ri)
+	void SetIndexBuffer(RIndexBuffer *_ri) override
 	{
 		ddev->SetIndices(((RIndexBufferD3D9*)_ri)->b);
 	}
 
-	void DrawBuffer(int first, int count)
+	void DrawBuffer(int first, int count) override
 	{
 		int vertsPerPrim = (g_d3d9currentTopology == D3DPT_LINELIST) ? 2 : 3;
 		ddev->DrawIndexedPrimitive(g_d3d9currentTopology, 0, 0, maxvbi, first, count / vertsPerPrim);
 	}
 
-	void EnableScissor()
+	void EnableScissor() override
 	{
 		ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 	}
 
-	void DisableScissor()
+	void DisableScissor() override
 	{
 		ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 	}
 
-	void SetScissorRect(int x, int y, int w, int h)
+	void SetScissorRect(int x, int y, int w, int h) override
 	{
 		RECT r = {x, y, x+w, y+h};
 		ddev->SetScissorRect(&r);
 	}
 
-	void InitImGuiDrawing()
+	void InitImGuiDrawing() override
 	{
 		ddev->SetVertexDeclaration(dvdbatch);
 
@@ -579,19 +579,19 @@ struct D3D9Renderer : public IRenderer
 		SetTransformMatrix(&m);
 	}
 
-	void BeginLakeDrawing()
+	void BeginLakeDrawing() override
 	{
 		ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
 		ddev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 		ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 	}
 
-	int ConvertColor(int c)
+	int ConvertColor(int c) override
 	{
 		return c;
 	}
 
-	void UpdateTexture(texture t, const Bitmap& bmp)
+	void UpdateTexture(texture t, const Bitmap& bmp) override
 	{
 		D3DLOCKED_RECT lr;
 		((IDirect3DTexture9*)t)->LockRect(0, &lr, NULL, 0);
@@ -600,12 +600,12 @@ struct D3D9Renderer : public IRenderer
 		((IDirect3DTexture9*)t)->UnlockRect(0);
 	}
 
-	void EnableDepth()
+	void EnableDepth() override
 	{
 		ddev->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
 	}
 
-	void DisableDepth()
+	void DisableDepth() override
 	{
 		ddev->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
 	}

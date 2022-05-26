@@ -41,7 +41,7 @@ struct Order {
 	int nextTaskId = 0;
 	int currentTask = -1;
 
-	Order(int id, OrderBlueprint *blueprint, ServerGameObject *gameObject) : id(id), blueprint(blueprint), gameObject(gameObject) {}
+	Order(int id, OrderBlueprint *blueprint, ServerGameObject *gameObject) : gameObject(gameObject), id(id), blueprint(blueprint) {}
 
 	bool isDone() const { return state >= OTS_ABORTED; }
 	bool isWorking() const { return (state == OTS_PROCESSING) || (state == OTS_SUSPENDED); }

@@ -37,6 +37,7 @@ namespace {
 				x++; z++;
 			}
 		}
+		return { -1, -1 };
 	}
 }
 

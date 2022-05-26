@@ -98,7 +98,7 @@ struct D3D11Renderer : IRenderer {
 	virtual void BeginLakeDrawing() override;
 
 	// 3D Mesh drawing
-	virtual void BeginMeshDrawing();
+	virtual void BeginMeshDrawing() override;
 
 	// Batch drawing
 	virtual RBatch* CreateBatch(int mv, int mi) override;

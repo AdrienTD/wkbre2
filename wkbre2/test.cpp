@@ -305,7 +305,7 @@ void FileExplorer()
 
 	ImGui::Text("Directory");
 	ImGui::NextColumn();
-	ImGui::Text(t29curdir.c_str());
+	ImGui::TextUnformatted(t29curdir.c_str());
 	ImGui::Separator();
 
 	ImGui::NextColumn();

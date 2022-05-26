@@ -66,7 +66,7 @@ template<typename TProgram, typename TAnyGO> struct SpecificScriptContext : Scri
 	AnyGO* get(const CtxElement& var) const { return (AnyGO*)ScriptContext::get(var); }
 	AnyGO* getSelf() const { return get(self); }
 
-	SpecificScriptContext(Program* program, AnyGO* self = nullptr) : program(program), ScriptContext(program, self) {}
+	SpecificScriptContext(Program* program, AnyGO* self = nullptr) : ScriptContext(program, self), program(program) {}
 };
 
 struct SrvScriptContext : SpecificScriptContext<Server, ServerGameObject> {

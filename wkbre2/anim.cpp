@@ -80,17 +80,17 @@ const Vector3* Anim::interpolateNormals(uint32_t animTime, const Mesh& mesh)
 
 	animnorms.resize(normalFrames.numNormals);
 	if ((int32_t)animTime < 0) animTime = 0;
-	int animtime = animTime % this->duration;
+	uint32_t animtime = animTime % this->duration;
 	auto& ac = normalFrames;
-	int cf = 0;
+	size_t cf = 0;
 	for (; cf < ac.numFrames - 1; cf++)
 		if (ac.frameTimes[cf + 1] >= animtime)
 			break;
-	int frame = cf;
+	size_t frame = cf;
 	for (uint32_t i = 0; i < ac.numNormals; i++) {
 		const auto& v1 = Mesh::s_normalTable[ac.norms[frame][i]];
 		const auto& v2 = Mesh::s_normalTable[ac.norms[frame+1][i]];
-		Vector3 vi = v1 + (v2 - v1) * (animtime - ac.frameTimes[frame]) / (ac.frameTimes[frame + 1] - ac.frameTimes[frame]);
+		Vector3 vi = v1 + (v2 - v1) * (float)(animtime - ac.frameTimes[frame]) / (float)(ac.frameTimes[frame + 1] - ac.frameTimes[frame]);
 		animnorms[mesh.normalRemapper[i]] = vi.normal();
 	}
 	return animnorms.data();
@@ -109,15 +109,15 @@ const float* Anim::interpolate(uint32_t animTime, const Mesh& mesh)
 
 	animverts.resize(3 * this->numVertices);
 	if ((int32_t)animTime < 0) animTime = 0;
-	int animtime = animTime % this->duration;
+	uint32_t animtime = animTime % this->duration;
 	for (int c = 0; c < 3; c++) {
 		auto& ac = this->coords[c];
-		int cf = 0;
+		size_t cf = 0;
 		for (; cf < ac.numFrames - 1; cf++)
 			if (ac.frameTimes[cf + 1] >= animtime)
 				break;
-		int frame = cf;
-		for (int i = 0; i < this->numVertices; i++) {
+		size_t frame = cf;
+		for (size_t i = 0; i < this->numVertices; i++) {
 			float z1 = ((ac.verts[frame][i / 3] >> (11 * (i % 3))) & 1023) / 1023.0f;
 			float z2 = ((ac.verts[frame + 1][i / 3] >> (11 * (i % 3))) & 1023) / 1023.0f;
 			float v1 = ac.vertadd[frame] + ac.vertmul[frame] * z1;
@@ -146,7 +146,7 @@ AttachmentPointState Anim::getAPState(size_t index, uint32_t animTime)
 
 size_t Anim::AnimAttachPoint::getAPFrame(uint32_t animTime)
 {
-	int frame = 0;
+	size_t frame = 0;
 	for (; frame < numFrames - 1; frame++)
 		if (frameTimes[frame + 1] >= animTime)
 			break;

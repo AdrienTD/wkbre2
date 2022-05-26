@@ -24,7 +24,7 @@ namespace {
 		ImVec4(0, 1, 0, 1), ImVec4(1, 0, 1, 1), ImVec4(1, 0.5f, 0, 1), ImVec4(0, 1, 1, 1)
 	};
 
-	bool IGPlayerChooser(char *popupid, CliGORef &ref, Client *client)
+	bool IGPlayerChooser(const char *popupid, CliGORef &ref, Client *client)
 	{
 		bool r = false;
 		ImGui::PushID(popupid);
@@ -85,11 +85,11 @@ void ClientDebugger::draw()
 		client->sendMessage(newmsg);
 	ImGui::SameLine();
 	if (ImGui::Button("Send number"))
-		client->sendMessage(itoa(num++, newmsg, 10));
+		client->sendMessage(std::to_string(num++));
 	ImGui::SameLine();
 	if (ImGui::Button("Stress")) {
 		for (int i = 0; i < 256; i++)
-			client->sendMessage(itoa(num++, newmsg, 10));
+			client->sendMessage(std::to_string(num++));
 	}
 	ImGui::Separator();
 	ImGui::BeginChild("ChatMessages", ImVec2(0,0), false);

@@ -15,7 +15,7 @@ struct PFNUnknown : PlanNodeBlueprint {
 	};
 	std::string name;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 	}
 	virtual PlanNodeState* createState() override {
 		return new State;
@@ -33,7 +33,7 @@ struct PFNAction : PlanNodeBlueprint {
 	};
 	Action* action;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		action = ReadAction(gsf, gs);
 	}
 	virtual PlanNodeState* createState() override {
@@ -53,7 +53,7 @@ struct PFNWaitFor : PlanNodeBlueprint {
 	};
 	std::unique_ptr<ValueDeterminer> waitTime;
 	
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		waitTime.reset(ReadValueDeterminer(gsf, gs));
 	}
 	virtual PlanNodeState* createState() override {
@@ -72,7 +72,7 @@ struct PFNWaitUntil : PlanNodeBlueprint {
 	};
 	std::unique_ptr<ValueDeterminer> value;
 	
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		value.reset(ReadValueDeterminer(gsf, gs));
 	}
 	virtual PlanNodeState* createState() override {
@@ -92,7 +92,7 @@ struct PFNStartLoop : PlanNodeBlueprint {
 	PlanNodeSequence sequence;
 	std::unique_ptr<ValueDeterminer> loopBreakCondition;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sequence.parse(gsf, gs, "END_LOOP");
 		if (gsf.nextString() == "IF")
 			loopBreakCondition.reset(ReadValueDeterminer(gsf, gs));
@@ -124,7 +124,7 @@ struct PFNDeployArmyFrom : PlanNodeBlueprint {
 	const ArmyCreationSchedule* schedule;
 	std::unique_ptr<ObjectFinder> finder;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		schedule = gs.armyCreationSchedules.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -176,7 +176,7 @@ struct PFNNoOperation : PlanNodeBlueprint {
 	};
 	std::string name;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 	}
 	virtual PlanNodeState* createState() override {
 		return new State;
@@ -196,7 +196,7 @@ struct PFNChooseAtRandom : PlanNodeBlueprint {
 	};
 	PlanNodeSequence sequence;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sequence.parse(gsf, gs, "END_CHOOSE_AT_RANDOM");
 	}
 	virtual PlanNodeState* createState() override {
@@ -223,7 +223,7 @@ struct PFNRegisterWorkOrder : PlanNodeBlueprint {
 	const WorkOrder* workOrder;
 	std::unique_ptr<ObjectFinder> cityFinder;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		auto str = gsf.nextString();
 		if (str != "FINDER_RESULTS")
 			ferr("REGISTER_WORK_ORDER must be followed by a FINDER_RESULTS!");
@@ -252,7 +252,7 @@ struct PFNIf : PlanNodeBlueprint {
 	std::unique_ptr<ValueDeterminer> condition;
 	PlanNodeSequence sequenceTrue, sequenceFalse;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		condition.reset(ReadValueDeterminer(gsf, gs));
 
 		gsf.advanceLine();
@@ -295,7 +295,7 @@ struct PFNEmbeddedPlan : PlanNodeBlueprint {
 	};
 	PlanNodeSequence* embeddedPlan;
 
-	virtual void parse(GSFileParser& gsf, const GameSet& gs) {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		embeddedPlan = const_cast<PlanNodeSequence*>(gs.plans.readPtr(gsf));
 	}
 	virtual PlanNodeState* createState() override {
