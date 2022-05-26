@@ -88,7 +88,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	float computeSpeed();
 };
 
-struct Server : SpecificGameState<ServerGameObject>
+struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 {
 	using GameObject = ServerGameObject;
 	static Server *instance;
@@ -101,7 +101,6 @@ struct Server : SpecificGameState<ServerGameObject>
 
 	//ServerGameObject *level;
 	//std::map<uint32_t, ServerGameObject*> idmap;
-	Terrain *terrain;
 
 	struct DelayedSequence {
 		ActionSequence* actionSequence;
@@ -135,7 +134,7 @@ struct Server : SpecificGameState<ServerGameObject>
 
 	ServerGameObject* objToDelete = nullptr, * objToDeleteLast = nullptr;
 
-	Server() : terrain(nullptr) { instance = this; }
+	Server() { instance = this; }
 
 	void loadSaveGame(const char *filename);
 	ServerGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);

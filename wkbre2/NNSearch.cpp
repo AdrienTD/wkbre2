@@ -8,15 +8,14 @@
 #include "terrain.h"
 #include <cassert>
 
-void NNSearch::start(CommonGameState* server, Terrain* terrain, const Vector3 &center, float radius)
+void NNSearch::start(CommonGameState* server, const Vector3 &center, float radius)
 {
 	this->gameState = server;
-	this->terrain = terrain;
 	int tileradius = static_cast<int>(radius / 5.0f + 1.5f);
 	int ctx = static_cast<int>(center.x / 5.0f), ctz = static_cast<int>(center.z / 5.0f);
 	minX = ctx - tileradius; minZ = ctz - tileradius;
 	maxX = ctx + tileradius; maxZ = ctz + tileradius;
-	auto area = terrain->getNumPlayableTiles();
+	auto area = gameState->terrain->getNumPlayableTiles();
 	auto clamp = [](int &x, int lim) {if (x < 0) x = 0; else if (x >= lim) x = lim - 1; };
 	clamp(minX, area.first); clamp(maxX, area.first); clamp(minZ, area.second), clamp(maxZ, area.second);
 	tx = minX; tz = minZ; it = 0;
@@ -25,7 +24,7 @@ void NNSearch::start(CommonGameState* server, Terrain* terrain, const Vector3 &c
 CommonGameObject* NNSearch::next()
 {
 	while (true) {
-		const auto& vec = gameState->tiles[tz * terrain->getNumPlayableTiles().first + tx].objList;
+		const auto& vec = gameState->tiles[tz * gameState->terrain->getNumPlayableTiles().first + tx].objList;
 		if ((size_t)it < vec.size()) {
 			CommonGameObject* obj = vec[it++].getFrom(gameState);
 			if (obj)

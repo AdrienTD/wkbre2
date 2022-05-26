@@ -20,6 +20,12 @@
 struct GameObjBlueprint;
 struct Model;
 struct GameSet;
+struct Terrain;
+
+enum class ProgramType {
+	SERVER = 1,
+	CLIENT = 2
+};
 
 struct CommonGameObject {
 	uint32_t id;
@@ -90,6 +96,7 @@ template<typename Program, typename AnyGameObject> struct SpecificGameObject : C
 };
 
 struct CommonGameState {
+	ProgramType programType;
 	GameSet* gameSet = nullptr;
 
 	CommonGameObject* level = nullptr;
@@ -106,14 +113,22 @@ struct CommonGameState {
 		bool buildingPassable;
 	};
 	std::unique_ptr<Tile[]> tiles;
+	Terrain* terrain = nullptr;
 
 	CommonGameObject* getLevel() const { return level; }
 	CommonGameObject* findObject(uint32_t id) { auto it = idmap.find(id); return (it != idmap.end()) ? it->second : nullptr; }
 
 	int getDiplomaticStatus(CommonGameObject* a, CommonGameObject* b) const;
+
+	bool isServer() const { return programType == ProgramType::SERVER; }
+	bool isClient() const { return programType == ProgramType::CLIENT; }
+	const char* getProgramName() const { return isServer() ? "Server" : isClient() ? "Client" : "?"; }
+
+	CommonGameState(ProgramType programType) : programType(programType) {}
 };
 
-template<typename AnyGameObject> struct SpecificGameState : CommonGameState {
+template<typename AnyGameObject, ProgramType PROGTYPE> struct SpecificGameState : CommonGameState {
 	AnyGameObject* getLevel() const { return (AnyGameObject*)level; }
 	AnyGameObject* findObject(uint32_t id) { return (AnyGameObject*)CommonGameState::findObject(id); }
+	SpecificGameState() : CommonGameState(PROGTYPE) {}
 };

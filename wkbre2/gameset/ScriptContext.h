@@ -6,6 +6,7 @@
 
 #include <type_traits>
 
+struct CommonGameState;
 struct Server;
 struct Client;
 struct CommonGameObject;
@@ -20,7 +21,7 @@ template<typename T> struct TemporaryValue {
 	TemporaryValue(T & var, const T &val) : var(var), original(var) { var = val; }
 	~TemporaryValue() { var = original; }
 
-	explicit operator bool() const { return true; }
+	explicit constexpr operator bool() const { return true; }
 };
 
 struct ScriptContext {
@@ -42,8 +43,12 @@ struct ScriptContext {
 	CommonGameObject* getSelf() const { return get(self); }
 	TemporaryValue<CommonGameObject*> changeSelf(CommonGameObject* obj) { return change(self, obj); }
 
-	ScriptContext(CommonGameObject* self = nullptr) : self{self} {}
+	template<int I = 1> bool isServer() const { return gameState->isServer(); }
+	template<int I = 1> bool isClient() const { return gameState->isClient(); }
 
+	ScriptContext(CommonGameState* gameState, CommonGameObject* self = nullptr) : gameState(gameState), self{self} {}
+
+	CommonGameState* gameState;
 	CtxElement self;
 	CtxElement candidate, creator, packageSender, sequenceExecutor, target, orderGiver, chainOriginalSelf, collisionSubject, selectedObject;
 };
@@ -61,7 +66,7 @@ template<typename TProgram, typename TAnyGO> struct SpecificScriptContext : Scri
 	AnyGO* get(const CtxElement& var) const { return (AnyGO*)ScriptContext::get(var); }
 	AnyGO* getSelf() const { return get(self); }
 
-	SpecificScriptContext(Program* program, AnyGO* self = nullptr) : program(program), ScriptContext(self) {}
+	SpecificScriptContext(Program* program, AnyGO* self = nullptr) : program(program), ScriptContext(program, self) {}
 };
 
 struct SrvScriptContext : SpecificScriptContext<Server, ServerGameObject> {

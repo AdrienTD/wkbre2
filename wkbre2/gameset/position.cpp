@@ -21,9 +21,9 @@
 #include "gameset.h"
 
 namespace {
-	OrientedPosition PosFromObjVec(const std::vector<ServerGameObject*> &vec) {
+	OrientedPosition PosFromObjVec(const std::vector<CommonGameObject*> &vec) {
 		OrientedPosition sum;
-		for (ServerGameObject *obj : vec)
+		for (CommonGameObject* obj : vec)
 			sum += {obj->position, obj->orientation};
 		return vec.empty() ? OrientedPosition() : (sum / (float)vec.size());
 	}
@@ -31,9 +31,9 @@ namespace {
 
 struct PDUnknown : PositionDeterminer {
 	std::string name;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override
+	virtual OrientedPosition eval(ScriptContext* ctx) override
 	{
-		ferr("Unknown position determiner %s called from Server!", name.c_str());
+		ferr("Unknown position determiner %s called from %s!", name.c_str(), ctx->gameState->getProgramName());
 		return OrientedPosition();
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override
@@ -44,7 +44,7 @@ struct PDUnknown : PositionDeterminer {
 
 struct PDLocationOf : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override
+	virtual OrientedPosition eval(ScriptContext* ctx) override
 	{
 		return PosFromObjVec(finder->eval(ctx));
 	}
@@ -56,11 +56,7 @@ struct PDLocationOf : PositionDeterminer {
 
 struct PDAbsolutePosition : PositionDeterminer {
 	OrientedPosition opos;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override
-	{
-		return opos;
-	}
-	virtual OrientedPosition eval(CliScriptContext* ctx) override
+	virtual OrientedPosition eval(ScriptContext* ctx) override
 	{
 		return opos;
 	}
@@ -76,7 +72,7 @@ struct PDAbsolutePosition : PositionDeterminer {
 };
 
 struct PDCentreOfMap : PositionDeterminer {
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		Vector3 pos;
 		std::tie(pos.x, pos.z) = Server::instance->terrain->getPlayableArea();
 		pos.y = Server::instance->terrain->getHeight(pos.x, pos.z);
@@ -89,7 +85,7 @@ struct PDCentreOfMap : PositionDeterminer {
 struct PDThisSideOf : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a, b;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		OrientedPosition o = PosFromObjVec(a->eval(ctx)), p = PosFromObjVec(b->eval(ctx));
 		Vector3 d = (o.position - p.position).normal();
 		return { p.position + d * v->eval(ctx), atan2f(d.x, -d.z) };
@@ -104,7 +100,7 @@ struct PDThisSideOf : PositionDeterminer {
 struct PDThisOtherSideOf : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a, b;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		OrientedPosition o = PosFromObjVec(a->eval(ctx)), p = PosFromObjVec(b->eval(ctx));
 		Vector3 d = (p.position - o.position).normal();
 		return { p.position + d * v->eval(ctx), atan2f(d.x, -d.z) };
@@ -119,7 +115,7 @@ struct PDThisOtherSideOf : PositionDeterminer {
 struct PDNearestValidPositionFor : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a;
 	std::unique_ptr<PositionDeterminer> p;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		// TODO
 		return p->eval(ctx);
 	}
@@ -133,7 +129,7 @@ struct PDOutAtAngle : public PositionDeterminer
 {
 	std::unique_ptr<ObjectFinder> f;
 	std::unique_ptr<ValueDeterminer> u, v;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		OrientedPosition po = PosFromObjVec(f->eval(ctx));
 		po.rotation.y -= u->eval(ctx) * (float)M_PI / 180;
 		float l = v->eval(ctx);
@@ -152,7 +148,7 @@ struct PDOutAtAngle : public PositionDeterminer
 struct PDTowards : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a, b;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		OrientedPosition o = PosFromObjVec(a->eval(ctx));
 		OrientedPosition p = PosFromObjVec(b->eval(ctx));
 		Vector3 d = (p.position - o.position).normal2xz();
@@ -169,7 +165,7 @@ struct PDTowards : public PositionDeterminer {
 struct PDAwayFrom : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> a, b;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		OrientedPosition o = PosFromObjVec(a->eval(ctx));
 		OrientedPosition p = PosFromObjVec(b->eval(ctx));
 		Vector3 d = (o.position - p.position).normal2xz();
@@ -186,7 +182,7 @@ struct PDAwayFrom : public PositionDeterminer {
 struct PDInFrontOf : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> f;
 	std::unique_ptr<ValueDeterminer> v;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		OrientedPosition op = PosFromObjVec(f->eval(ctx));
 		Vector3 d{ sinf(op.rotation.y), 0.0f, -cosf(op.rotation.y) };
 		op.position += d * v->eval(ctx);
@@ -201,7 +197,7 @@ struct PDInFrontOf : public PositionDeterminer {
 struct PDOffsetFrom : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> f;
 	std::unique_ptr<ValueDeterminer> x, y, z;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		return PosFromObjVec(f->eval(ctx)) + OrientedPosition(Vector3(x->eval(ctx), y->eval(ctx), z->eval(ctx)));
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -218,8 +214,8 @@ struct PDNearestAttachmentPoint : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<PositionDeterminer> pos;
 	std::unique_ptr<ValueDeterminer> tochoose;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
-		ServerGameObject* obj = finder->getFirst(ctx);
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
+		CommonGameObject* obj = finder->getFirst(ctx);
 		if (Model* model = obj->getModel()) {
 			auto target = pos->eval(ctx);
 			size_t numAPs = model->getNumAPs();
@@ -259,7 +255,7 @@ struct PDNearestAttachmentPoint : public PositionDeterminer {
 
 struct PDSpawnTilePosition : PositionDeterminer {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		// TODO
 		return PosFromObjVec(finder->eval(ctx));
 	}
@@ -273,7 +269,7 @@ struct PDMatchingOffset : PositionDeterminer {
 	std::unique_ptr<PositionDeterminer> cr;
 	std::unique_ptr<PositionDeterminer> co;
 
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		OrientedPosition pp = cp->eval(ctx);
 		OrientedPosition pr = cr->eval(ctx);
 		OrientedPosition po = co->eval(ctx);
@@ -295,8 +291,8 @@ struct PDMatchingOffset : PositionDeterminer {
 };
 
 struct PDFiringAttachmentPoint : PositionDeterminer {
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
-		ServerGameObject* obj = ctx->getSelf();
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
+		CommonGameObject* obj = ctx->getSelf();
 		Model* model = obj->blueprint->getModel(obj->subtype, obj->appearance, obj->animationIndex, obj->animationVariant);
 		if (model) {
 			size_t numAPs = model->getNumAPs();
@@ -316,14 +312,14 @@ struct PDFiringAttachmentPoint : PositionDeterminer {
 struct PDNearestValidStampdownPos : PositionDeterminer {
 	GameObjBlueprint* objbp;
 	std::unique_ptr<PositionDeterminer> p;
-	bool isTileFree(Server* server, int tx, int tz) {
+	bool isTileFree(CommonGameState* server, int tx, int tz) {
 		int sx, sz;
 		std::tie(sx, sz) = server->terrain->getNumPlayableTiles();
 		if (tx >= 0 && tx < sx && tz >= 0 && tz < sz)
 			return !server->tiles[tz * sx + tx].building.getFrom<Server>();
 		return false;
 	}
-	bool canBuildOn(Server* server, int tx, int tz) {
+	bool canBuildOn(CommonGameState* server, int tx, int tz) {
 		for (auto& to : objbp->footprint->tiles) {
 			if (true /*!to.mode*/) {
 				int px = tx + to.offsetX, pz = tz + to.offsetZ;
@@ -333,7 +329,7 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 		}
 		return true;
 	}
-	std::pair<int, int> findPos(Server* server, int ox, int oz) {
+	std::pair<int, int> findPos(CommonGameState* server, int ox, int oz) {
 		if (canBuildOn(server, ox, oz))
 			return { ox, oz };
 		auto area = server->terrain->getNumPlayableTiles();
@@ -363,16 +359,16 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 			}
 		}
 	}
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		auto po = p->eval(ctx);
 		if (!objbp->footprint)
 			return po;
 		int ox = (int)((po.position.x - objbp->footprint->originX) / 5.0f);
 		int oz = (int)((po.position.z - objbp->footprint->originZ) / 5.0f);
-		std::tie(ox, oz) = findPos(ctx->server, ox, oz);
+		std::tie(ox, oz) = findPos(ctx->gameState, ox, oz);
 		float fx = ox * 5 + objbp->footprint->originX + 2.5f;
 		float fz = oz * 5 + objbp->footprint->originZ + 2.5f;
-		return { Vector3(fx, ctx->server->terrain->getHeight(fx, fz), fz) };
+		return { Vector3(fx, ctx->gameState->terrain->getHeight(fx, fz), fz) };
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		auto cursor = gsf.cursor;
@@ -388,8 +384,8 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 struct PDRandomAttachmentPoint : public PositionDeterminer {
 	std::string sAttachTag;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
-		ServerGameObject* obj = finder->getFirst(ctx);
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
+		CommonGameObject* obj = finder->getFirst(ctx);
 		if (Model* model = obj->getModel()) {
 			size_t numAPs = model->getNumAPs();
 
@@ -419,16 +415,16 @@ struct PDRandomAttachmentPoint : public PositionDeterminer {
 struct PDNearestConstructionSite : public PDNearestValidStampdownPos {
 	std::unique_ptr<ValueDeterminer> val1, val2, val3;
 	std::unique_ptr<ObjectFinder> fExemptTilesReservedBy;
-	virtual OrientedPosition eval(SrvScriptContext* ctx) override {
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		auto po = p->eval(ctx);
 		if (!objbp->footprint)
 			return po;
 		int ox = (int)((po.position.x - objbp->footprint->originX) / 5.0f);
 		int oz = (int)((po.position.z - objbp->footprint->originZ) / 5.0f);
-		std::tie(ox, oz) = findPos(ctx->server, ox, oz);
+		std::tie(ox, oz) = findPos(ctx->gameState, ox, oz);
 		float fx = ox * 5 + objbp->footprint->originX + 2.5f;
 		float fz = oz * 5 + objbp->footprint->originZ + 2.5f;
-		return { Vector3(fx, ctx->server->terrain->getHeight(fx, fz), fz) };
+		return { Vector3(fx, ctx->gameState->terrain->getHeight(fx, fz), fz) };
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		p.reset(PositionDeterminer::createFrom(gsf, gs));

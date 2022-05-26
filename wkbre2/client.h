@@ -36,7 +36,7 @@ struct ClientGameObject : SpecificGameObject<Client, ClientGameObject> {
 	void updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
 };
 
-struct Client : SpecificGameState<ClientGameObject>
+struct Client : SpecificGameState<ClientGameObject, ProgramType::CLIENT>
 {
 	using GameObject = ClientGameObject;
 	static Client *instance;
@@ -47,7 +47,6 @@ struct Client : SpecificGameState<ClientGameObject>
 
 	//ClientGameObject *level;
 	//std::map<uint32_t, ClientGameObject*> idmap;
-	Terrain *terrain;
 
 	std::vector<std::string> chatMessages;
 
@@ -85,7 +84,7 @@ struct Client : SpecificGameState<ClientGameObject>
 	//ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
 
 	Client(bool localServer = false) : 
-		serverLink(nullptr), terrain(nullptr), cliInterface(nullptr), localServer(localServer) {instance = this;}
+		serverLink(nullptr), cliInterface(nullptr), localServer(localServer) {instance = this;}
 
 	//ClientGameObject* findObject(uint32_t id) { auto it = idmap.find(id); if (it != idmap.end()) return it->second; else return nullptr; }
 

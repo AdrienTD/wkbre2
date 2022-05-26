@@ -8,12 +8,10 @@
 
 struct CommonGameState;
 struct CommonGameObject;
-struct Terrain;
 
 // Find all objects in the requested circle
 struct NNSearch {
 	CommonGameState* gameState;
-	Terrain* terrain;
 
 	int minX, minZ, maxX, maxZ;
 
@@ -21,7 +19,7 @@ struct NNSearch {
 	int it;
 
 	// Starts the search.
-	void start(CommonGameState* server, Terrain* terrain, const Vector3& center, float radius);
+	void start(CommonGameState* server, const Vector3& center, float radius);
 	// Returns the next found object, or nullptr if no more objects found.
 	CommonGameObject* next();
 };

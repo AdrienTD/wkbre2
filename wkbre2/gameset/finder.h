@@ -6,10 +6,12 @@
 
 #include <vector>
 
+struct CommonGameObject;
 struct ServerGameObject;
 struct ClientGameObject;
 struct GSFileParser;
 struct GameSet;
+struct ScriptContext;
 struct SrvScriptContext;
 struct CliScriptContext;
 
@@ -17,12 +19,34 @@ struct ObjectFinder {
 	using EvalRetSrv = std::vector<ServerGameObject*>;
 	using EvalRetCli = std::vector<ClientGameObject*>;
 	virtual ~ObjectFinder() {}
-	virtual std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) = 0;
-	virtual std::vector<ClientGameObject*> eval(CliScriptContext* ctx);
+	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) = 0;
 	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
-	template<typename CTX> typename CTX::AnyGO* getFirst(CTX* ctx) {
+
+	CommonGameObject* getFirst(ScriptContext* ctx) {
 		auto objlist = eval(ctx);
 		return objlist.empty() ? nullptr : objlist[0];
+	}
+	std::vector<CommonGameObject*> fail(ScriptContext* ctx);
+
+	std::vector<ServerGameObject*> eval(SrvScriptContext* ctx) {
+		// TEMP TODO: Avoid copy
+		auto res = eval((ScriptContext*)ctx);
+		ServerGameObject** ptr = (ServerGameObject**)res.data();
+		auto cp = std::vector<ServerGameObject*>{ ptr, ptr + res.size() };
+		return cp;
+	}
+	std::vector<ClientGameObject*> eval(CliScriptContext* ctx) {
+		// TEMP TODO: Avoid copy
+		auto res = eval((ScriptContext*)ctx);
+		ClientGameObject** ptr = (ClientGameObject**)res.data();
+		auto cp = std::vector<ClientGameObject*>{ ptr, ptr + res.size() };
+		return cp;
+	}
+	ServerGameObject* getFirst(SrvScriptContext* ctx) {
+		return (ServerGameObject*)getFirst((ScriptContext*)ctx);
+	}
+	ClientGameObject* getFirst(CliScriptContext* ctx) {
+		return (ClientGameObject*)getFirst((ScriptContext*)ctx);
 	}
 };
 

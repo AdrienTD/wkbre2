@@ -842,7 +842,7 @@ void ServerGameObject::lookForSightRangeEvents()
 		return;
 	std::unordered_set<SrvGORef> objfound;
 	NNSearch search;
-	search.start(Server::instance, Server::instance->terrain, this->position, dist * 5.0f);
+	search.start(Server::instance, this->position, dist * 5.0f);
 	while (ServerGameObject* nobj = (ServerGameObject*)search.next()) {
 		if (!nobj->blueprint->generateSightRangeEvents)
 			continue;
