@@ -70,7 +70,7 @@ void AIController::update()
 		std::sort(units.begin(), units.end(), idComparator);
 		auto popUnitAndAssignTo = [&units](ServerGameObject* target, const OrderBlueprint* order) {
 			if (units.empty()) return;
-			ServerGameObject* unit = units.back();
+			ServerGameObject* unit = (ServerGameObject*)units.back();
 			Order* currentOrder = unit->orderConfig.getCurrentOrder();
 			if (!currentOrder || currentOrder->blueprint != order) {
 				unit->orderConfig.addOrder((OrderBlueprint*)order, Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE, target);

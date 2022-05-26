@@ -47,7 +47,7 @@ struct ValueConstant : ValueDeterminer {
 struct ValueItemValue : ValueDeterminer {
 	int item;
 	std::unique_ptr<ObjectFinder> finder;
-	float eval(ScriptContext *ctx) {
+	float eval(ScriptContext *ctx) override {
 		if (CommonGameObject* obj = finder->getFirst(ctx))
 			return obj->getItem(item);
 		return 0.0f;
@@ -228,10 +228,10 @@ struct ValueObjectType : ValueDeterminer {
 struct ValueDistanceBetween : ValueDeterminer {
 	bool takeHorizontal, takeVertical;
 	std::unique_ptr<ObjectFinder> fnd1, fnd2;
-	template<typename T> Vector3 centre(const std::vector<T*> &vec) {
+	Vector3 centre(const ObjectFinderResult& vec) {
 		if (vec.empty()) return {};
 		Vector3 sum;
-		for (T *obj : vec)
+		for (CommonGameObject* obj : vec)
 			sum += obj->position;
 		return sum / (float)vec.size();
 	}
@@ -451,6 +451,7 @@ struct ValueCurrentlyDoingOrder : ValueDeterminer {
 				return obj->reportedCurrentOrder != -1 && ctx->gameState->gameSet->orders[obj->reportedCurrentOrder].category == category;
 			});
 		}
+		return 0.0f;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		category = gs.orderCategories.readIndex(gsf);

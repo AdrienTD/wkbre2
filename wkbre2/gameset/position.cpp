@@ -21,7 +21,7 @@
 #include "gameset.h"
 
 namespace {
-	OrientedPosition PosFromObjVec(const std::vector<CommonGameObject*> &vec) {
+	OrientedPosition PosFromObjVec(const ObjectFinderResult &vec) {
 		OrientedPosition sum;
 		for (CommonGameObject* obj : vec)
 			sum += {obj->position, obj->orientation};

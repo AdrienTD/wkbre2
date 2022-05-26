@@ -14,14 +14,14 @@
 #include <cassert>
 #include <iterator>
 
-std::vector<CommonGameObject*> ObjectFinder::fail(ScriptContext* ctx) {
+ObjectFinderResult ObjectFinder::fail(ScriptContext* ctx) {
 	ferr("Invalid object finder call from %s", ctx->gameState->getProgramName());
 	return {};
 }
 
 struct FinderUnknown : ObjectFinder {
 	std::string name;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		ferr("Unknown object finder %s called from the %s!", name.c_str(), ctx->gameState->getProgramName());
 		return {};
 	}
@@ -31,7 +31,7 @@ struct FinderUnknown : ObjectFinder {
 };
 
 struct FinderSelf : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->getSelf();
 		if (obj) return { obj };
 		else return {};
@@ -42,7 +42,7 @@ struct FinderSelf : ObjectFinder {
 
 struct FinderSpecificId : ObjectFinder {
 	uint32_t objid;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->gameState->findObject(objid);
 		if (obj) return { obj };
 		else return {};
@@ -55,7 +55,7 @@ struct FinderSpecificId : ObjectFinder {
 };
 
 struct FinderPlayer : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->getSelf()->getPlayer();
 		if (obj) return { obj };
 		else return {};
@@ -66,9 +66,9 @@ struct FinderPlayer : ObjectFinder {
 
 struct FinderAlias : ObjectFinder {
 	int aliasIndex;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto &alias = ctx->gameState->aliases[aliasIndex];
-		std::vector<CommonGameObject*> res;
+		ObjectFinderResult res;
 		for (auto &ref : alias)
 			if (auto* obj = ref.getFrom<Server>(); obj && obj->isInteractable())
 				res.push_back(obj);
@@ -82,7 +82,7 @@ struct FinderAlias : ObjectFinder {
 };
 
 struct FinderController : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		return { ctx->getSelf()->getParent() };
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
@@ -90,7 +90,7 @@ struct FinderController : ObjectFinder {
 };
 
 struct FinderTarget : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		if (ctx->isServer()) {
 			SrvScriptContext* sctx = (SrvScriptContext*)ctx;
 			if (auto obj = sctx->get(ctx->target))
@@ -105,6 +105,7 @@ struct FinderTarget : ObjectFinder {
 			if (obj) return { obj };
 			else return {};
 		}
+		return {};
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
 	}
@@ -112,7 +113,7 @@ struct FinderTarget : ObjectFinder {
 
 struct FinderResults : ObjectFinder {
 	int ofd;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		if (ofd == -1) return {}; // TODO: Remove this after implementing exception handling
 		return ctx->gameState->gameSet->objectFinderDefinitions[ofd]->eval(ctx);
 	}
@@ -123,11 +124,11 @@ struct FinderResults : ObjectFinder {
 
 struct FinderAssociates : ObjectFinder {
 	int category;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		if (!ctx->isServer()) return fail(ctx);
 		SrvScriptContext* sctx = (SrvScriptContext*)ctx;
 		const auto &set = sctx->getSelf()->associates[category];
-		std::vector<CommonGameObject*> vec;
+		ObjectFinderResult vec;
 		for (auto& ref : set)
 			if (ref && ref->isInteractable())
 				vec.push_back(ref);
@@ -140,11 +141,11 @@ struct FinderAssociates : ObjectFinder {
 
 struct FinderAssociators : ObjectFinder {
 	int category;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		if (!ctx->isServer()) return fail(ctx);
 		SrvScriptContext* sctx = (SrvScriptContext*)ctx;
 		const auto &set = sctx->getSelf()->associators[category];
-		std::vector<CommonGameObject*> vec;
+		ObjectFinderResult vec;
 		for (auto& ref : set)
 			if (ref && ref->isInteractable())
 				vec.push_back(ref);
@@ -157,9 +158,9 @@ struct FinderAssociators : ObjectFinder {
 
 struct FinderPlayers : ObjectFinder {
 	int equation;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		Server *server = Server::instance;
-		std::vector<CommonGameObject*> res;
+		ObjectFinderResult res;
 		for (auto &it : server->getLevel()->children) {
 			if ((it.first & 63) == Tags::GAMEOBJCLASS_PLAYER)
 				for (CommonGameObject *player : it.second)
@@ -175,7 +176,7 @@ struct FinderPlayers : ObjectFinder {
 };
 
 struct FinderCandidate : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->get(ctx->candidate);
 		if (obj) return { obj };
 		else return {};
@@ -184,7 +185,7 @@ struct FinderCandidate : ObjectFinder {
 };
 
 struct FinderCreator : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->get(ctx->creator);
 		if (obj) return { obj };
 		else return {};
@@ -193,7 +194,7 @@ struct FinderCreator : ObjectFinder {
 };
 
 struct FinderPackageSender : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->get(ctx->packageSender);
 		if (obj) return { obj };
 		else return {};
@@ -202,7 +203,7 @@ struct FinderPackageSender : ObjectFinder {
 };
 
 struct FinderSequenceExecutor : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->get(ctx->sequenceExecutor);
 		if (obj) return { obj };
 		else return {};
@@ -212,12 +213,12 @@ struct FinderSequenceExecutor : ObjectFinder {
 
 struct FinderNearestToSatisfy : ObjectFinder {
 	std::unique_ptr<ValueDeterminer> vdcond, vdradius;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		using AnyGO = CommonGameObject;
 		float radius = vdradius->eval(ctx);
 		NNSearch search;
 		search.start(ctx->gameState, ctx->getSelf()->position, radius);
-		std::vector<AnyGO*> res;
+		ObjectFinderResult res;
 		while (AnyGO* obj = (AnyGO*)search.next()) {
 			if (!obj->isInteractable()) continue;
 			auto _ = ctx->change(ctx->candidate, obj);
@@ -233,7 +234,7 @@ struct FinderNearestToSatisfy : ObjectFinder {
 };
 
 struct FinderLevel : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		return { ctx->gameState->getLevel() };
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
@@ -241,11 +242,11 @@ struct FinderLevel : ObjectFinder {
 
 struct FinderDisabledAssociates : ObjectFinder {
 	int category;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		if (!ctx->isServer()) return fail(ctx);
 		SrvScriptContext* sctx = (SrvScriptContext*)ctx;
 		const auto& set = sctx->getSelf()->associates[category];
-		std::vector<CommonGameObject*> vec;
+		ObjectFinderResult vec;
 		for (auto& ref : set)
 			if (ref && ref->disableCount > 0) // terminated?
 				vec.push_back(ref);
@@ -258,7 +259,7 @@ struct FinderDisabledAssociates : ObjectFinder {
 
 struct FinderReferencers : ObjectFinder {
 	int category;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		if (!ctx->isServer()) return fail(ctx);
 		SrvScriptContext* sctx = (SrvScriptContext*)ctx;
 		std::set<CommonGameObject*> vec;
@@ -282,7 +283,7 @@ struct FinderReferencers : ObjectFinder {
 };
 
 struct FinderOrderGiver : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->get(ctx->orderGiver);
 		if (obj) return { obj };
 		else return {};
@@ -292,7 +293,7 @@ struct FinderOrderGiver : ObjectFinder {
 
 struct FinderBeingTransferredToMe : ObjectFinder {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		return {};
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
@@ -301,7 +302,7 @@ struct FinderBeingTransferredToMe : ObjectFinder {
 };
 
 struct FinderCollisionSubject : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->get(ctx->collisionSubject);
 		if (obj) return { obj };
 		else return {};
@@ -310,14 +311,14 @@ struct FinderCollisionSubject : ObjectFinder {
 };
 
 struct FinderUser : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		return {};
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
 };
 
 struct FinderSelectedObject : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto obj = ctx->get(ctx->selectedObject);
 		if (obj) return { obj };
 		else return {};
@@ -327,10 +328,10 @@ struct FinderSelectedObject : ObjectFinder {
 
 struct FinderAgAllOfType : ObjectFinder {
 	GameObjBlueprint* blueprint;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		uint32_t bpid = blueprint->getFullId();
-		std::vector<CommonGameObject*> vec;
-		auto walk = [this, bpid, &vec](CommonGameObject* obj, auto& rec) -> void {
+		ObjectFinderResult vec;
+		auto walk = [bpid, &vec](CommonGameObject* obj, auto& rec) -> void {
 			for (const auto& subords : obj->children) {
 				if (subords.first == bpid) {
 					for (CommonGameObject* sub : subords.second) {
@@ -397,7 +398,7 @@ struct FinderSubordinates : ObjectFinder {
 	int bpclass = -1;
 	GameObjBlueprint *objbp = nullptr;
 	bool immediateLevel = false;
-	static /*thread_local*/ std::vector<CommonGameObject*> results;
+	static /*thread_local*/ ObjectFinderResult results;
 	bool eligible(CommonGameObject *obj, ScriptContext *ctx) {
 		if (!obj->isInteractable()) return false;
 		if (!objbp || (objbp == obj->blueprint)) {
@@ -420,7 +421,7 @@ struct FinderSubordinates : ObjectFinder {
 			}
 		}
 	}
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
 		results.clear();
 		for (CommonGameObject *par : vec) {
@@ -464,7 +465,7 @@ struct FinderNSubs : ObjectFinder {
 };
 
 struct FinderUnion : FinderNSubs {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		std::unordered_set<CommonGameObject*> set;
 		for (auto &finder : finders) {
 			auto vec = finder->eval(ctx);
@@ -475,7 +476,7 @@ struct FinderUnion : FinderNSubs {
 };
 
 struct FinderIntersection : FinderNSubs {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto objs = finders[0]->eval(ctx);
 		decltype(objs) intersected;
 		std::sort(objs.begin(), objs.end());
@@ -492,9 +493,9 @@ struct FinderIntersection : FinderNSubs {
 };
 
 struct FinderChain : FinderNSubs {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto _ = ctx->change(ctx->chainOriginalSelf, ctx->getSelf());
-		std::vector<CommonGameObject*> vec = { ctx->getSelf() };
+		ObjectFinderResult vec = { ctx->getSelf() };
 		for (auto &finder : finders) {
 			auto _ = ctx->changeSelf(vec[0]);
 			vec = finder->eval(ctx);
@@ -506,7 +507,7 @@ struct FinderChain : FinderNSubs {
 };
 
 struct FinderAlternative : FinderNSubs {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		for (auto &finder : finders) {
 			auto vec = finder->eval(ctx);
 			if (!vec.empty())
@@ -520,7 +521,7 @@ struct FinderFilterFirst : ObjectFinder {
 	int equation;
 	std::unique_ptr<ValueDeterminer> count;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
 		int limit = (int)count->eval(ctx), num = 0;
 		decltype(vec) res;
@@ -544,7 +545,7 @@ struct FinderFilterFirst : ObjectFinder {
 struct FinderFilter : ObjectFinder {
 	int equation;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
 		decltype(vec) res;
 		for (CommonGameObject *obj : vec) {
@@ -585,13 +586,13 @@ struct FinderMetreRadius : ObjectFinder {
 		}
 		return true;
 	}
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		using AnyGO = CommonGameObject;
 		float radius = vdradius->eval(ctx);
 		AnyGO* player = (useOriginalSelf ? ctx->get(ctx->chainOriginalSelf) : ctx->getSelf())->getPlayer();
 		NNSearch search;
 		search.start(ctx->gameState, ctx->getSelf()->position, radius);
-		std::vector<AnyGO*> res;
+		ObjectFinderResult res;
 		while (AnyGO* obj = (AnyGO*)search.next())
 			if (eligible(obj, player, ctx))
 				res.push_back(obj);
@@ -622,7 +623,7 @@ struct FinderGradeSelect : ObjectFinder {
 	int equation;
 	std::unique_ptr<ValueDeterminer> vdCount;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		int count = 0;
 		if (vdCount)
 			count = (int)vdCount->eval(ctx);
@@ -637,9 +638,10 @@ struct FinderGradeSelect : ObjectFinder {
 		std::sort(values.begin(), values.end(), [this](auto & a, auto & b) {return byHighest ? (a.first > b.first) : (a.first < b.first); });
 		if (count <= 0 || (size_t)count > vec.size())
 			count = vec.size();
-		std::vector<CommonGameObject*> res(count);
-		for (size_t i = 0; i < res.size(); i++)
-			res[i] = values[i].second;
+		ObjectFinderResult res;
+		res.reserve(count);
+		for (int i = 0; i < count; i++)
+			res.push_back(values[i].second);
 		return res;
 	}
 	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
@@ -659,7 +661,7 @@ struct FinderGradeSelect : ObjectFinder {
 
 struct FinderNearestCandidate : ObjectFinder {
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
 		float bestDist = INFINITY;
 		CommonGameObject *bestObj = nullptr;
@@ -682,12 +684,12 @@ struct FinderNearestCandidate : ObjectFinder {
 
 struct FinderTileRadius : ObjectFinder {
 	std::unique_ptr<ValueDeterminer> vdradius;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		using AnyGO = CommonGameObject;
 		float radius = vdradius->eval(ctx);
 		NNSearch search;
 		search.start(ctx->gameState, ctx->getSelf()->position, radius);
-		std::vector<AnyGO*> res;
+		ObjectFinderResult res;
 		while (AnyGO* obj = (AnyGO*)search.next())
 			if (obj->isInteractable())
 				res.push_back(obj);
@@ -699,7 +701,7 @@ struct FinderTileRadius : ObjectFinder {
 };
 
 struct FinderDiscoveredUnits : ObjectFinder {
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		// TODO
 		return {};
 	}
@@ -709,7 +711,7 @@ struct FinderDiscoveredUnits : ObjectFinder {
 struct FinderRandomSelection : ObjectFinder {
 	std::unique_ptr<ValueDeterminer> vCount;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
 		size_t cnt = std::min(vec.size(), (size_t)vCount->eval(ctx));
 		for (size_t i = 0; i < cnt; i++) {
@@ -728,7 +730,7 @@ struct FinderRandomSelection : ObjectFinder {
 struct FinderFilterCandidates : ObjectFinder {
 	std::unique_ptr<ValueDeterminer> condition;
 	std::unique_ptr<ObjectFinder> finder;
-	virtual std::vector<CommonGameObject*> eval(ScriptContext* ctx) override {
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
 		decltype(vec) res;
 		for (CommonGameObject* obj : vec) {
