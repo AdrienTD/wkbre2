@@ -7,6 +7,7 @@
 #include "../tags.h"
 #include <string>
 #include "../file.h"
+#include "finder.h"
 
 void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir, bool overrideAnims) {
 	//printf("Loading anims from %s\n", dir.c_str());
@@ -289,6 +290,9 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 				offeredCommands.push_back(&gameSet->commands[x]);
 			break;
 		}
+		}
+		if (strtag == "AI__SPAWN_LOCATION_SELECTOR") {
+			aiSpawnLocationSelector = ReadFinder(gsf, *gameSet);
 		}
 		gsf.advanceLine();
 	}

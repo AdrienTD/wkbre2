@@ -31,6 +31,7 @@
 #include "Plan.h"
 #include "ArmyCreationSchedule.h"
 #include "WorkOrder.h"
+#include "Commission.h"
 
 struct GameObjBlueprint;
 
@@ -103,6 +104,8 @@ struct GameSet
 	GSBlueprintList<PlanNodeSequence> plans;
 	GSBlueprintList<ArmyCreationSchedule> armyCreationSchedules;
 	GSBlueprintList<WorkOrder> workOrders;
+	GSBlueprintList<GSCommission> commissions;
+	GSBlueprintList<GSCharacterLadder> characterLadders;
 
 	std::map<std::string, float, StriCompare> definedValues;
 	int defaultDiplomaticStatus = 0;

@@ -312,6 +312,7 @@ struct PDFiringAttachmentPoint : PositionDeterminer {
 struct PDNearestValidStampdownPos : PositionDeterminer {
 	GameObjBlueprint* objbp;
 	std::unique_ptr<PositionDeterminer> p;
+	std::unique_ptr<ObjectFinder> fdExemptTilesReservedBy;
 	bool isTileFree(CommonGameState* server, int tx, int tz) {
 		int sx, sz;
 		std::tie(sx, sz) = server->terrain->getNumPlayableTiles();
@@ -379,6 +380,13 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 			objbp = gs.objBlueprints[Tags::GAMEOBJCLASS_BUILDING].readPtr(gsf);
 		}
 		p.reset(PositionDeterminer::createFrom(gsf, gs));
+		cursor = gsf.cursor;
+		if (gsf.nextString(false) == "EXEMPT_TILES_RESERVED_BY") {
+			fdExemptTilesReservedBy.reset(ReadFinder(gsf, gs));
+		}
+		else {
+			gsf.cursor = cursor;
+		}
 	}
 };
 

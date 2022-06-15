@@ -44,6 +44,8 @@ void AIController::update()
 
 	// ---- Work Orders ----
 	for (auto& woi : workOrderInstances) {
+		if (!woi.city)
+			continue;
 		SrvScriptContext ctx{ Server::instance, woi.city };
 		auto units = woi.unitFinder->eval(&ctx);
 
@@ -124,6 +126,68 @@ void AIController::update()
 			}
 		}
 	}
+	auto wit = std::remove_if(workOrderInstances.begin(), workOrderInstances.end(),
+		[](auto& woi) -> bool {return !woi.city; }
+	);
+	workOrderInstances.erase(wit, workOrderInstances.end());
+
+	// ---- Commissions ----
+	for (auto& cominst : commissionInstances) {
+		const GSCommission* gscomm = cominst.blueprint;
+		ServerGameObject* obj = cominst.handlerObject.get();
+		if (!obj) continue;
+		SrvScriptContext ctx{ Server::instance, obj };
+		if (gscomm->suspensionCondition && gscomm->suspensionCondition->booleval(&ctx))
+			continue;
+		for (size_t ri = 0; ri < cominst.characterReqInsts.size(); ++ri) {
+			auto& gsreq = gscomm->characterRequirements[ri];
+			auto& reqinst = cominst.characterReqInsts[ri];
+			size_t requiredCount = (size_t)gsreq.vdCountNeeded->eval(&ctx);
+			size_t existingCount = gsreq.fdAlreadyHaving->eval(&ctx).size();
+			//size_t inCtrCount = reqinst.foundations.size();
+			if (existingCount < requiredCount) {
+				// find spawn buildings and create spawn order if available
+				auto& charToSpawn = gsreq.ladder->entries.back();
+				SrvFinderResult buildingList = charToSpawn.finder->eval(&ctx);
+				for (ServerGameObject* building : buildingList) {
+					if (building->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING) {
+						if (building->orderConfig.getCurrentOrder() == nullptr) {
+							int ordid = Server::instance->gameSet->orders.names.getIndex("Spawn " + charToSpawn.type->name);
+							OrderBlueprint* orderBp = &Server::instance->gameSet->orders[ordid];
+							Order* order = building->orderConfig.addOrder(orderBp, Tags::ORDERASSIGNMODE_DO_FIRST);
+							((SpawnTask*)(order->tasks[0]))->toSpawn = charToSpawn.type;
+						}
+					}
+				}
+			}
+		}
+		int isFoundationItem = Server::instance->gameSet->items.names.getIndex("Is a Foundation");
+		for (size_t ri = 0; ri < cominst.buildingReqInsts.size(); ++ri) {
+			auto& gsreq = gscomm->buildingRequirements[ri];
+			auto& reqinst = cominst.buildingReqInsts[ri];
+			auto it = std::remove_if(reqinst.foundations.begin(), reqinst.foundations.end(),
+				[isFoundationItem](SrvGORef& ref) { return !(ref && ref->getItem(isFoundationItem) > 0.0f); }
+			);
+			reqinst.foundations.erase(it, reqinst.foundations.end());
+			size_t requiredCount = (size_t)gsreq.vdCountNeeded->eval(&ctx);
+			size_t existingCount = gsreq.fdAlreadyHaving->eval(&ctx).size();
+			size_t inCtrCount = reqinst.foundations.size();
+			while (existingCount + inCtrCount < requiredCount) {
+				auto posori = gsreq.pdBuildPosition->eval(&ctx);
+				GameObjBlueprint* bpFoundation = Server::instance->gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, gsreq.bpBuilding->name + " Foundation");
+				ServerGameObject* foundation = Server::instance->createObject(bpFoundation);
+				foundation->setParent(obj->getPlayer());
+				foundation->setPosition(posori.position);
+				foundation->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
+				reqinst.foundations.emplace_back(foundation);
+				inCtrCount = reqinst.foundations.size();
+			}
+		}
+	}
+	auto cit = std::remove_if(commissionInstances.begin(), commissionInstances.end(),
+		[](auto& ci) -> bool {return !ci.handlerObject.get(); }
+	);
+	commissionInstances.erase(cit, commissionInstances.end());
 }
 
 void AIController::activatePlan(int planTag)
@@ -144,4 +208,27 @@ void AIController::registerWorkOrder(ServerGameObject* city, ObjectFinder* unitF
 {
 	WorkOrderInstance woi{ city, unitFinder, workOrder };
 	workOrderInstances.push_back(std::move(woi));
+}
+
+void AIController::activateCommission(const GSCommission* commission, ServerGameObject* handler)
+{
+	deactivateCommission(commission, handler);
+	CommissionInstance& ci = commissionInstances.emplace_back();
+	ci.blueprint = commission;
+	ci.handlerObject = handler;
+	ci.characterReqInsts.resize(commission->characterRequirements.size());
+	ci.buildingReqInsts.resize(commission->buildingRequirements.size());
+	ci.upgradeReqInsts.resize(commission->upgradeRequirements.size());
+	printf("COMMISSION ACTIVATED\n");
+}
+
+void AIController::deactivateCommission(const GSCommission* commission, ServerGameObject* handler)
+{
+	for (auto it = commissionInstances.begin(); it != commissionInstances.end(); ++it) {
+		auto& ci = *it;
+		if (ci.blueprint == commission && ci.handlerObject.get() == handler) {
+			commissionInstances.erase(it);
+			return;
+		}
+	}
 }
