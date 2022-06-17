@@ -139,6 +139,8 @@ void AIController::update()
 		SrvScriptContext ctx{ Server::instance, obj };
 		if (gscomm->suspensionCondition && gscomm->suspensionCondition->booleval(&ctx))
 			continue;
+
+		// Character Requirements
 		for (size_t ri = 0; ri < cominst.characterReqInsts.size(); ++ri) {
 			auto& gsreq = gscomm->characterRequirements[ri];
 			auto& reqinst = cominst.characterReqInsts[ri];
@@ -161,6 +163,8 @@ void AIController::update()
 				}
 			}
 		}
+
+		// Building Requirements
 		int isFoundationItem = Server::instance->gameSet->items.names.getIndex("Is a Foundation");
 		for (size_t ri = 0; ri < cominst.buildingReqInsts.size(); ++ri) {
 			auto& gsreq = gscomm->buildingRequirements[ri];
@@ -175,12 +179,32 @@ void AIController::update()
 			while (existingCount + inCtrCount < requiredCount) {
 				auto posori = gsreq.pdBuildPosition->eval(&ctx);
 				GameObjBlueprint* bpFoundation = Server::instance->gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, gsreq.bpBuilding->name + " Foundation");
-				ServerGameObject* foundation = Server::instance->createObject(bpFoundation);
-				foundation->setParent(obj->getPlayer());
+				ServerGameObject* foundation = Server::instance->spawnObject(bpFoundation, obj->getPlayer());
 				foundation->setPosition(posori.position);
 				foundation->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
 				reqinst.foundations.emplace_back(foundation);
 				inCtrCount = reqinst.foundations.size();
+			}
+		}
+
+		// Upgrade Requirements
+		for (size_t ri = 0; ri < cominst.upgradeReqInsts.size(); ++ri) {
+			auto& gsreq = gscomm->upgradeRequirements[ri];
+			auto& reqinst = cominst.upgradeReqInsts[ri];
+			size_t requiredCount = (size_t)gsreq.vdCountNeeded->eval(&ctx);
+			if (requiredCount > 0) {
+				// find supporting buildings and launch upgrades
+				// TODO: Prevent upgrades from happening multiple times (check preconditions)
+				// might need to use COMMAND instead of ORDER
+				SrvFinderResult buildingList =  gsreq.fdSupportedBuildings->eval(&ctx);
+				for (ServerGameObject* building : buildingList) {
+					if (building->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING) {
+						if (building->orderConfig.getCurrentOrder() == nullptr) {
+							OrderBlueprint* orderBp = gsreq.order;
+							Order* order = building->orderConfig.addOrder(orderBp, Tags::ORDERASSIGNMODE_DO_FIRST);
+						}
+					}
+				}
 			}
 		}
 	}

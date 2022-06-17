@@ -290,6 +290,10 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 				offeredCommands.push_back(&gameSet->commands[x]);
 			break;
 		}
+		case Tags::CBLUEPRINT_BUILDING_TYPE: {
+			buildingType = Tags::BUILDINGTYPE_tagDict.getTagID(gsf.nextString(false).c_str());
+			break;
+		}
 		}
 		if (strtag == "AI__SPAWN_LOCATION_SELECTOR") {
 			aiSpawnLocationSelector = ReadFinder(gsf, *gameSet);
