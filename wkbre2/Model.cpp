@@ -18,12 +18,20 @@ Model * ModelCache::getModel(const std::string & filename) {
 	}
 
 	const char *ext = strrchr(filename.c_str(), '.');
+#ifdef _WIN32
+    if (!_stricmp(ext + 1, "mesh3")) {
+#else
     if (!strcasecmp(ext + 1, "mesh3")) {
+#endif
 		StaticModel *m = new StaticModel(this, filename);
 		models[filename].reset(m);
 		return m;
 	}
+#ifdef _WIN32
+    else if (!_stricmp(ext + 1, "anim3")) {
+#else
     else if (!strcasecmp(ext + 1, "anim3")) {
+#endif
 		AnimatedModel *m = new AnimatedModel(this, filename);
 		models[filename].reset(m);
 		return m;

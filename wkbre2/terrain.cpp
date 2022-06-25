@@ -93,7 +93,11 @@ int Terrain::GetMaxBits(int x)
 void Terrain::readFromFile(const char* filename)
 {
 	const char* ext = strrchr(filename, '.');
+#ifdef _WIN32
+    if (!_stricmp(ext, ".bcm"))
+#else
 	if (!strcasecmp(ext, ".bcm"))
+#endif
 		readBCM(filename);
 	else
 		readSNR(filename);

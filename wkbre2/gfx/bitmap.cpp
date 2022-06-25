@@ -16,9 +16,17 @@ Bitmap Bitmap::loadBitmap(const char *fn)
 	char *d; int s;
 	const char *e = strrchr(fn, '.');
 	LoadFile(fn, &d, &s);
-	if(!strcasecmp(e, ".tga"))
+#ifdef _WIN32
+    if(!_stricmp(e, ".tga"))
+#else
+    if(!strcasecmp(e, ".tga"))
+#endif
 		return loadTGA(d, s);
+#ifdef _WIN32
+    if(!_stricmp(e, ".pcx"))
+#else
 	if(!strcasecmp(e, ".pcx"))
+#endif
 		return loadPCX(d, s);
 	ferr("Unknown bitmap file extension.");
 	return {};

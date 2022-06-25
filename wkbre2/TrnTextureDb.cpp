@@ -96,8 +96,13 @@ void TerrainTextureDatabase::translate(const char* ltttFilePath)
 	struct TransEntry {
 		uint8_t position;
 		std::string textureFilePath;
+#ifdef _WIN32
+        bool operator==(const TransEntry& e) const { return position == e.position && _stricmp(textureFilePath.c_str(), e.textureFilePath.c_str()) == 0; }
+        bool operator<(const TransEntry& e) const { return (position != e.position) ? (position < e.position) : _stricmp(textureFilePath.c_str(), e.textureFilePath.c_str()) < 0; }
+#else
 		bool operator==(const TransEntry& e) const { return position == e.position && strcasecmp(textureFilePath.c_str(), e.textureFilePath.c_str()) == 0; }
 		bool operator<(const TransEntry& e) const { return (position != e.position) ? (position < e.position) : strcasecmp(textureFilePath.c_str(), e.textureFilePath.c_str()) < 0; }
+#endif
 	};
 	uint32_t numTranslations = br.readUint32();
 	std::map<TransEntry, TransEntry> translations;
