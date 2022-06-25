@@ -6,6 +6,8 @@
 #include "../file.h"
 #include "../util/GSFileParser.h"
 #include "../tags.h"
+#include "Commission.h"
+
 #include <vector>
 #include <string>
 #include <set>

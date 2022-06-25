@@ -23,4 +23,5 @@ target_sources(${TARGET} PRIVATE
     "Plan.cpp" "Plan.h"
     "ArmyCreationSchedule.h" "ArmyCreationSchedule.cpp"
     "WorkOrder.h" "WorkOrder.cpp"
-    "Sound.h" "Sound.cpp")
+    "Sound.h" "Sound.cpp"
+    "Commission.h" "Commission.cpp")
