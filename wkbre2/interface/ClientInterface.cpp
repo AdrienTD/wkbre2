@@ -28,7 +28,9 @@
 #include "../gfx/D3D11EnhancedTerrainRenderer.h"
 #include "../settings.h"
 #include <nlohmann/json.hpp>
-#include "../gfx/D3D11EnhancedSceneRenderer.h"
+#ifdef _WIN32
+    #include "../gfx/D3D11EnhancedSceneRenderer.h"
+#endif
 
 namespace {
 	Vector3 getRay(const Camera &cam) {
@@ -249,7 +251,7 @@ void ClientInterface::drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t ob
 		auto ap = model->getAPInfo(i);
 		auto state = model->getAPState(i, sceneEntity->animTime);
 		if (state.on) {
-			if (strcmpi(ap.tag.c_str(), "PS_Trail") == 0) {
+            if (strcasecmp(ap.tag.c_str(), "PS_Trail") == 0) {
 				particlesContainer->generateTrail(state.position.transform(sceneEntity->transform), objid, client->timeManager.previousTime, client->timeManager.currentTime);
 			}
 			else if (ap.tag.substr(0, 3) == "PS_") {

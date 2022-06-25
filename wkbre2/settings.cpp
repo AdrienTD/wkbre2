@@ -4,6 +4,7 @@
 
 #include "settings.h"
 #include <nlohmann/json.hpp>
+#include <filesystem>
 #include <fstream>
 #include <codecvt>
 #include <locale>
@@ -15,7 +16,7 @@
 
 nlohmann::json g_settings;
 
-void LoadSettings() {
+bool LoadSettings() {
 	std::ifstream file("wkconfig.json");
 	if (file.good()) {
 		try {
@@ -27,11 +28,15 @@ void LoadSettings() {
 			std::wstring wstr = cvt.from_bytes(exc.what());
 			MessageBoxW(nullptr, wstr.c_str(), L"wkconfig.json Parsing Error", 16);
 #endif
+            return false;
 		}
 	}
 	else {
 #ifdef _WIN32
 		MessageBoxA(nullptr, "The configuration file wkconfig.json could not be opened.", "wkbre2", 16);
 #endif
+        return false;
 	}
+
+    return true;
 }

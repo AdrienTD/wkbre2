@@ -5,6 +5,7 @@
 #pragma once
 
 #include <vector>
+#include <cstddef>
 
 struct CommonGameObject;
 struct ServerGameObject;

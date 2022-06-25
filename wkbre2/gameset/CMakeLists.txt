@@ -1,0 +1,26 @@
+cmake_minimum_required (VERSION 3.13)
+
+target_sources(${TARGET} PRIVATE
+    "gameset.cpp" "gameset.h"
+    "GameObjBlueprint.cpp" "GameObjBlueprint.h"
+    "values.cpp" "values.h"
+    "actions.cpp" "actions.h"
+    "finder.cpp" "finder.h"
+    "command.cpp" "command.h"
+    "OrderBlueprint.cpp" "OrderBlueprint.h"
+    "CommonEval.h"
+    "position.cpp" "position.h"
+    "reaction.cpp" "reaction.h"
+    "ObjectCreation.cpp" "ObjectCreation.h"
+    "ScriptContext.cpp" "ScriptContext.h"
+    "condition.cpp" "condition.h"
+    "GameTextWindow.h" "GameTextWindow.cpp"
+    "Package.h" "Package.cpp"
+    "3DClip.h" "3DClip.cpp"
+    "cameraPath.h" "cameraPath.cpp"
+    "Footprint.h" "Footprint.cpp"
+    "GSTerrain.h" "GSTerrain.cpp"
+    "Plan.cpp" "Plan.h"
+    "ArmyCreationSchedule.h" "ArmyCreationSchedule.cpp"
+    "WorkOrder.h" "WorkOrder.cpp"
+    "Sound.h" "Sound.cpp")

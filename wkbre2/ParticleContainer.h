@@ -7,6 +7,7 @@
 #include <map>
 #include <vector>
 #include "util/vecmat.h"
+#include <cstdint>
 
 struct ParticleSystem;
 

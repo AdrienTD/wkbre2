@@ -138,14 +138,47 @@ then compile the project.
 
 ### Ubuntu
 
-**NOTE**: Right now the building process is bad. I tried using CMake and vcpkg on Ubuntu but
-had some trouble, and I'm not used to Linux. Thus for now there is a regular Makefile instead. I hope I can manage
-to make the CMake files run on Ubuntu too in the future.
+#### Necessary packages
+You need OpenGL, look on Internet for the Ubuntu install. It usually looks like: 
+```sudo apt-get install mesa-utils``` 
+You need the additional libraries: 
+```sudo apt-get install libbz2-dev libenet-dev libglew-dev libmpg123-dev nlohmann-json3-dev libopenal-dev libsdl2-dev libstb-dev``` 
 
+Important, the imgui code (here version v1.84) needs to be modified to make things work. 
+wkbre2/imgui/imgui.cpp is modified, an assert is deactivated: 
+``` 
++#ifdef _WIN32
+     IM_ASSERT((g.IO.DeltaTime > 0.0f || g.FrameCount == 0) && "Need a positive DeltaTime!");
++#endif
+``` 
+
+#### Necessary data and config file
+You must create a config file _wkconfig.json_ in order to run wkbre2. Put this config file next to the executable. The "game_path"
+must point to a folder wich contains "data.bcp", the Warrior King dataset.
+```
+{
+  "game_path": "/home/username/dev/wkb_dataset",
+  "gameVersion": 2,
+
+  "test": false,
+  "musicEnabled": true,
+
+  "renderer": "ogl3"
+}
+``` 
+
+#### Using CMake
+A good solution is to open the top CMakeLists.txt with QtCreator IDE. Normally you can just hit Ctrl+r to build and run.
+***Note:*** There is a problem with an old library, libbz2, which has some ASM code. This is where the "-no-pie" cmake option comes from in the CMakeLists.txt. But you can still see some warnings about it during compilation, and many warning coming from Clang static code analysis. 
+ 
+You must put _wkconfig.json_ in the build folder, for example: wkbre2-Desktop_Qt_6_2_4_GCC_64bit-Debug/wkbre2 
+ 
+#### Using Make
 - Open a terminal.
 - `cd <repo root>`
-- `sudo apt-get install libbz2-dev libenet-dev libglew-dev libmpg123-dev nlohmann-json3-dev libopenal-dev libsdl2-dev`
 - `mkdir inc`
-- Download the [stb headers](https://github.com/nothings/stb) and copy them to the inc folder
 - `cd wkbre2`
 - `make -f ../Makefile`
+ 
+ 
+

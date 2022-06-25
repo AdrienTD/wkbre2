@@ -8,4 +8,4 @@
 
 extern nlohmann::json g_settings;
 
-void LoadSettings();
+bool LoadSettings();

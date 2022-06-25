@@ -2,11 +2,11 @@
 // (C) 2021 AdrienTD
 // Licensed under the GNU General Public License 3
 
-// wkbre2.cpp : définit le point d'entrée de l'application.
+// wkbre2.cpp : définit le point d'entrée de l'application.
 //
 
 #include "wkbre2.h"
-#include <cstdio>
+#include <iostream>
 #include "settings.h"
 #include "file.h"
 #include <nlohmann/json.hpp>
@@ -60,10 +60,15 @@ void LaunchQSM() {
 int main()
 //int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR cmdArgs, int showMode)
 {
-	printf("Hello! :)\n");
+    std::cout << "Hello WKBRE2" << std::endl;
 
-	LoadSettings();
-	g_gamePath = g_settings["game_path"].get<std::string>();
+    if ( !LoadSettings() )
+    {
+        std::cout << "Failed to load wkconfig.json settings" << std::endl;
+        return 1;
+    }
+
+    g_gamePath = g_settings["game_path"].get<std::string>();
 
 	if (g_settings.value<bool>("test", false))
 		LaunchTest();

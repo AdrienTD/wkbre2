@@ -11,7 +11,7 @@ void WavDocument::read(BinaryReader& file)
 {
 	uint32_t riffTag = file.readUint32();
 	assert(riffTag == 'FFIR');
-	uint32_t riffSize = file.readUint32();
+    [[maybe_unused]] uint32_t riffSize = file.readUint32();
 	uint32_t riffFormat = file.readUint32();
 	assert(riffFormat == 'EVAW');
 	uint32_t fmtTag = file.readUint32();
