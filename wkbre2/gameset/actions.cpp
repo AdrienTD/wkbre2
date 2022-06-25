@@ -1208,8 +1208,7 @@ struct ActionCreateObject : Action {
 	GameObjBlueprint* objbp;
 	std::unique_ptr<PositionDeterminer> pPosition;
 	virtual void run(SrvScriptContext* ctx) override {
-		ServerGameObject* obj = ctx->server->createObject(objbp);
-		obj->setParent(ctx->getSelf()->getPlayer());
+		ServerGameObject* obj = ctx->server->spawnObject(objbp, ctx->getSelf()->getPlayer());
 		auto posori = pPosition->eval(ctx);
 		obj->setPosition(posori.position);
 		obj->setOrientation(posori.rotation);
@@ -1306,6 +1305,32 @@ struct ActionAbandonPlan : Action {
 	}
 };
 
+struct ActionActivateCommission : Action {
+	const GSCommission* commission;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			obj->getPlayer()->aiController.activateCommission(commission, obj);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		commission = gs.commissions.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionDeactivateCommission : Action {
+	const GSCommission* commission;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			obj->getPlayer()->aiController.deactivateCommission(commission, obj);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		commission = gs.commissions.readPtr(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1391,6 +1416,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_ACTIVATE_PLAN: action = new ActionActivatePlan; break;
 	case Tags::ACTION_REGISTER_WORK_ORDER: action = new ActionRegisterWorkOrder; break;
 	case Tags::ACTION_ABANDON_PLAN: action = new ActionAbandonPlan; break;
+	case Tags::ACTION_ACTIVATE_COMMISSION: action = new ActionActivateCommission; break;
+	case Tags::ACTION_DEACTIVATE_COMMISSION: action = new ActionDeactivateCommission; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:
@@ -1407,8 +1434,6 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_STOP_INDICATING_POSITION_OF_MISSION_OBJECTIVES_ENTRY:
 	case Tags::ACTION_ADOPT_APPEARANCE_FOR:
 	case Tags::ACTION_ADOPT_DEFAULT_APPEARANCE_FOR:
-	case Tags::ACTION_ACTIVATE_COMMISSION:
-	case Tags::ACTION_DEACTIVATE_COMMISSION:
 	case Tags::ACTION_SWITCH_ON_INTENSITY_MAP:
 	case Tags::ACTION_FADE_STOP_MUSIC:
 	case Tags::ACTION_DECLINE_DIPLOMATIC_OFFER:

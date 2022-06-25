@@ -97,10 +97,6 @@ void GameSet::parseFile(const char * fn, int pass)
 				animations.names.insertString(gsf.nextString(true));
 				break;
 			}
-			case Tags::GAMESET_CHARACTER_LADDER: {
-				ignoreBlueprint(gsf, strtag);
-				break;
-			}
 			case Tags::GAMESET_ORDER: {
 				orders.names.insertString(gsf.nextString(true));
 				ignoreBlueprint(gsf, strtag);
@@ -238,6 +234,16 @@ void GameSet::parseFile(const char * fn, int pass)
 				ignoreBlueprint(gsf, strtag);
 				break;
 			}
+			case Tags::GAMESET_COMMISSION: {
+				commissions.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
+			case Tags::GAMESET_CHARACTER_LADDER: {
+				characterLadders.names.insertString(gsf.nextString(true));
+				ignoreBlueprint(gsf, strtag);
+				break;
+			}
 
 			case Tags::GAMESET_LEVEL:
 			case Tags::GAMESET_PLAYER:
@@ -321,10 +327,6 @@ void GameSet::parseFile(const char * fn, int pass)
 				int x = commands.readIndex(gsf);
 				commands[x].id = x;
 				commands[x].parse(gsf, *this);
-				break;
-			}
-			case Tags::GAMESET_CHARACTER_LADDER: {
-				ignoreBlueprint(gsf, strtag);
 				break;
 			}
 			case Tags::GAMESET_ORDER: {
@@ -442,6 +444,14 @@ void GameSet::parseFile(const char * fn, int pass)
 				wo.parse(gsf, *this);
 				break;
 			}
+			case Tags::GAMESET_COMMISSION: {
+				commissions.readRef(gsf).parse(gsf, *this);
+				break;
+			}
+			case Tags::GAMESET_CHARACTER_LADDER: {
+				characterLadders.readRef(gsf).parse(gsf, *this);
+				break;
+			}
 			}
 		}
 
@@ -518,6 +528,8 @@ void GameSet::load(const char * fn)
 	plans.pass();
 	armyCreationSchedules.pass();
 	workOrders.pass();
+	commissions.pass();
+	characterLadders.pass();
 
 	printf("Gameset pass 2...\n");
 	parseFile(fn, 1);

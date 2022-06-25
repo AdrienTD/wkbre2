@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory ("imgui")
 
+
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_compile_options("-no-pie")
 

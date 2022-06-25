@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <type_traits>
 
 template <class T> class DynArray {
 private:
@@ -23,6 +24,16 @@ private:
 		if (newlen)
 			pointer = new T[newlen];
 		length = newlen;
+	}
+
+	void copyFrom(const DynArray& other) {
+		if constexpr (std::is_trivially_copyable<T>::value) {
+			memcpy(pointer, other.pointer, length * sizeof(T));
+		}
+		else {
+			for (size_t i = 0; i < length; ++i)
+				pointer[i] = other.pointer[i];
+		}
 	}
 
 public:
@@ -45,9 +56,9 @@ public:
 
 	DynArray() { pointer = nullptr; length = 0; }
 	DynArray(int len) { setsize(len); }
-	DynArray(const DynArray &other) { setsize(other.length); memcpy(pointer, other.pointer, length * sizeof(T)); }
+	DynArray(const DynArray& other) { setsize(other.length); copyFrom(other); }
 	DynArray(DynArray &&other) noexcept { pointer = other.pointer; length = other.length; other.pointer = nullptr; other.length = 0; }
-	void operator=(const DynArray &other) { resize(other.length); memcpy(pointer, other.pointer, length * sizeof(T)); }
+	void operator=(const DynArray &other) { resize(other.length); copyFrom(other); }
 	void operator=(DynArray &&other) noexcept { freeP(); pointer = other.pointer; length = other.length; other.pointer = nullptr; other.length = 0; }
 	~DynArray() { freeP(); }
 };
