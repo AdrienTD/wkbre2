@@ -18,6 +18,7 @@ struct Model;
 struct Reaction;
 struct ValueDeterminer;
 struct Footprint;
+struct ObjectFinder;
 
 struct GameObjBlueprint {
 	struct BPAppearance {
@@ -89,6 +90,10 @@ struct GameObjBlueprint {
 
 	int movementSpeedEquation = -1;
 	std::vector<MovementBand> movementBands;
+
+	ObjectFinder* aiSpawnLocationSelector = nullptr;
+
+	int buildingType = -1;
 
 	void parse(GSFileParser &gsf, const std::string &directory, bool isExtension = false);
 	void init(int i_bpClass, int i_bpId, const std::string &i_name, GameSet *i_gameSet) {
