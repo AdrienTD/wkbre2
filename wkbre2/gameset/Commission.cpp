@@ -50,6 +50,12 @@ void GSCommission::parse(GSFileParser& gsf, GameSet& gs)
 		else if (tag == "SUSPENSION_CONDITION") {
 			suspensionCondition = ReadValueDeterminer(gsf, gs);
 		}
+		else if (tag == "ON_COMPLETE_EVENT") {
+			onCompleteEvent = gs.events.readIndex(gsf);
+		}
+		else if (tag == "ON_STALLED_EVENT") {
+			onStalledEvent = gs.events.readIndex(gsf);
+		}
 		else if (tag == "END_COMMISSION") {
 			break;
 		}

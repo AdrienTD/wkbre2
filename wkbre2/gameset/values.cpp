@@ -731,7 +731,7 @@ struct ValueCanAffordCommission : ValueDeterminer {
 	std::unique_ptr<ObjectFinder> fPlayer;
 	virtual float eval(ScriptContext* ctx) override {
 		// TODO
-		return 0.0f;
+		return 1.0f;
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		gsf.nextString(true);
@@ -758,6 +758,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_SAME_PLAYER: vd = new ValueSamePlayer; break;
 	case Tags::VALUE_OBJECT_TYPE: vd = new ValueObjectType; break;
 	case Tags::VALUE_DISTANCE_BETWEEN: vd = new ValueDistanceBetween; break;
+	case Tags::VALUE_DISTANCE_BETWEEN_INCLUDING_RADIUS: vd = new ValueDistanceBetween; break; // TODO
 	case Tags::VALUE_VALUE_TAG_INTERPRETATION: vd = new ValueValueTagInterpretation; break;
 	case Tags::VALUE_DIPLOMATIC_STATUS_AT_LEAST: vd = new ValueDiplomaticStatusAtLeast; break;
 	case Tags::VALUE_ARE_ASSOCIATED: vd = new ValueAreAssociated; break;

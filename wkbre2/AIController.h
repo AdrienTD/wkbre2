@@ -32,7 +32,7 @@ struct CommissionInstance {
 		std::vector<SrvGORef> foundations;
 	};
 	struct UpgradeRequirementInstance : RequirementInstance {
-
+		bool done = false;
 	};
 
 	const GSCommission* blueprint;

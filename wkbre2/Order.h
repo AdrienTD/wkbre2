@@ -122,6 +122,7 @@ struct FaceTowardsTask : Task {
 
 struct SpawnTask : Task {
 	GameObjBlueprint* toSpawn = nullptr;
+	SrvGORef aiCommissioner; // temp
 	using Task::Task;
 	virtual void onStart() override;
 	virtual void onUpdate() override;

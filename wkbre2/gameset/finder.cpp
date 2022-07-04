@@ -398,7 +398,7 @@ struct FinderSubordinates : ObjectFinder {
 	int bpclass = -1;
 	GameObjBlueprint *objbp = nullptr;
 	bool immediateLevel = false;
-	static /*thread_local*/ ObjectFinderResult results;
+	static thread_local ObjectFinderResult results;
 	bool eligible(CommonGameObject *obj, ScriptContext *ctx) {
 		if (!obj->isInteractable()) return false;
 		if (!objbp || (objbp == obj->blueprint)) {
@@ -453,7 +453,7 @@ struct FinderSubordinates : ObjectFinder {
 	}
 };
 
-decltype(FinderSubordinates::results) FinderSubordinates::results; // this could be avoided using "inline" static members from C++17
+thread_local decltype(FinderSubordinates::results) FinderSubordinates::results; // this could be avoided using "inline" static members from C++17
 
 struct FinderNSubs : ObjectFinder {
 	DynArray<std::unique_ptr<ObjectFinder>> finders;

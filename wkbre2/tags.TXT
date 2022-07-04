@@ -521,6 +521,7 @@ PDEVENT_ | char* {
 	ON_SUBORDINATE_RECEIVED "On Subordinate Received"
 	ON_SEEING_OBJECT "On Seeing Object"
 	ON_STOP_SEEING_OBJECT "On Stop Seeing Object"
+	ON_COMMISSIONED "On Commissioned"
 }
 
 ORDTSKTYPE_ {

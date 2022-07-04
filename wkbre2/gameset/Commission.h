@@ -38,6 +38,7 @@ struct GSCommission {
 		ObjectFinder* fdSupportedBuildings;
 	};
 	ValueDeterminer* priority = nullptr;
+	int onCompleteEvent = -1, onStalledEvent = -1;
 	std::vector<CharacterRequirement> characterRequirements;
 	std::vector<BuildingRequirement> buildingRequirements;
 	std::vector<UpgradeRequirement> upgradeRequirements;

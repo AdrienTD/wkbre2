@@ -551,8 +551,9 @@ TagDict<6> Tags::SORDER_tagDict({
     "UNIQUE_TASK_ID",
 });
 
-TagDict<15> Tags::PDEVENT_tagDict({
+TagDict<16> Tags::PDEVENT_tagDict({
     "ON_BUSY",
+    "ON_COMMISSIONED",
     "ON_CONTROL_TRANSFERRED",
     "ON_CONVERSION_END",
     "ON_DESTRUCTION",

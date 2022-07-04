@@ -120,11 +120,14 @@ ServerGameObject* Server::spawnObject(GameObjBlueprint* blueprint, ServerGameObj
 	}
 	ServerGameObject* obj = createObject(blueprint);
 	obj->setParent(parent);
+
 	// TODO: "On Stampdown" event, etc.
 	if (blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING)
 		obj->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
 	else if (blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER)
 		obj->sendEvent(Tags::PDEVENT_ON_SPAWN);
+	parent->sendEvent(Tags::PDEVENT_ON_SUBORDINATE_RECEIVED, obj);
+
 	return obj;
 }
 
@@ -400,6 +403,18 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		}
 		case Tags::GAMEOBJ_AI_CONTROLLER: {
 			obj->aiController.parse(gsf, *gameSet);
+			break;
+		}
+		case Tags::GAMEOBJ_DISABLE_COUNT: {
+			obj->disableCount = gsf.nextInt(); // report to client?
+			break;
+		}
+		case Tags::GAMEOBJ_TERMINATED: {
+			obj->updateFlags(obj->flags | ServerGameObject::fTerminated);
+			break;
+		}
+		case Tags::GAMEOBJ_PLAYER_TERMINATED: {
+			obj->updateFlags(obj->flags | ServerGameObject::fPlayerTerminated);
 			break;
 		}
 		case Tags::GAMEOBJ_PLAYER:

@@ -638,10 +638,10 @@ void SpawnTask::onUpdate()
 	if (this->isDone()) {
 		ServerGameObject* obj = order->gameObject;
 		if (obj->getItem(Tags::PDITEM_HIT_POINTS_OF_OBJECT_BEING_SPAWNED) >= obj->getItem(Tags::PDITEM_HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED)) {
-			ServerGameObject* spawned = Server::instance->createObject(toSpawn);
-			spawned->setParent(obj->getPlayer());
+			ServerGameObject* spawned = Server::instance->spawnObject(toSpawn, obj->getPlayer());
 			spawned->setPosition(obj->position);
-			spawned->sendEvent(Tags::PDEVENT_ON_SPAWN, obj);
+			if (ServerGameObject* com = aiCommissioner.get())
+				com->sendEvent(Tags::PDEVENT_ON_COMMISSIONED, spawned);
 		}
 	}
 }
