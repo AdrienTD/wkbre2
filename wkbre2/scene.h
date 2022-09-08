@@ -30,7 +30,7 @@ struct SceneEntity {
 struct Scene {
 	//struct MaterialLess {
 	//	bool operator() (const Material &a, const Material &b) const {
-	//		int r = _stricmp(a.textureFilename.c_str(), b.textureFilename.c_str());
+	//		int r = StrCICompare(a.textureFilename.c_str(), b.textureFilename.c_str());
 	//		if (r == 0) return a.alphaTest < b.alphaTest;
 	//		return r < 0;
 	//	}

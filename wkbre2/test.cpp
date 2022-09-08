@@ -318,7 +318,7 @@ void FileExplorer()
 	if (t29curfiles)
 		for (const std::string &filename : *t29curfiles) {
 			const char *ext = strrchr(filename.c_str(), '.');
-			if (!_stricmp(ext, ".mesh3")) {
+			if (!StrCICompare(ext, ".mesh3")) {
 				if (ImGui::Selectable(filename.c_str())) {
 					feselfile = t29curdir + "\\" + filename;
 					printf("Selected file: %s\n", feselfile.c_str());

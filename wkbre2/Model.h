@@ -100,7 +100,7 @@ struct ModelCache {
 	friend StaticModel;
 	friend AnimatedModel;
 private:
-	std::map<std::string, std::unique_ptr<Model>, StriCompare> models;
+	std::map<std::string, std::unique_ptr<Model>, StrCICompareClass> models;
 	int numCalls = 0, numHits = 0;
 	std::map<uint32_t, Material> materials;
 	IndexedStringList textureFilenames;

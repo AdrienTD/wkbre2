@@ -6,6 +6,7 @@
 #include "file.h"
 #include "util/util.h"
 #include "util/GSFileParser.h"
+#include "util/StriCompare.h"
 #include "gfx/bitmap.h"
 #include <algorithm>
 #include <cstring>
@@ -93,7 +94,7 @@ int Terrain::GetMaxBits(int x)
 void Terrain::readFromFile(const char* filename)
 {
 	const char* ext = strrchr(filename, '.');
-	if (!_stricmp(ext, ".bcm"))
+	if (!StrCICompare(ext, ".bcm"))
 		readBCM(filename);
 	else
 		readSNR(filename);

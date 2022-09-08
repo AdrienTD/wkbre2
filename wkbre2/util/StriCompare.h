@@ -4,12 +4,27 @@
 
 #pragma once
 
-#include <cstring>
-#include <string>
+#include <string_view>
 
-struct StriCompare
+inline int StrCICompare(std::string_view a, std::string_view b) {
+	size_t len = (a.size() < b.size()) ? a.size() : b.size();
+	for (size_t i = 0; i < len; ++i) {
+		char x = a[i], y = b[i];
+		if (x >= 'A' && x <= 'Z')
+			x = x - 'A' + 'a';
+		if (y >= 'A' && y <= 'Z')
+			y = y - 'A' + 'a';
+		if (x < y)
+			return -1;
+		else if (x > y)
+			return 1;
+	}
+	return (a.size() == b.size()) ? 0 : ((a.size() < b.size()) ? -1 : 1);
+}
+
+struct StrCICompareClass
 {
-	bool operator() (const std::string &a, const std::string &b) const {
-		return _stricmp(a.c_str(), b.c_str()) < 0;
+	bool operator() (std::string_view a, std::string_view b) const {
+		return StrCICompare(a, b) < 0;
 	}
 };

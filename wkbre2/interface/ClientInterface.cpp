@@ -249,7 +249,7 @@ void ClientInterface::drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t ob
 		auto ap = model->getAPInfo(i);
 		auto state = model->getAPState(i, sceneEntity->animTime);
 		if (state.on) {
-			if (strcmpi(ap.tag.c_str(), "PS_Trail") == 0) {
+			if (StrCICompare(ap.tag, "PS_Trail") == 0) {
 				particlesContainer->generateTrail(state.position.transform(sceneEntity->transform), objid, client->timeManager.previousTime, client->timeManager.currentTime);
 			}
 			else if (ap.tag.substr(0, 3) == "PS_") {

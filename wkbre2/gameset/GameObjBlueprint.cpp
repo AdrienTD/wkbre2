@@ -18,7 +18,7 @@ void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const 
 		size_t pp = fn.find('.');
 		std::string name = fn.substr(0, pp);
 		std::string ext = fn.substr(pp + 1);
-		if (!_stricmp(ext.c_str(), "MESH3") || !_stricmp(ext.c_str(), "ANIM3")) {
+		if (!StrCICompare(ext, "mesh3") || !StrCICompare(ext, "anim3")) {
 			int pn = name.find_first_of("0123456789");
 			std::string ats = name.substr(0, pn);
 			//std::string num = name.substr(pn);

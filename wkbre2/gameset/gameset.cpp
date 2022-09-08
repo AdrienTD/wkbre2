@@ -25,7 +25,7 @@ void ignoreBlueprint(GSFileParser& gsf, const std::string& tag) { ignoreBlueprin
 
 void GameSet::parseFile(const char * fn, int pass)
 {
-	static std::set<std::string, StriCompare> processedFiles;
+	static std::set<std::string, StrCICompareClass> processedFiles;
 	static int callcount = 0;
 	callcount++;
 	processedFiles.insert(fn);

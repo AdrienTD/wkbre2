@@ -107,7 +107,7 @@ struct GameSet
 	GSBlueprintList<GSCommission> commissions;
 	GSBlueprintList<GSCharacterLadder> characterLadders;
 
-	std::map<std::string, float, StriCompare> definedValues;
+	std::map<std::string, float, StrCICompareClass> definedValues;
 	int defaultDiplomaticStatus = 0;
 	std::map<int, std::vector<GameObjBlueprint::SoundRef>> globalSoundMap;
 	std::map<std::string, GSTerrain*> associatedTileTexGroups;

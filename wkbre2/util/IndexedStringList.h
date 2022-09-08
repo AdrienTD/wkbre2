@@ -13,7 +13,7 @@
 // Basically a vector of strings but with a map for quick string searching
 struct IndexedStringList
 {
-	std::map<std::string, int, StriCompare> str2idMap;
+	std::map<std::string, int, StrCICompareClass> str2idMap;
 	std::vector<decltype(str2idMap)::iterator> id2strVector;
 
 	struct iterator {
