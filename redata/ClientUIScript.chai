@@ -1,0 +1,172 @@
+// This ChaiScript code is executed every frame on the client,
+// and is responsible for drawing and handling the in-game user interface.
+// This way, the UI can be easily modded.
+
+global g;
+if(g.is_var_undef()) { g = 1; }
+
+
+// Draw the panels
+
+if(getWKVersion() == GSVERSION_WKONE) {
+	var tpm = getWindowWidth() / 1024.0;
+	drawImage(11*tpm, 16, 1002*tpm, 45, "Interface/InGame/Top Panel/Standard Panel.tga")
+} else {
+	drawImage(0, 0, getWindowWidth(), 85, "Interface/InGame/Top Panel/Standard Panel.tga")
+}
+drawImage(0, getWindowHeight()-326, 330, 326, "Interface/InGame/Bottom_Left_Panel.tga")
+drawImage(getWindowWidth()-345, getWindowHeight()-343, 345, 343, "Interface/InGame/Bottom_Right_Panel.tga")
+
+
+// Top Panel Information
+
+global player = getPlayerID();
+if(player != 0) {
+	var tpm = getWindowWidth() / 1024.0;
+	drawText(674*tpm, 24, to_string(getItem(player, "Population Count")));
+	drawText(674*tpm, 42, to_string(getItem(player, "Total Population Count")));
+	drawText(748*tpm, 24, to_string(getItem(player, "Food")));
+	drawText(838*tpm, 24, to_string(getItem(player, "Wood")));
+	drawText(930*tpm, 24, to_string(getItem(player, "Gold")));
+	var color = getColor(player) % 8;
+	if(color == 0) { color = 8; }
+	drawImage((650+8) * tpm - 8, 22, 16, 36, "Interface/InGame/Top Panel/Player" + to_string(color) + ".tga");
+
+	var foodCons = getItem(player, "Food Consumption");
+	var foodProd = getItem(player, "Food Production");
+	if(foodProd > 0) {
+		var foodRatio = min(1, foodCons / foodProd);
+		if(foodRatio < 1) {
+			var leftWidth = round(64*foodRatio);
+			drawRect(744*tpm, 42, leftWidth*tpm, 13, 0xFF004A7F);
+			drawRect((744+leftWidth)*tpm, 42, (64-leftWidth)*tpm, 13, 0xFF007817);
+		} else {
+			var t = int(getSystemTime() * 2);
+			if(even(t)) {
+				drawRect(744*tpm, 42, 64*tpm, 13, 0xFF0000FF);
+			}
+		}
+	}
+	var foodText = to_string(foodCons) + "/" + to_string(foodProd);
+	drawText(748*tpm, 42, foodText);
+}
+
+
+// Selection
+
+global sel = getFirstSelection();
+if(sel != 0) {
+	var ypos = getWindowHeight() - 190;
+	var h = 16;
+	var n = 0;
+	var bp = getBlueprint(sel);
+
+	
+	// Selection information
+
+	drawText(70, ypos, bp.name);
+	drawText(71, ypos, bp.name);
+	drawText(70, ypos + ++n*h, "ID: " + to_string(sel));
+	drawText(71, ypos + n*h, "ID: " + to_string(sel));
+
+	if(bp.bpClass == GAMEOBJCLASS_CHARACTER) {
+		drawText(70, ypos + ++n*h, "HP: " + to_string(getItem(sel, "Hit Points")) + "/" + to_string(getItem(sel, "Hit Point Capacity")));
+	}
+	else if(bp.bpClass == GAMEOBJCLASS_BUILDING) {
+		drawText(70, ypos + ++n*h, "SI: " + to_string(getItem(sel, "Structural Integrity")) + "/" + to_string(getItem(sel, "Structural Integrity Capacity")));
+	}
+	drawText(70, ypos + ++n*h, "Food: " + to_string(getItem(sel, "Food")));
+	drawText(70, ypos + ++n*h, "Wood: " + to_string(getItem(sel, "Wood")));
+	drawText(70, ypos + ++n*h, "Gold: " + to_string(getItem(sel, "Gold")));
+
+
+	// Commands
+
+	var commandButton = fun(x, y, w, h, cs) {
+		var mx = getMouseX();
+		var my = getMouseY();
+		var tex = string(cs.texpath);
+		if(x <= mx && mx < x+w && y <= my && my < y+h) {
+			if(cs.info == CSInfo_ENABLED && cs.command.buttonHighlighted != "") {
+				tex = cs.command.buttonHighlighted;
+			}
+			setTooltip("TODO");
+		}
+		drawImage(x, y, w, h, tex);
+	}
+
+	// Ordinary commands
+	var x = 0;
+	var y = 0;
+	var vec = listSelectionCommands(fun (string x) {
+		x.find("Build ") != 0 && x.find("Spawn ") != 0 && x.find("Research ") != 0 &&
+		x != "Finish Building" && x != "Build"
+	});
+	// Knuckles button positions, in pixel relative to top-corner of Bottom_Left_Panel.tga
+	var knucklesButtonX = [ 14,  93, 173, 232, 251, 228 ]
+	var knucklesButtonY = [ 37,  13,  31,  87, 167, 247 ]
+	for(var i = 0; i < vec.size(); ++i) {
+		var cs := vec[i];
+		var hi = 64;
+		if(cs.texpath.size() > 0) {
+			if(i < knucklesButtonX.size()) {
+				x = knucklesButtonX[i];
+				y = getWindowHeight() - 326 + knucklesButtonY[i];
+			}
+			commandButton(x, y, hi, hi, cs);
+			x += hi+2;
+		}
+	}
+
+	if(bp.bpClass == GAMEOBJCLASS_CHARACTER) {
+		// Build commands
+		vec = listSelectionCommands(fun (string x) { x.find("Build ") == 0 });
+		for(var i = 0; i < vec.size(); ++i) {
+			var cs := vec[i];
+			var hi = 64;
+			if(cs.texpath.size() > 0) {
+				x = 24 + (i % 5) * (hi+2);
+				y = 64 + (i / 5) * (hi+2);
+				commandButton(x, y, hi, hi, cs);
+			}
+		}
+	}
+	else if(bp.bpClass == GAMEOBJCLASS_BUILDING) {
+		// Spawn commands
+		vec = listSelectionCommands(fun (string x) { x.find("Spawn ") == 0 });
+		for(var i = 0; i < vec.size(); ++i) {
+			var cs := vec[i];
+			var hi = 64;
+			if(cs.texpath.size() > 0) {
+				x = 24;
+				y = 64 + i * (hi+2);
+				commandButton(x, y, hi, hi, cs);
+			}
+		}
+
+		// Research commands
+		vec = listSelectionCommands(fun (string x) { x.find("Research ") == 0 });
+		for(var i = 0; i < vec.size(); ++i) {
+			var cs := vec[i];
+			var hi = 64;
+			if(cs.texpath.size() > 0) {
+				x = 24 + hi+2;
+				y = 64 + i * (hi+2);
+				commandButton(x, y, hi, hi, cs);
+			}
+		}
+	}
+	
+}
+
+
+// Random stuff ...
+
+global xanim = 32*sin(g*0.05);
+drawImage(32 + xanim, 0, 59, 59, "default_create.tga");
+
+global yanim = 5*sin(g*0.1);
+drawRect(31, 31 + yanim, 160, 16, 0x80000000);
+drawText(32, 32 + yanim, "Hello! " + to_string(g));
+
+g += 1;
