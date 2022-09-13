@@ -82,15 +82,25 @@ if(sel != 0) {
 
 	// Commands
 
-	var commandButton = fun(x, y, w, h, cs) {
+	var commandButton = fun(x, y, w, h, cs, assignMode, count) {
 		var mx = getMouseX();
 		var my = getMouseY();
 		var tex = string(cs.texpath);
 		if(x <= mx && mx < x+w && y <= my && my < y+h) {
-			if(cs.info == CSInfo_ENABLED && cs.command.buttonHighlighted != "") {
-				tex = cs.command.buttonHighlighted;
+			if(cs.info == CSInfo_ENABLED) {
+				if(isMouseDown(1) && cs.command.buttonDepressed != "") {
+					tex = cs.command.buttonDepressed;
+				}
+				else if(cs.command.buttonHighlighted != "") {
+					tex = cs.command.buttonHighlighted;
+				}
 			}
-			setTooltip("TODO");
+			setTooltip(getCommandHint(cs.command, sel));
+			var clicked = handleButton();
+			if(clicked) {
+				print("Clicked!");
+				launchCommand(cs.command, assignMode, count);
+			}
 		}
 		drawImage(x, y, w, h, tex);
 	}
@@ -102,7 +112,7 @@ if(sel != 0) {
 		x.find("Build ") != 0 && x.find("Spawn ") != 0 && x.find("Research ") != 0 &&
 		x != "Finish Building" && x != "Build"
 	});
-	// Knuckles button positions, in pixel relative to top-corner of Bottom_Left_Panel.tga
+	// Knuckles button positions, in pixel relative to top-left corner of Bottom_Left_Panel.tga
 	var knucklesButtonX = [ 14,  93, 173, 232, 251, 228 ]
 	var knucklesButtonY = [ 37,  13,  31,  87, 167, 247 ]
 	for(var i = 0; i < vec.size(); ++i) {
@@ -113,7 +123,8 @@ if(sel != 0) {
 				x = knucklesButtonX[i];
 				y = getWindowHeight() - 326 + knucklesButtonY[i];
 			}
-			commandButton(x, y, hi, hi, cs);
+			var assignMode = isCtrlHeld() ? ORDERASSIGNMODE_DO_FIRST : (isShiftHeld() ? ORDERASSIGNMODE_DO_LAST : ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
+			commandButton(x, y, hi, hi, cs, assignMode, 1);
 			x += hi+2;
 		}
 	}
@@ -127,7 +138,8 @@ if(sel != 0) {
 			if(cs.texpath.size() > 0) {
 				x = 24 + (i % 5) * (hi+2);
 				y = 64 + (i / 5) * (hi+2);
-				commandButton(x, y, hi, hi, cs);
+				var assignMode = isCtrlHeld() ? ORDERASSIGNMODE_DO_FIRST : (isShiftHeld() ? ORDERASSIGNMODE_DO_LAST : ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE);
+				commandButton(x, y, hi, hi, cs, assignMode, 1);
 			}
 		}
 	}
@@ -140,7 +152,8 @@ if(sel != 0) {
 			if(cs.texpath.size() > 0) {
 				x = 24;
 				y = 64 + i * (hi+2);
-				commandButton(x, y, hi, hi, cs);
+				var count = isShiftHeld() ? 10 : 1;
+				commandButton(x, y, hi, hi, cs, ORDERASSIGNMODE_DO_LAST, count);
 			}
 		}
 
@@ -152,7 +165,7 @@ if(sel != 0) {
 			if(cs.texpath.size() > 0) {
 				x = 24 + hi+2;
 				y = 64 + i * (hi+2);
-				commandButton(x, y, hi, hi, cs);
+				commandButton(x, y, hi, hi, cs, ORDERASSIGNMODE_DO_LAST, 1);
 			}
 		}
 	}

@@ -14,6 +14,7 @@ struct OrderBlueprint;
 struct WndCursor;
 struct GSCondition;
 struct GameObjBlueprint;
+struct ValueDeterminer;
 
 struct Command {
 	int id;
@@ -25,6 +26,8 @@ struct Command {
 	std::string buttonEnabled, buttonWait, buttonDepressed, buttonHighlighted, buttonAvailable, buttonImpossible;
 	std::vector<GSCondition*> conditionsImpossible, conditionsWait, conditionsWarning;
 	GameObjBlueprint* stampdownObject = nullptr;
+	std::string defaultHint;
+	std::vector<ValueDeterminer*> defaultHintValues;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
 	void execute(ServerGameObject *self, ServerGameObject *target = nullptr, int assignmentMode = 0, const Vector3 &destination = Vector3());

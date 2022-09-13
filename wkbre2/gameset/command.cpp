@@ -53,6 +53,12 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 			conditionsWarning.push_back(gs.conditions.readPtr(gsf));
 		else if (strtag == "STAMPDOWN_OBJECT")
 			stampdownObject = gs.readObjBlueprintPtr(gsf);
+		else if (strtag == "DEFAULT_HINT") {
+			defaultHint = gsf.nextString(false);
+			while (!gsf.eol) {
+				defaultHintValues.push_back(ReadValueDeterminer(gsf, gs));
+			}
+		}
 		else if (strtag == "END_COMMAND")
 			return;
 		gsf.advanceLine();

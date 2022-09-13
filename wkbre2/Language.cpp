@@ -21,7 +21,7 @@ void Language::load(const char* path)
 	free(out);
 }
 
-std::string Language::getText(const std::string& key)
+std::string Language::getText(const std::string& key) const
 {
 	auto it = text.find(key);
 	if (it != text.end())

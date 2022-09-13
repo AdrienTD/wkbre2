@@ -360,7 +360,8 @@ void ClientInterface::iter()
 	if (g_mouseWheel)
 		client->camera.position.y += g_mouseWheel;
 
-	if (g_mousePressed[SDL_BUTTON_LEFT]) {
+	static bool clickedScriptedUi = false;
+	if (!clickedScriptedUi && g_mousePressed[SDL_BUTTON_LEFT]) {
 		debugger.selectObject(nextSelectedObject);
 		if (!g_modShift)
 			selection.clear();
@@ -371,6 +372,7 @@ void ClientInterface::iter()
 		selBoxStartY = selBoxEndY = g_mouseY;
 		selBoxOn = true;
 	}
+	clickedScriptedUi = false;
 
 	if (g_mouseDown[SDL_BUTTON_LEFT]) {
 		selBoxEndX = g_mouseX;
@@ -445,10 +447,20 @@ void ClientInterface::iter()
 				client->sendTerminateObject(sel);
 	}
 
+	static bool debuggerOn = true;
+	static bool uiScriptOn = true;
+	if (g_keyPressed[SDL_SCANCODE_F2]) {
+		debuggerOn = !debuggerOn;
+	}
+	if (g_keyPressed[SDL_SCANCODE_F3]) {
+		uiScriptOn = !uiScriptOn;
+	}
+
 	//----- ImGui -----//
 
 	ImGuiImpl_NewFrame();
-	debugger.draw();
+	if (debuggerOn)
+		debugger.draw();
 	ImGui::Begin("Client Interface Debug");
 	ImGui::Text("ODPF: %i", numObjectsDrawn);
 	ImGui::Text("FPS: %i", framesPerSecond);
@@ -568,9 +580,6 @@ void ClientInterface::iter()
 		), "getWKVersion");
 		chai.add(chaiscript::const_var((int)GameSet::GSVERSION_WKONE), "GSVERSION_WKONE");
 		chai.add(chaiscript::const_var((int)GameSet::GSVERSION_WKBATTLES), "GSVERSION_WKBATTLES");
-		for (size_t i = 0; i < Tags::GAMEOBJCLASS_tagDict.tags.size(); ++i) {
-			chai.add(chaiscript::const_var((int)i), std::string("GAMEOBJCLASS_") + Tags::GAMEOBJCLASS_tagDict.tags[i]);
-		}
 		chai.add(chaiscript::fun([this]() {return client->timeManager.currentTime; }), "getGameTime");
 		chai.add(chaiscript::fun([this]() {return (float)SDL_GetTicks() / 1000.0f; }), "getSystemTime");
 		// Blueprint
@@ -594,6 +603,29 @@ void ClientInterface::iter()
 		chai.add(chaiscript::fun(&Command::buttonHighlighted), "buttonHighlighted");
 		chai.add(chaiscript::fun(&Command::buttonImpossible), "buttonImpossible");
 		chai.add(chaiscript::fun(&Command::buttonWait), "buttonWait");
+		chai.add(chaiscript::fun(
+			[this](const Command* cmd, uint32_t objid) -> std::string {
+				ClientGameObject* obj = client->findObject(objid);
+				if (!obj) return "No object, no hint";
+				CliScriptContext ctx{ client, obj };
+				auto condPred = [&ctx](GSCondition* cond) {return cond->test->booleval(&ctx); };
+				auto it = std::find_if_not(cmd->conditionsImpossible.begin(), cmd->conditionsImpossible.end(), condPred);
+				if (it != cmd->conditionsImpossible.end()) {
+					return (*it)->getFormattedHint(lang, &ctx);
+				}
+				it = std::find_if_not(cmd->conditionsWait.begin(), cmd->conditionsWait.end(), condPred);
+				if (it != cmd->conditionsWait.end()) {
+					return (*it)->getFormattedHint(lang, &ctx);
+				}
+				it = std::find_if_not(cmd->conditionsWarning.begin(), cmd->conditionsWarning.end(), condPred);
+				if (it != cmd->conditionsWarning.end()) {
+					return (*it)->getFormattedHint(lang, &ctx);
+				}
+				if (!cmd->defaultHint.empty())
+					return GSCondition::getFormattedHint(cmd->defaultHint, cmd->defaultHintValues, lang, &ctx);
+				return client->gameSet->commands.getString(cmd);
+			}
+		), "getCommandHint");
 		// Command list
 		enum class CSInfo {
 			ENABLED = 0,
@@ -656,9 +688,46 @@ void ClientInterface::iter()
 		// Mouse
 		chai.add(chaiscript::fun([]() {return g_mouseX; }), "getMouseX");
 		chai.add(chaiscript::fun([]() {return g_mouseY; }), "getMouseY");
-		chai.add(chaiscript::fun([](int button) {return g_mousePressed[button % std::size(g_mousePressed)]; }), "getMouseIsPressed");
+		chai.add(chaiscript::fun([](int button) {return g_mousePressed[button % std::size(g_mousePressed)]; }), "isMousePressed");
+		chai.add(chaiscript::fun([](int button) {return g_mouseDown[button % std::size(g_mouseDown)]; }), "isMouseDown");
+		// Keyboard
+		chai.add(chaiscript::fun([]() {return g_modCtrl; }), "isCtrlHeld");
+		chai.add(chaiscript::fun([]() {return g_modShift; }), "isShiftHeld");
+		chai.add(chaiscript::fun([]() {return g_modAlt; }), "isAltHeld");
 		// ImGui
 		chai.add(chaiscript::fun([](const std::string& str) { ImGui::SetTooltip("%s", str.c_str()); }), "setTooltip");
+		// Button
+		chai.add(chaiscript::fun(
+			[]() -> bool {
+				clickedScriptedUi = true;
+				if (g_mouseReleased[SDL_BUTTON_LEFT]) {
+					return true;
+				}
+				return false;
+			}), "handleButton");
+		chai.add(chaiscript::fun(
+			[](ClientInterface* cliUi, const Command* cmd, int assignmentMode, int count) {
+				if (cmd->stampdownObject) {
+					cliUi->stampdownBlueprint = cmd->stampdownObject;
+					cliUi->stampdownPlayer = (*cliUi->selection.begin())->getPlayer();
+					cliUi->stampdownFromCommand = true;
+				}
+				else {
+					for (ClientGameObject* obj : cliUi->selection)
+						if (obj)
+							if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end())
+								for (int i = 0; i < count; i++)
+									cliUi->client->sendCommand(obj, cmd, assignmentMode);
+				}
+			}, this), "launchCommand");
+		// Tags
+		auto addTags = [](auto& chai, auto& tagDict, const std::string& prefix) {
+			for (size_t i = 0; i < tagDict.tags.size(); ++i) {
+				chai.add(chaiscript::const_var((int)i), prefix + tagDict.tags[i]);
+			}
+		};
+		addTags(chai, Tags::GAMEOBJCLASS_tagDict, "GAMEOBJCLASS_");
+		addTags(chai, Tags::ORDERASSIGNMODE_tagDict, "ORDERASSIGNMODE_");
 		// Misc
 		chai.add(chaiscript::fun(static_cast<double(*)(double)>(&std::sin)), "sin");
 		chai.add(chaiscript::fun(static_cast<double(*)(double)>(&std::round)), "round");
@@ -678,16 +747,18 @@ void ClientInterface::iter()
 		//}
 		chaiInitialized = true;
 	}
-	try {
-		//chai.eval(*chaiAST.get());
-		chai.eval_file("redata/ClientUIScript.chai");
+	if (uiScriptOn) {
+		try {
+			//chai.eval(*chaiAST.get());
+			chai.eval_file("redata/ClientUIScript.chai");
+		}
+		catch (const chaiscript::exception::eval_error& err) {
+			printf("ChaiScript Eval error:\n%s\n", err.pretty_print().c_str());
+		}
+		//catch (const chaiscript::Boxed_Value& err) {
+		//	printf("ChaiScript Eval error:\n%s\n", chaiscript::boxed_cast<chaiscript::exception::eval_error>(err).pretty_print().c_str());
+		//}
 	}
-	catch (const chaiscript::exception::eval_error& err) {
-		printf("ChaiScript Eval error:\n%s\n", err.pretty_print().c_str());
-	}
-	//catch (const chaiscript::Boxed_Value& err) {
-	//	printf("ChaiScript Eval error:\n%s\n", chaiscript::boxed_cast<chaiscript::exception::eval_error>(err).pretty_print().c_str());
-	//}
 
 	//----- Rendering -----//
 
