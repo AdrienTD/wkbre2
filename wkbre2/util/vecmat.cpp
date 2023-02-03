@@ -55,8 +55,8 @@ Matrix Matrix::getLHOrthoMatrix(float w, float h, float zn, float zf)
 	Matrix m = getZeroMatrix();
 	m._11 = 2.0f / w;
 	m._22 = 2.0f / h;
-	m._33 = 1.0f / (zn - zf);
-	m._43 = zn / (zn - zf);
+	m._33 = 1.0f / -(zn - zf);
+	m._43 = zn / -(zn - zf);
 	m._44 = 1.0f;
 	return m;
 }

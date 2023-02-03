@@ -1183,7 +1183,8 @@ void Server::tick()
 		}
 	}
 
-	static std::vector<SrvGORef> toprocess;
+	//static std::vector<SrvGORef> toprocess;
+	static std::vector<ServerGameObject*> toprocess;
 	toprocess.clear();
 	const auto processObjOrders = [](ServerGameObject *obj, auto &func) -> void {
 		if (!obj->orderConfig.orders.empty() || obj->blueprint->receiveSightRangeEvents || obj->blueprint->removeWhenNotReferenced)
@@ -1212,16 +1213,19 @@ void Server::tick()
 	};
 	if(getLevel())
 		processObjOrders(getLevel(), processObjOrders);
-	for (const SrvGORef& ref : toprocess) {
-		ServerGameObject* obj = ref.get();
-		if (!obj) continue;
+	//for (const SrvGORef& ref : toprocess) {
+		//ServerGameObject* obj = ref.get();
+		//if (!obj) continue;
+	for (ServerGameObject* obj : toprocess) {
 		obj->orderConfig.process();
-		if (!ref) continue;
+		//if (!ref) continue;
+		if (obj->deleted) continue;
 		if (obj->movement.isMoving()) {
 			auto newpos = obj->movement.getNewPosition(timeManager.currentTime);
 			newpos.y = terrain->getHeightEx(obj->position.x, obj->position.z, obj->blueprint->canWalkOnWater());
 			obj->updatePosition(newpos, true);
-			if (!ref) continue;
+			//if (!ref) continue;
+			if (obj->deleted) continue;
 			Vector3 dir = obj->movement.getDirection();
 			obj->orientation.y = atan2f(dir.x, -dir.z);
 			// restart movement is speed changes
@@ -1238,7 +1242,8 @@ void Server::tick()
 		}
 		if (obj->blueprint->receiveSightRangeEvents) {
 			obj->lookForSightRangeEvents();
-			if (!ref) continue;
+			//if (!ref) continue;
+			if (obj->deleted) continue;
 		}
 		if (obj->blueprint->removeWhenNotReferenced)
 			obj->removeIfNotReferenced();

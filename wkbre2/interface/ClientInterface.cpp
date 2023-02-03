@@ -151,38 +151,34 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 		//if (dist < client->camera.nearDist || dist > client->camera.farDist)
 		//	goto drawsub;
 
-		Model* model = nullptr;
-		const auto& ap = obj->blueprint->subtypes[obj->subtype].appearances[obj->appearance];
-		auto it = ap.animations.find(obj->animationIndex);
-		if (it == ap.animations.end())
-			it = ap.animations.find(0);
-		if (it != ap.animations.end()) {
-			const auto& anim = it->second;
-			if (!anim.empty())
-				model = anim[obj->animationVariant];
-		}
+		Vector3 ttpp = obj->position.transformScreenCoords(client->camera.sceneMatrix);
+		bool onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
+		if (!onCam)
+			goto drawsub;
+
+		Model* model = obj->getModel();
 		if (!model)
 			model = obj->blueprint->representAs;
 		if (!model)
 			goto drawsub;
 
-		Vector3 sphereCenter = model->getSphereCenter().transform(obj->getWorldMatrix());
-		float sphereRadius = model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z });
-		Vector3 ttpp = sphereCenter.transformScreenCoords(client->camera.sceneMatrix);
-		bool onCam = (client->camera.position - sphereCenter).len3() < sphereRadius;
-		if (!onCam)
-			onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
-		if (!onCam) {
-			Vector3 camdir = client->camera.direction.normal();
-			Vector3 H = client->camera.position + camdir * camdir.dot(sphereCenter - client->camera.position);
-			Vector3 sphereEnd = sphereCenter + (H - sphereCenter).normal() * sphereRadius;
-			ttpp = sphereEnd.transformScreenCoords(client->camera.sceneMatrix);
-			onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
-		}
+		//Vector3 sphereCenter = model->getSphereCenter().transform(obj->getSceneMatrix());
+		//float sphereRadius = model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z });
+		//Vector3 ttpp = sphereCenter.transformScreenCoords(client->camera.sceneMatrix);
+		//bool onCam = (client->camera.position - sphereCenter).len3() < sphereRadius;
+		//if (!onCam)
+		//	onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
+		////if (!onCam) {
+		////	Vector3 camdir = client->camera.direction.normal();
+		////	Vector3 H = client->camera.position + camdir * camdir.dot(sphereCenter - client->camera.position);
+		////	Vector3 sphereEnd = sphereCenter + (H - sphereCenter).normal() * sphereRadius;
+		////	ttpp = sphereEnd.transformScreenCoords(client->camera.sceneMatrix);
+		////	onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
+		////}
 		if (onCam) {
 			if (model) {
 				obj->sceneEntity.model = model;
-				obj->sceneEntity.transform = obj->getWorldMatrix();
+				obj->sceneEntity.transform = obj->getSceneMatrix();
 				obj->sceneEntity.color = obj->getPlayer()->color;
 				obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
 				obj->sceneEntity.flags = 0;
@@ -467,6 +463,12 @@ void ClientInterface::iter()
 #endif
 	ImGui::End();
 
+	if (auto* sr = static_cast<D3D11EnhancedSceneRenderer*>(sceneRenderer)) {
+		ImGui::Begin("Shadow Map");
+		ImGui::Image(sr->getShadowMapTexture(), ImVec2(256, 256));
+		ImGui::End();
+	}
+
 	for (auto& activeGtw : client->gtwStates) {
 		if (activeGtw.second == -1) continue;
 		auto& gtw = client->gameSet->gameTextWindows[activeGtw.first];
@@ -512,6 +514,8 @@ void ClientInterface::iter()
 	}
 
 	//----- Rendering -----//
+
+	Matrix smMatrix;
 
 	gfx->ClearFrame(true, true, client->terrain ? client->terrain->fogColor : 0);
 	gfx->BeginDrawing();
@@ -569,7 +573,7 @@ void ClientInterface::iter()
 		}
 		for (auto& sfx : client->specialEffects) {
 			if (sfx.attachedObj)
-				sfx.entity.transform = sfx.attachedObj->getWorldMatrix();
+				sfx.entity.transform = sfx.attachedObj->getSceneMatrix();
 			Vector3 ttpp = sfx.entity.transform.getTranslationVector().transformScreenCoords(client->camera.sceneMatrix);
 			if (ttpp.x >= -1 && ttpp.x <= 1 && ttpp.y >= -1 && ttpp.y <= 1 && ttpp.z >= -1 && ttpp.z <= 1) {
 				sfx.entity.animTime = (uint32_t)((client->timeManager.currentTime - sfx.startTime) * 1000.0f);
@@ -598,11 +602,33 @@ void ClientInterface::iter()
 #endif
 		}
 		sceneRenderer->render();
+		if (g_settings.value<bool>("enhancedGraphics", false)) {
+			//Vector3 smLightPos(619.0f, 69.0f, 56.0f);
+			float sphRadius = client->camera.farDist / 2.0f;
+			Vector3 sphCenter = client->camera.position + client->camera.direction.normal() * sphRadius;
+			Vector3 smLightPos = sphCenter + scene->sunDirection.normal() * sphRadius;
+			Matrix smViewMatrix = Matrix::getLHLookAtViewMatrix(smLightPos, smLightPos - scene->sunDirection, Vector3(0, 1, 0));
+			Matrix smProjMatrix = Matrix::getLHOrthoMatrix(sphRadius * 2.0f, sphRadius * 2.0f, client->camera.nearDist, client->camera.farDist);
+			//Matrix smProjMatrix = Matrix::getLHPerspectiveMatrix(0.9f, 16.0f / 9.0f, client->camera.nearDist, client->camera.farDist);
+			smMatrix = smViewMatrix * smProjMatrix;
+			//Matrix smMatrix = client->camera.viewMatrix * smProjMatrix;
+			gfx->SetTransformMatrix(&smMatrix);
+			((D3D11EnhancedSceneRenderer*)sceneRenderer)->enterShadowMapMode();
+			sceneRenderer->render();
+			((D3D11EnhancedSceneRenderer*)sceneRenderer)->leaveShadowMapMode();
+			gfx->SetTransformMatrix(&client->camera.sceneMatrix);
+		}
 		scene->clear();
 	}
 
-	if (terrainRenderer && showTerrain)
+	if (terrainRenderer && showTerrain) {
+		if (g_settings.value<bool>("enhancedGraphics", false)) {
+			texture t = ((D3D11EnhancedSceneRenderer*)sceneRenderer)->getShadowMapTexture();
+			((D3D11EnhancedTerrainRenderer*)terrainRenderer)->m_shadowMap = t;
+			((D3D11EnhancedTerrainRenderer*)terrainRenderer)->m_sunViewProjMatrix = smMatrix;
+		}
 		terrainRenderer->render();
+	}
 
 	if (particleRenderer && particlesContainer) {
 		gfx->BeginParticles();

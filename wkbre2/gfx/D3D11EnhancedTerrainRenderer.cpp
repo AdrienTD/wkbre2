@@ -47,6 +47,7 @@ static constexpr uint32_t NormalToR10G10B10A2(const Vector3& vec) {
 const char tshaderCode[] = R"---(
 Texture2D inpTexture : register(t0);
 Texture2D normalTexture : register(t1);
+Texture2D shadowTexture : register(t2);
 SamplerState inpSampler : register(s0);
 
 cbuffer ConstantBuffer : register(b0)
@@ -67,6 +68,11 @@ cbuffer SunBuffer : register(b2)
 	float3 LampPos;
 	int BumpOn;
 	int LampOn;
+};
+
+cbuffer ShadowBuffer : register(b3)
+{
+	matrix ShadowTransform;
 };
 
 struct VS_OUTPUT
@@ -103,6 +109,11 @@ VS_OUTPUT VS(float4 Pos : POSITION, float3 Normal : NORMAL, float3 Tangent : TAN
 	return output;
 };
 
+float exagerrate(float x) {
+	//return (1.0 - cos(3.14159 * x)) * 0.5;
+	return x;
+}
+
 float4 PS(VS_OUTPUT input) : SV_Target
 {
 	// Compute the length of a half pixel in the current mipmap
@@ -118,7 +129,24 @@ float4 PS(VS_OUTPUT input) : SV_Target
 	float4 tex = inpTexture.Sample(inpSampler, fuv);
 	//float4 tex = float4(1,1,1,1);
 
-	float lum = 0.2;
+	// Shadow map
+	float4 smapResult = mul(float4(input.FragPos, 1), ShadowTransform);
+	smapResult.y *= -1;
+	const float smapPixLen = 1.0/2048.0;
+	const float2 smapCoords = (smapResult.xy + 1) * 0.5;
+	const float2 smapFrac = fmod(float2(smapCoords.x, 1-smapCoords.y) + 1 - smapPixLen*0.5, smapPixLen.xx) / smapPixLen.xx;
+	const float4 smapWeights = (float4(1,0,0,1) + smapFrac.xxxx * float4(-1,1,1,-1)) * (float4(1,1,0,0) + smapFrac.yyyy * float4(-1,-1,1,1));
+	float smapValue = 1;
+	smapValue -= dot(shadowTexture.Gather(inpSampler, smapCoords) < smapResult.zzzz, smapWeights);
+	bool onShadow = smapValue < 0.1;
+	if(abs(smapResult.x) > 1 || abs(smapResult.y) > 1) {
+		onShadow = false;
+		tex.g = 0;
+		tex.b = 0;
+	}
+
+	const float ambientLum = 0.35;
+	float lum = ambientLum;
 
 	float3 lampDir = LampPos - input.FragPos;
 	const float lampRadius = 5;
@@ -129,8 +157,12 @@ float4 PS(VS_OUTPUT input) : SV_Target
 		float3 m2 = input.Norm;
 		float3 m3 = input.Bitangent;
 		float3 actnorm = nrm.xxx * m1 + nrm.yyy * m2 + nrm.zzz * m3;
-		lum += clamp(dot(normalize(actnorm), SunDirection), 0, 1);
-		lum = clamp(lum, 0, 1);
+		if(!onShadow) {
+			lum += exagerrate(clamp(dot(normalize(actnorm), SunDirection), 0, 1)) * (1-ambientLum) * smapValue; //* 1 * (smapValue / 2.0 + 0.5);
+			lum = clamp(lum, 0, 1);
+			//lum = exagerrate(clamp(dot(normalize(actnorm), SunDirection), 0, 1)) * smapValue;
+			//lum = clamp(lum, ambientLum, 1);
+		}
 
 		float lampLum = clamp(dot(normalize(actnorm), normalize(lampDir)), 0, 1);
 		float lampDist = length(lampDir);
@@ -139,8 +171,10 @@ float4 PS(VS_OUTPUT input) : SV_Target
 		//lum += lampLum * clamp(1 / (1 + 0.14*lampDist + 0.07*lampDist*lampDist), 0, 1);
 	}
 	else {
-		lum += clamp(dot(input.Norm, SunDirection), 0, 1);
-		lum = clamp(lum, 0, 1);
+		if(!onShadow) {
+			lum += clamp(dot(input.Norm, SunDirection), 0, 1) * (1-ambientLum) * smapValue;
+			lum = clamp(lum, 0, 1);
+		}
 
 		float lampLum = clamp(dot(input.Norm, normalize(lampDir)), 0, 1);
 		float lampDist = length(lampDir);
@@ -329,6 +363,8 @@ struct D3D11EnhancedTerrainRenderer::Impl {
 
 	ComPtr<ID3D11Buffer> trnVertexBuffer;
 	std::unique_ptr<RIndexBatchD3D11<uint32_t>> trnIndexBatch;
+
+	ComPtr<ID3D11Buffer> shadowTransformBuffer;
 };
 
 void D3D11EnhancedTerrainRenderer::init()
@@ -540,6 +576,9 @@ void D3D11EnhancedTerrainRenderer::init()
 	bd.ByteWidth = 48;
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	d11gfx->ddDevice->CreateBuffer(&bd, nullptr, &_impl->sunBuffer);
+
+	bd.ByteWidth = 64;
+	d11gfx->ddDevice->CreateBuffer(&bd, nullptr, &_impl->shadowTransformBuffer);
 }
 
 D3D11EnhancedTerrainRenderer::~D3D11EnhancedTerrainRenderer()
@@ -595,6 +634,13 @@ void D3D11EnhancedTerrainRenderer::render() {
 	dimm->Unmap(_impl->sunBuffer.Get(), 0);
 	dimm->VSSetConstantBuffers(2, 1, _impl->sunBuffer.GetAddressOf());
 	dimm->PSSetConstantBuffers(2, 1, _impl->sunBuffer.GetAddressOf());
+
+	hres = dimm->Map(_impl->shadowTransformBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedRes);
+	assert(!FAILED(hres));
+	*(Matrix*)mappedRes.pData = m_sunViewProjMatrix.getTranspose();
+	dimm->Unmap(_impl->shadowTransformBuffer.Get(), 0);
+	dimm->PSSetConstantBuffers(3, 1, _impl->shadowTransformBuffer.GetAddressOf());
+	gfx->SetTexture(2, m_shadowMap);
 
 	texture oldgfxtex = 0;
 	for (int z = tlsz; z <= tlez; z++) {

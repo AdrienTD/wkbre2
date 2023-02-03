@@ -31,9 +31,11 @@ struct ClientGameObject : SpecificGameObject<Client, ClientGameObject> {
 	using Program = Client;
 	ClientGameObject(uint32_t id, GameObjBlueprint *blueprint) : SpecificGameObject<Client, ClientGameObject>(id, blueprint) {}
 	SceneEntity sceneEntity;
+	bool sceneMatrixDirty = true;
 
 	void updatePosition(const Vector3& newposition);
 	void updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
+	const Matrix& getSceneMatrix();
 };
 
 struct Client : SpecificGameState<ClientGameObject, ProgramType::CLIENT>

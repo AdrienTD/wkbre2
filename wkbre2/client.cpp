@@ -217,6 +217,7 @@ void Client::tick()
 				info("Object %u oriented to (%f,%f,%f)\n", objid, ori.x, ori.y, ori.z);
 				if (ClientGameObject *obj = findObject(objid)) {
 					obj->orientation = ori;
+					obj->sceneMatrixDirty = true;
 				}
 				break;
 			}
@@ -323,8 +324,10 @@ void Client::tick()
 			case NETCLIMSG_OBJECT_SCALE_SET: {
 				auto id = br.readUint32();
 				Vector3 scale = br.readVector3();
-				if (ClientGameObject* obj = findObject(id))
+				if (ClientGameObject* obj = findObject(id)) {
 					obj->scale = scale;
+					obj->sceneMatrixDirty = true;
+				}
 				break;
 			}
 			case NETCLIMSG_HIDE_GAME_TEXT_WINDOW: {
@@ -640,6 +643,7 @@ void ClientGameObject::updatePosition(const Vector3& newposition)
 	Client* prog = Client::instance;
 	Vector3 oldposition = position;
 	position = newposition;
+	sceneMatrixDirty = true;
 	if (prog->tiles) {
 		int trnNumX, trnNumZ;
 		std::tie(trnNumX, trnNumZ) = prog->terrain->getNumPlayableTiles();
@@ -706,3 +710,17 @@ void ClientGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vec
 		}
 	}
 }
+
+const Matrix& ClientGameObject::getSceneMatrix()
+{
+	if (sceneMatrixDirty) {
+		sceneEntity.transform = getWorldMatrix();
+		sceneMatrixDirty = false;
+	}
+	return sceneEntity.transform;
+}
+
+//Matrix ClientGameObject::getSceneMatrix()
+//{
+//	return getWorldMatrix();
+//}

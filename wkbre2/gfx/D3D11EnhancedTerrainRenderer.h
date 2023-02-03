@@ -24,6 +24,9 @@ public:
 
 	Vector3 m_lampPos;
 	bool m_bumpOn = true;
+
+	texture m_shadowMap = nullptr;
+	Matrix m_sunViewProjMatrix;
 private:
 	struct LoadedTexture {
 		texture diffuseMap;

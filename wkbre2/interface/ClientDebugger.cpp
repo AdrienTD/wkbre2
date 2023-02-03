@@ -126,8 +126,8 @@ void ClientDebugger::draw()
 	if (selectedObject) {
 		ClientGameObject *sel = selectedObject;
 		ImGui::Text("Object ID %i at %p\n%s", sel->id, sel, sel->blueprint->getFullName().c_str());
-		ImGui::DragFloat3("Position", &sel->position.x);
-		ImGui::DragFloat2("Orientation", &sel->orientation.x);
+		sel->sceneMatrixDirty |= ImGui::DragFloat3("Position", &sel->position.x);
+		sel->sceneMatrixDirty |= ImGui::DragFloat2("Orientation", &sel->orientation.x);
 		ImGui::Text("Subtype=%i, Appearance=%i", sel->subtype, sel->appearance);
 		ImGui::Text("Items:");
 		for (auto item : sel->items)

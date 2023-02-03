@@ -278,14 +278,15 @@ void D3D11Renderer::Init() {
 	swapChainDesc.BufferDesc.Width = g_windowWidth;
 	swapChainDesc.BufferDesc.Height = g_windowHeight;
 	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
-	swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+	swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
+	swapChainDesc.BufferDesc.RefreshRate.Denominator = 0;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.OutputWindow = hWindow;
 	swapChainDesc.SampleDesc.Count = msaaNumSamples;
 	swapChainDesc.SampleDesc.Quality = 0;
 	swapChainDesc.Windowed = TRUE;
-	HRESULT hres = D3D11CreateDeviceAndSwapChain(dxgiAdapter0.Get(), driverType, NULL, 0, featureLevels, std::size(featureLevels), D3D11_SDK_VERSION, &swapChainDesc, &dxgiSwapChain, &ddDevice, &featureLevel, &ddImmediateContext);
+	UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS;
+	HRESULT hres = D3D11CreateDeviceAndSwapChain(dxgiAdapter0.Get(), driverType, NULL, flags, featureLevels, std::size(featureLevels), D3D11_SDK_VERSION, &swapChainDesc, &dxgiSwapChain, &ddDevice, &featureLevel, &ddImmediateContext);
 	assert(!FAILED(hres));
 
 	ComPtr<ID3DBlob> vsBlob = compileShader(mainShaderCode, sizeof(mainShaderCode), "VS", "vs_4_0");

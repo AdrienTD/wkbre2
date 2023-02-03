@@ -20,6 +20,9 @@
 #include <wrl/client.h>
 using Microsoft::WRL::ComPtr;
 
+static constexpr int SHADOWMAP_WIDTH = 2048;
+static constexpr int SHADOWMAP_HEIGHT = SHADOWMAP_WIDTH;
+
 static constexpr uint32_t Vec3ToR10G10B10A2(const Vector3& vec) {
 	uint32_t res = (uint32_t)(vec.x * 1023.0f);
 	res |= (uint32_t)(vec.y * 1023.0f) << 10;
@@ -246,6 +249,11 @@ struct D3D11EnhancedSceneRenderer::Impl {
 	ComPtr<ID3D11Buffer> sceneConstBuffer, sunConstBuffer;
 	const size_t MAX_INSTANCES = 16;
 	ComPtr<ID3D11Buffer> instanceBuffer;
+
+	ComPtr<ID3D11Texture2D> shadowMapTexture;
+	ComPtr<ID3D11DepthStencilView> shadowMapDepthView;
+	ComPtr<ID3D11ShaderResourceView> shadowMapSRView;
+	D3D11_VIEWPORT oldViewport;
 };
 
 D3D11EnhancedSceneRenderer::~D3D11EnhancedSceneRenderer()
@@ -308,6 +316,35 @@ void D3D11EnhancedSceneRenderer::init()
 	bdesc.ByteWidth = 64 * _impl->MAX_INSTANCES;
 	bdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	ddev->CreateBuffer(&bdesc, nullptr, &_impl->instanceBuffer);
+
+	// SHADOW
+	D3D11_TEXTURE2D_DESC smTexDesc;
+	smTexDesc.Width = SHADOWMAP_WIDTH;
+	smTexDesc.Height = SHADOWMAP_HEIGHT;
+	smTexDesc.MipLevels = 1;
+	smTexDesc.ArraySize = 1;
+	smTexDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	smTexDesc.SampleDesc.Count = 1;
+	smTexDesc.SampleDesc.Quality = 0;
+	smTexDesc.Usage = D3D11_USAGE_DEFAULT;
+	smTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+	smTexDesc.CPUAccessFlags = 0;
+	smTexDesc.MiscFlags = 0;
+	ddev->CreateTexture2D(&smTexDesc, nullptr, &_impl->shadowMapTexture);
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC smDepthViewDesc;
+	smDepthViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	smDepthViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	smDepthViewDesc.Flags = 0;
+	smDepthViewDesc.Texture2D.MipSlice = 0;
+	ddev->CreateDepthStencilView(_impl->shadowMapTexture.Get(), &smDepthViewDesc, &_impl->shadowMapDepthView);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC smShadViewDesc;
+	smShadViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	smShadViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	smShadViewDesc.Texture2D.MostDetailedMip = 0;
+	smShadViewDesc.Texture2D.MipLevels = 1;
+	ddev->CreateShaderResourceView(_impl->shadowMapTexture.Get(), &smShadViewDesc, &_impl->shadowMapSRView);
 }
 
 void D3D11EnhancedSceneRenderer::render()
@@ -470,4 +507,35 @@ void D3D11EnhancedSceneRenderer::render()
 	}
 
 	dimm->IASetInputLayout(((D3D11Renderer*)gfx)->ddInputLayout);
+}
+
+texture D3D11EnhancedSceneRenderer::getShadowMapTexture()
+{
+	return (texture)_impl->shadowMapSRView.Get();
+}
+
+void D3D11EnhancedSceneRenderer::enterShadowMapMode()
+{
+	D3D11Renderer* d11gfx = (D3D11Renderer*)gfx;
+	ID3D11DeviceContext* dimm = d11gfx->ddImmediateContext;
+	UINT numOldViewports = 1;
+	D3D11_VIEWPORT viewport;
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	viewport.Width = SHADOWMAP_WIDTH;
+	viewport.Height = SHADOWMAP_HEIGHT;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	dimm->RSGetViewports(&numOldViewports, &_impl->oldViewport);
+	dimm->RSSetViewports(1, &viewport);
+	dimm->OMSetRenderTargets(0, nullptr, _impl->shadowMapDepthView.Get());
+	dimm->ClearDepthStencilView(_impl->shadowMapDepthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
+
+void D3D11EnhancedSceneRenderer::leaveShadowMapMode()
+{
+	D3D11Renderer* d11gfx = (D3D11Renderer*)gfx;
+	ID3D11DeviceContext* dimm = d11gfx->ddImmediateContext;
+	dimm->RSSetViewports(1, &_impl->oldViewport);
+	dimm->OMSetRenderTargets(1, &d11gfx->ddRenderTargetView, d11gfx->depthView);
 }

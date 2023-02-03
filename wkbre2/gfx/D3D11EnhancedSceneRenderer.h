@@ -5,6 +5,7 @@
 #pragma once
 
 #include "SceneRenderer.h"
+#include "renderer.h"
 
 struct D3D11EnhancedSceneRenderer : SceneRenderer
 {
@@ -12,6 +13,9 @@ struct D3D11EnhancedSceneRenderer : SceneRenderer
 	~D3D11EnhancedSceneRenderer();
 	void init();
 	void render() override;
+	texture getShadowMapTexture();
+	void enterShadowMapMode();
+	void leaveShadowMapMode();
 private:
 	struct Impl;
 	Impl* _impl;
