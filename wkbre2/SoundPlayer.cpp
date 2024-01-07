@@ -176,7 +176,7 @@ struct OALSoundPlayer : SoundPlayer {
 		mpg123_init();
 		mHandle = mpg123_new(nullptr, nullptr);
 		mpg123_replace_reader_handle(mHandle,
-			[](void* file, void* out, size_t len) -> ssize_t {
+			[](void* file, void* out, size_t len) -> ptrdiff_t {
 				OALSoundPlayer* self = (OALSoundPlayer*)file;
 				size_t clen = len;
 				if (self->streamPtr - self->streamBytes + len > self->streamSize)
