@@ -270,8 +270,8 @@ void ClientInterface::drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t ob
 	}
 }
 
-#define CHAISCRIPT_NO_THREADS
-#include <chaiscript/chaiscript.hpp>
+#define SOL_NO_CHECK_NUMBER_PRECISION 1
+#include <sol/sol.hpp>
 
 void ClientInterface::iter()
 {
@@ -527,83 +527,84 @@ void ClientInterface::iter()
 	}
 
 	//----- Scriptable UI -----//
-	static bool chaiInitialized = false;
-	static chaiscript::ChaiScript chai;
-	static chaiscript::AST_NodePtr chaiAST;
+	static bool luaInitialized = false;
+	static sol::state lua;
+	static sol::load_result luaScript;
 	static TextureCache csTextureCache(gfx);
-	if (!chaiInitialized) {
+	if (uiScriptOn && !luaInitialized) {
+		lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::string);
 		// UI functions
-		chai.add(chaiscript::fun(
+		lua.set_function("drawText", 
 			[](int x, int y, const std::string& text) {
 				ImGui::GetBackgroundDrawList()->AddText(ImVec2((float)x, (float)y), -1, text.c_str());
-			}), "drawText");
-		chai.add(chaiscript::fun(
+			});
+		lua.set_function("drawRect",
 			[](int x, int y, int width, int height, uint32_t color) {
 				ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2((float)x, (float)y), ImVec2((float)(x + width), (float)(y + height)), color);
-			}), "drawRect");
-		chai.add(chaiscript::fun(
+			});
+		lua.set_function("drawImage",
 			[](int x, int y, int width, int height, const std::string& path) {
 				texture tex = csTextureCache.getTexture(path.c_str(), true);
 				ImGui::GetBackgroundDrawList()->AddImage(tex, ImVec2((float)x, (float)y), ImVec2((float)(x + width), (float)(y + height)));
-			}), "drawImage");
-		chai.add(chaiscript::fun([]() {return g_windowWidth; }), "getWindowWidth");
-		chai.add(chaiscript::fun([]() {return g_windowHeight; }), "getWindowHeight");
+			});
+		lua.set_function("getWindowWidth", []() {return g_windowWidth; });
+		lua.set_function("getWindowHeight", []() {return g_windowHeight; });
 		// Client object
-		chai.add(chaiscript::fun(
+		lua.set_function("getPlayerID",
 			[this]() { ClientGameObject* obj = client->clientPlayer.get(); return obj ? obj->id : 0u; }
-		), "getPlayerID");
-		chai.add(chaiscript::fun(
+		);
+		lua.set_function("getItem",
 			[this](uint32_t id, const std::string& item) {
 				int itemId = client->gameSet->items.names.getIndex(item);
 				return client->findObject(id)->getItem(itemId);
-			}), "getItem");
-		chai.add(chaiscript::fun(
+			});
+		lua.set_function("getFirstSelection",
 			[this]() -> uint32_t {
 				if (selection.empty()) return 0u;
 				ClientGameObject* obj = selection.begin()->get();
 				return obj ? obj->id : 0u;
 			}
-		), "getFirstSelection");
-		chai.add(chaiscript::fun(
+		);
+		lua.set_function("getColor",
 			[this](uint32_t id) {
 				ClientGameObject* obj = client->findObject(id);
 				return obj ? obj->color : 0;
-			}), "getColor");
-		chai.add(chaiscript::fun(
+			});
+		lua.set_function("getObjectClass",
 			[this](uint32_t id) {
 				ClientGameObject* obj = client->findObject(id);
 				return obj ? obj->blueprint->bpClass : -1;
 			}
-		), "getObjectClass");
-		chai.add(chaiscript::fun(
+		);
+		lua.set_function("getWKVersion",
 			[this]() {return client->gameSet ? client->gameSet->version : 0; }
-		), "getWKVersion");
-		chai.add(chaiscript::const_var((int)GameSet::GSVERSION_WKONE), "GSVERSION_WKONE");
-		chai.add(chaiscript::const_var((int)GameSet::GSVERSION_WKBATTLES), "GSVERSION_WKBATTLES");
-		chai.add(chaiscript::fun([this]() {return client->timeManager.currentTime; }), "getGameTime");
-		chai.add(chaiscript::fun([this]() {return (float)SDL_GetTicks() / 1000.0f; }), "getSystemTime");
+		);
+		lua.set("GSVERSION_WKONE", GameSet::GSVERSION_WKONE);
+		lua.set("GSVERSION_WKBATTLES", GameSet::GSVERSION_WKBATTLES);
+		lua.set_function("getGameTime", [this]() {return client->timeManager.currentTime; });
+		lua.set_function("getSystemTime", [this]() {return (float)SDL_GetTicks() / 1000.0f; });
 		// Blueprint
-		chai.add(chaiscript::fun(
+		lua.set_function("getBlueprint",
 			[this](uint32_t id) -> const GameObjBlueprint* {
 				ClientGameObject* obj = client->findObject(id);
 				return obj ? obj->blueprint : nullptr;
 			}
-		), "getBlueprint");
-		chai.add(chaiscript::fun(&GameObjBlueprint::name), "name");
-		chai.add(chaiscript::fun(&GameObjBlueprint::bpClass), "bpClass");
-		chai.add(chaiscript::bootstrap::standard_library::vector_type<std::vector<Command*>>("CommandPtrVector"));
-		chaiscript::utility::add_class<Command>(chai, "Command", {}, {});
-		chai.add(chaiscript::fun(&GameObjBlueprint::offeredCommands), "offeredCommands");
-		chai.add(chaiscript::fun([](const GameObjBlueprint* bp) {return bp->offeredCommands.size(); }), "getOfferedCommandsCount");
-		chai.add(chaiscript::fun([](const GameObjBlueprint* bp, int index) -> Command* {return bp->offeredCommands.at(index); }), "getOfferedCommand");
+		);
+		sol::usertype<GameObjBlueprint> blueprint_type = lua.new_usertype<GameObjBlueprint>("GameObjBlueprint");
+		blueprint_type.set("name", sol::readonly(&GameObjBlueprint::name));
+		blueprint_type.set("bpClass", sol::readonly(&GameObjBlueprint::bpClass));
+		//AA lua.set_function("offeredCommands", &GameObjBlueprint::offeredCommands);
+		lua.set_function("getOfferedCommandsCount", [](const GameObjBlueprint* bp) {return bp->offeredCommands.size(); });
+		lua.set_function("getOfferedCommand", [](const GameObjBlueprint* bp, int index) -> Command* {return bp->offeredCommands.at(index); });
 		// Command
-		chai.add(chaiscript::fun(&Command::buttonAvailable), "buttonAvailable");
-		chai.add(chaiscript::fun(&Command::buttonDepressed), "buttonDepressed");
-		chai.add(chaiscript::fun(&Command::buttonEnabled), "buttonEnabled");
-		chai.add(chaiscript::fun(&Command::buttonHighlighted), "buttonHighlighted");
-		chai.add(chaiscript::fun(&Command::buttonImpossible), "buttonImpossible");
-		chai.add(chaiscript::fun(&Command::buttonWait), "buttonWait");
-		chai.add(chaiscript::fun(
+		sol::usertype<Command> command_type = lua.new_usertype<Command>("Command");
+		lua.set("buttonAvailable", sol::readonly(&Command::buttonAvailable));
+		lua.set("buttonDepressed", sol::readonly(&Command::buttonDepressed));
+		lua.set("buttonEnabled", sol::readonly(&Command::buttonEnabled));
+		lua.set("buttonHighlighted", sol::readonly(&Command::buttonHighlighted));
+		lua.set("buttonImpossible", sol::readonly(&Command::buttonImpossible));
+		lua.set("buttonWait", sol::readonly(&Command::buttonWait));
+		lua.set_function("getCommandHint",
 			[this](const Command* cmd, uint32_t objid) -> std::string {
 				ClientGameObject* obj = client->findObject(objid);
 				if (!obj) return "No object, no hint";
@@ -625,29 +626,37 @@ void ClientInterface::iter()
 					return GSCondition::getFormattedHint(cmd->defaultHint, cmd->defaultHintValues, lang, &ctx);
 				return client->gameSet->commands.getString(cmd);
 			}
-		), "getCommandHint");
+		);
 		// Command list
 		enum class CSInfo {
 			ENABLED = 0,
 			IMPOSSIBLE = 1,
 			WAIT = 2
 		};
-		chaiscript::ModulePtr mod = std::make_shared<chaiscript::Module>();
-		chaiscript::utility::add_class<CSInfo>(*mod, "CSInfo", {
-			{CSInfo::ENABLED, "CSInfo_ENABLED"},
-			{CSInfo::IMPOSSIBLE, "CSInfo_IMPOSSIBLE"},
-			{CSInfo::WAIT, "CSInfo_WAIT"}});
-		chai.add(mod);
+		lua.new_enum("CSInfo",
+			"ENABLED", CSInfo::ENABLED,
+			"IMPOSSIBLE", CSInfo::IMPOSSIBLE,
+			"WAIT", CSInfo::WAIT);
 		struct CommandState {
 			const Command* command;
 			const std::string* texpath;
 			CSInfo info;
 		};
-		chai.add(chaiscript::fun(&CommandState::command), "command");
-		chai.add(chaiscript::fun(&CommandState::texpath), "texpath");
-		chai.add(chaiscript::fun(&CommandState::info), "info");
-		chai.add(chaiscript::fun([this](const std::function<bool(const std::string&)>& filter) {
-			std::vector<chaiscript::Boxed_Value> cmdStates;
+		sol::usertype<CommandState> cs_type = lua.new_usertype<CommandState>("CommandState");
+		//cs_type.set("command", sol::readonly(&CommandState::command));
+		//cs_type.set("texpath", sol::readonly(&CommandState::texpath));
+		cs_type.set("command", sol::readonly_property([](CommandState* cs) {return cs->command; }));
+		cs_type.set("texpath", sol::readonly_property([](CommandState* cs) {return *cs->texpath; }));
+		cs_type.set("info", sol::readonly(&CommandState::info));
+		cs_type.set("buttonAvailable", sol::readonly_property([](CommandState* cs) {return cs->command->buttonAvailable; }));
+		cs_type.set("buttonDepressed", sol::readonly_property([](CommandState* cs) {return cs->command->buttonDepressed; }));
+		cs_type.set("buttonEnabled", sol::readonly_property([](CommandState* cs) {return cs->command->buttonEnabled; }));
+		cs_type.set("buttonHighlighted", sol::readonly_property([](CommandState* cs) {return cs->command->buttonHighlighted; }));
+		cs_type.set("buttonImpossible", sol::readonly_property([](CommandState* cs) {return cs->command->buttonImpossible; }));
+		cs_type.set("buttonWait", sol::readonly_property([](CommandState* cs) {return cs->command->buttonWait; }));
+		
+		lua.set_function("listSelectionCommands", [this](const std::function<bool(const std::string&)>& filter) {
+			std::vector<CommandState> cmdStates;
 			ClientGameObject* sel = nullptr; //selectedObject;
 			if (!sel && !selection.empty()) sel = *selection.begin();
 			if (sel) {
@@ -678,86 +687,88 @@ void ClientInterface::iter()
 							cs.info = CSInfo::ENABLED;
 						}
 						if (!cs.texpath->empty()) {
-							cmdStates.emplace_back(std::move(cs));
+							cmdStates.push_back(std::move(cs));
+							//cmdStates.push_back(lua.create_table_with(
+							//	"command", lua.wrapp cs.command,
+							//	"texpath", *cs.texpath,
+							//	"info", cs.info
+							//));
 						}
 					}
 				}
 			}
-			return cmdStates;
-			}), "listSelectionCommands");
+			return sol::as_nested(cmdStates);
+			});
 		// Mouse
-		chai.add(chaiscript::fun([]() {return g_mouseX; }), "getMouseX");
-		chai.add(chaiscript::fun([]() {return g_mouseY; }), "getMouseY");
-		chai.add(chaiscript::fun([](int button) {return g_mousePressed[button % std::size(g_mousePressed)]; }), "isMousePressed");
-		chai.add(chaiscript::fun([](int button) {return g_mouseDown[button % std::size(g_mouseDown)]; }), "isMouseDown");
+		lua.set_function("getMouseX", []() {return g_mouseX; });
+		lua.set_function("getMouseY", []() {return g_mouseY; });
+		lua.set_function("isMousePressed", [](int button) {return g_mousePressed[button % std::size(g_mousePressed)]; });
+		lua.set_function("isMouseDown", [](int button) {return g_mouseDown[button % std::size(g_mouseDown)]; });
 		// Keyboard
-		chai.add(chaiscript::fun([]() {return g_modCtrl; }), "isCtrlHeld");
-		chai.add(chaiscript::fun([]() {return g_modShift; }), "isShiftHeld");
-		chai.add(chaiscript::fun([]() {return g_modAlt; }), "isAltHeld");
+		lua.set_function("isCtrlHeld", []() {return g_modCtrl; });
+		lua.set_function("isShiftHeld", []() {return g_modShift; });
+		lua.set_function("isAltHeld", []() {return g_modAlt; });
 		// ImGui
-		chai.add(chaiscript::fun([](const std::string& str) { ImGui::SetTooltip("%s", str.c_str()); }), "setTooltip");
+		lua.set_function("setTooltip",[](const std::string& str) { ImGui::SetTooltip("%s", str.c_str()); });
 		// Button
-		chai.add(chaiscript::fun(
+		lua.set_function("handleButton",
 			[]() -> bool {
 				clickedScriptedUi = true;
 				if (g_mouseReleased[SDL_BUTTON_LEFT]) {
 					return true;
 				}
 				return false;
-			}), "handleButton");
-		chai.add(chaiscript::fun(
-			[](ClientInterface* cliUi, const Command* cmd, int assignmentMode, int count) {
+			});
+		lua.set_function("launchCommand",
+			[this](const Command* cmd, int assignmentMode, int count) {
 				if (cmd->stampdownObject) {
-					cliUi->stampdownBlueprint = cmd->stampdownObject;
-					cliUi->stampdownPlayer = (*cliUi->selection.begin())->getPlayer();
-					cliUi->stampdownFromCommand = true;
+					stampdownBlueprint = cmd->stampdownObject;
+					stampdownPlayer = (*selection.begin())->getPlayer();
+					stampdownFromCommand = true;
 				}
 				else {
-					for (ClientGameObject* obj : cliUi->selection)
+					for (ClientGameObject* obj : selection)
 						if (obj)
 							if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end())
 								for (int i = 0; i < count; i++)
-									cliUi->client->sendCommand(obj, cmd, assignmentMode);
+									client->sendCommand(obj, cmd, assignmentMode);
 				}
-			}, this), "launchCommand");
+			});
 		// Tags
-		auto addTags = [](auto& chai, auto& tagDict, const std::string& prefix) {
+		auto addTags = [](auto& lua, auto& tagDict, const std::string& prefix) {
 			for (size_t i = 0; i < tagDict.tags.size(); ++i) {
-				chai.add(chaiscript::const_var((int)i), prefix + tagDict.tags[i]);
+				lua.set(prefix + tagDict.tags[i], i);
 			}
 		};
-		addTags(chai, Tags::GAMEOBJCLASS_tagDict, "GAMEOBJCLASS_");
-		addTags(chai, Tags::ORDERASSIGNMODE_tagDict, "ORDERASSIGNMODE_");
+		addTags(lua, Tags::GAMEOBJCLASS_tagDict, "GAMEOBJCLASS_");
+		addTags(lua, Tags::ORDERASSIGNMODE_tagDict, "ORDERASSIGNMODE_");
 		// Misc
-		chai.add(chaiscript::fun(static_cast<double(*)(double)>(&std::sin)), "sin");
-		chai.add(chaiscript::fun(static_cast<double(*)(double)>(&std::round)), "round");
-		//try {
-		//	FILE* file;
-		//	fopen_s(&file, "C:\\Users\\Adrien\\Desktop\\Greatest Warrior Kings UI.txt", "rb");
-		//	fseek(file, 0, SEEK_END);
-		//	size_t siz = ftell(file);
-		//	fseek(file, 0, SEEK_SET);
-		//	std::string str = std::string(siz, 0);
-		//	fread(str.data(), str.size(), 1, file);
-		//	fclose(file);
-		//	chaiAST = chai.parse(str);
-		//}
-		//catch (const chaiscript::Boxed_Value& err) {
-		//	printf("ChaiScript Parse error:\n%s\n", chaiscript::boxed_cast<chaiscript::exception::eval_error>(err).pretty_print().c_str());
-		//}
-		chaiInitialized = true;
+		//lua.set_function("sin",static_cast<double(*)(double)>(&std::sin));
+		//lua.set_function("round",static_cast<double(*)(double)>(&std::round));
+
+		//luaScript = lua.load_file("redata/ClientUIScript.lua");
+		luaInitialized = true;
+		try {
+			lua.script_file("redata/ClientUIScript.lua");
+		}
+		catch (const sol::error& err) {
+			printf("Sol init error:\n%s\n", err.what());
+			uiScriptOn = false;
+		}
 	}
 	if (uiScriptOn) {
 		try {
-			//chai.eval(*chaiAST.get());
-			chai.eval_file("redata/ClientUIScript.chai");
+			lua["CCUI_PerFrame"]();
 		}
-		catch (const chaiscript::exception::eval_error& err) {
-			printf("ChaiScript Eval error:\n%s\n", err.pretty_print().c_str());
+		catch (const sol::error& err) {
+			printf("Sol error:\n%s\n", err.what());
+			uiScriptOn = false;
 		}
-		//catch (const chaiscript::Boxed_Value& err) {
-		//	printf("ChaiScript Eval error:\n%s\n", chaiscript::boxed_cast<chaiscript::exception::eval_error>(err).pretty_print().c_str());
-		//}
+	}
+	if (!uiScriptOn && luaInitialized) {
+		luaInitialized = false;
+		luaScript = {};
+		lua = {};
 	}
 
 	//----- Rendering -----//
