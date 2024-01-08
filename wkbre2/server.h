@@ -138,7 +138,7 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 
 	void loadSaveGame(const char *filename);
 	ServerGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
-	ServerGameObject* spawnObject(GameObjBlueprint* blueprint, ServerGameObject* parent);
+	ServerGameObject* spawnObject(GameObjBlueprint* blueprint, ServerGameObject* parent, const Vector3& initialPosition, const Vector3& initialOrientation);
 	void deleteObject(ServerGameObject *obj);
 	void destroyObject(ServerGameObject* obj);
 

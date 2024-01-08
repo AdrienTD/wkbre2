@@ -111,7 +111,7 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 	return obj;
 }
 
-ServerGameObject* Server::spawnObject(GameObjBlueprint* blueprint, ServerGameObject* parent)
+ServerGameObject* Server::spawnObject(GameObjBlueprint* blueprint, ServerGameObject* parent, const Vector3& initialPosition, const Vector3& initialOrientation)
 {
 	if (blueprint->buildingType == Tags::BUILDINGTYPE_RURAL_CENTRE) {
 		ServerGameObject* town = createObject(&gameSet->objBlueprints[Tags::GAMEOBJCLASS_TOWN][0]);
@@ -120,6 +120,8 @@ ServerGameObject* Server::spawnObject(GameObjBlueprint* blueprint, ServerGameObj
 	}
 	ServerGameObject* obj = createObject(blueprint);
 	obj->setParent(parent);
+	obj->setPosition(initialPosition);
+	obj->setOrientation(initialOrientation);
 
 	// TODO: "On Stampdown" event, etc.
 	if (blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING)
@@ -1301,8 +1303,7 @@ void Server::tick()
 				uint32_t playerid = br.readUint32();
 				Vector3 pos = br.readVector3();
 				bool sendEvent = br.readUint8();
-				ServerGameObject *obj = spawnObject(gameSet->getBlueprint(bpid), findObject(playerid));
-				obj->setPosition(pos);
+				ServerGameObject* obj = spawnObject(gameSet->getBlueprint(bpid), findObject(playerid), pos, Vector3(0,0,0));
 				if (sendEvent)
 					obj->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
 				clientInfos[clientIndex].lastStampdown = obj;

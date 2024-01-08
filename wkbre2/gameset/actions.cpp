@@ -1208,10 +1208,8 @@ struct ActionCreateObject : Action {
 	GameObjBlueprint* objbp;
 	std::unique_ptr<PositionDeterminer> pPosition;
 	virtual void run(SrvScriptContext* ctx) override {
-		ServerGameObject* obj = ctx->server->spawnObject(objbp, ctx->getSelf()->getPlayer());
 		auto posori = pPosition->eval(ctx);
-		obj->setPosition(posori.position);
-		obj->setOrientation(posori.rotation);
+		ServerGameObject* obj = ctx->server->spawnObject(objbp, ctx->getSelf()->getPlayer(), posori.position, posori.rotation);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		objbp = gs.readObjBlueprintPtr(gsf);

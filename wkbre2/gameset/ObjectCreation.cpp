@@ -60,10 +60,8 @@ void ObjectCreation::run(ServerGameObject * creator, SrvScriptContext* ctx)
 		printf("WARNING: OBJECT_CREATION failed as no CONTROLLER found.\n");
 		return;
 	}
-	ServerGameObject* created = Server::instance->spawnObject(type, ctrl);
 	OrientedPosition opos = createAt ? createAt->eval(ctx) : OrientedPosition({ creator->position, creator->orientation });
-	created->setPosition(opos.position);
-	created->setOrientation(opos.rotation);
+	ServerGameObject* created = Server::instance->spawnObject(type, ctrl, opos.position, opos.rotation);
 	auto _2 = ctx->changeSelf(created);
 	postCreationSequence.run(ctx);
 }

@@ -191,8 +191,7 @@ void AIController::update()
 			while (existingCount + inCtrCount < requiredCount) {
 				auto posori = gsreq.pdBuildPosition->eval(&ctx);
 				GameObjBlueprint* bpFoundation = Server::instance->gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, gsreq.bpBuilding->name + " Foundation");
-				ServerGameObject* foundation = Server::instance->spawnObject(bpFoundation, obj->getPlayer());
-				foundation->setPosition(posori.position);
+				ServerGameObject* foundation = Server::instance->spawnObject(bpFoundation, obj->getPlayer(), posori.position, Vector3(0,0,0));
 				obj->sendEvent(Tags::PDEVENT_ON_COMMISSIONED, foundation);
 				reqinst.foundations.emplace_back(foundation);
 				inCtrCount = reqinst.foundations.size();
