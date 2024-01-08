@@ -93,7 +93,7 @@ struct Client : SpecificGameState<ClientGameObject, ProgramType::CLIENT>
 	void tick();
 
 	void sendMessage(const std::string &msg);
-	void sendCommand(ClientGameObject *obj, Command *cmd, int assignmentMode, ClientGameObject *target = nullptr, const Vector3 & destination = Vector3());
+	void sendCommand(ClientGameObject *obj, const Command *cmd, int assignmentMode, ClientGameObject *target = nullptr, const Vector3 & destination = Vector3());
 	void sendPauseRequest(uint8_t pauseState);
 	void sendStampdown(GameObjBlueprint *blueprint, ClientGameObject *player, const Vector3 &position, bool sendEvent = false);
 	void sendStartLevelRequest();

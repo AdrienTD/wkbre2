@@ -270,6 +270,9 @@ void ClientInterface::drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t ob
 	}
 }
 
+#define SOL_NO_CHECK_NUMBER_PRECISION 1
+#include <sol/sol.hpp>
+
 void ClientInterface::iter()
 {
 	static Vector3 peapos(0, 0, 0);
@@ -357,7 +360,8 @@ void ClientInterface::iter()
 	if (g_mouseWheel)
 		client->camera.position.y += g_mouseWheel;
 
-	if (g_mousePressed[SDL_BUTTON_LEFT]) {
+	static bool clickedScriptedUi = false;
+	if (!clickedScriptedUi && g_mousePressed[SDL_BUTTON_LEFT]) {
 		debugger.selectObject(nextSelectedObject);
 		if (!g_modShift)
 			selection.clear();
@@ -368,6 +372,7 @@ void ClientInterface::iter()
 		selBoxStartY = selBoxEndY = g_mouseY;
 		selBoxOn = true;
 	}
+	clickedScriptedUi = false;
 
 	if (g_mouseDown[SDL_BUTTON_LEFT]) {
 		selBoxEndX = g_mouseX;
@@ -442,10 +447,20 @@ void ClientInterface::iter()
 				client->sendTerminateObject(sel);
 	}
 
+	static bool debuggerOn = true;
+	static bool uiScriptOn = true;
+	if (g_keyPressed[SDL_SCANCODE_F2]) {
+		debuggerOn = !debuggerOn;
+	}
+	if (g_keyPressed[SDL_SCANCODE_F3]) {
+		uiScriptOn = !uiScriptOn;
+	}
+
 	//----- ImGui -----//
 
 	ImGuiImpl_NewFrame();
-	debugger.draw();
+	if (debuggerOn)
+		debugger.draw();
 	ImGui::Begin("Client Interface Debug");
 	ImGui::Text("ODPF: %i", numObjectsDrawn);
 	ImGui::Text("FPS: %i", framesPerSecond);
@@ -509,6 +524,251 @@ void ClientInterface::iter()
 		}
 		ImGui::NewLine();
 		ImGui::End();
+	}
+
+	//----- Scriptable UI -----//
+	static bool luaInitialized = false;
+	static sol::state lua;
+	static sol::load_result luaScript;
+	static TextureCache csTextureCache(gfx);
+	if (uiScriptOn && !luaInitialized) {
+		lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::string);
+		// UI functions
+		lua.set_function("drawText", 
+			[](int x, int y, const std::string& text) {
+				ImGui::GetBackgroundDrawList()->AddText(ImVec2((float)x, (float)y), -1, text.c_str());
+			});
+		lua.set_function("drawRect",
+			[](int x, int y, int width, int height, uint32_t color) {
+				ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2((float)x, (float)y), ImVec2((float)(x + width), (float)(y + height)), color);
+			});
+		lua.set_function("drawImage",
+			[](int x, int y, int width, int height, const std::string& path) {
+				texture tex = csTextureCache.getTexture(path.c_str(), true);
+				ImGui::GetBackgroundDrawList()->AddImage(tex, ImVec2((float)x, (float)y), ImVec2((float)(x + width), (float)(y + height)));
+			});
+		lua.set_function("getWindowWidth", []() {return g_windowWidth; });
+		lua.set_function("getWindowHeight", []() {return g_windowHeight; });
+		// Client object
+		lua.set_function("getPlayerID",
+			[this]() { ClientGameObject* obj = client->clientPlayer.get(); return obj ? obj->id : 0u; }
+		);
+		lua.set_function("getItem",
+			[this](uint32_t id, const std::string& item) {
+				int itemId = client->gameSet->items.names.getIndex(item);
+				return client->findObject(id)->getItem(itemId);
+			});
+		lua.set_function("getFirstSelection",
+			[this]() -> uint32_t {
+				if (selection.empty()) return 0u;
+				ClientGameObject* obj = selection.begin()->get();
+				return obj ? obj->id : 0u;
+			}
+		);
+		lua.set_function("getColor",
+			[this](uint32_t id) {
+				ClientGameObject* obj = client->findObject(id);
+				return obj ? obj->color : 0;
+			});
+		lua.set_function("getObjectClass",
+			[this](uint32_t id) {
+				ClientGameObject* obj = client->findObject(id);
+				return obj ? obj->blueprint->bpClass : -1;
+			}
+		);
+		lua.set_function("getWKVersion",
+			[this]() {return client->gameSet ? client->gameSet->version : 0; }
+		);
+		lua.set("GSVERSION_WKONE", GameSet::GSVERSION_WKONE);
+		lua.set("GSVERSION_WKBATTLES", GameSet::GSVERSION_WKBATTLES);
+		lua.set_function("getGameTime", [this]() {return client->timeManager.currentTime; });
+		lua.set_function("getSystemTime", [this]() {return (float)SDL_GetTicks() / 1000.0f; });
+		// Blueprint
+		lua.set_function("getBlueprint",
+			[this](uint32_t id) -> const GameObjBlueprint* {
+				ClientGameObject* obj = client->findObject(id);
+				return obj ? obj->blueprint : nullptr;
+			}
+		);
+		sol::usertype<GameObjBlueprint> blueprint_type = lua.new_usertype<GameObjBlueprint>("GameObjBlueprint");
+		blueprint_type.set("name", sol::readonly(&GameObjBlueprint::name));
+		blueprint_type.set("bpClass", sol::readonly(&GameObjBlueprint::bpClass));
+		//AA lua.set_function("offeredCommands", &GameObjBlueprint::offeredCommands);
+		lua.set_function("getOfferedCommandsCount", [](const GameObjBlueprint* bp) {return bp->offeredCommands.size(); });
+		lua.set_function("getOfferedCommand", [](const GameObjBlueprint* bp, int index) -> Command* {return bp->offeredCommands.at(index); });
+		// Command
+		sol::usertype<Command> command_type = lua.new_usertype<Command>("Command");
+		lua.set("buttonAvailable", sol::readonly(&Command::buttonAvailable));
+		lua.set("buttonDepressed", sol::readonly(&Command::buttonDepressed));
+		lua.set("buttonEnabled", sol::readonly(&Command::buttonEnabled));
+		lua.set("buttonHighlighted", sol::readonly(&Command::buttonHighlighted));
+		lua.set("buttonImpossible", sol::readonly(&Command::buttonImpossible));
+		lua.set("buttonWait", sol::readonly(&Command::buttonWait));
+		lua.set_function("getCommandHint",
+			[this](const Command* cmd, uint32_t objid) -> std::string {
+				ClientGameObject* obj = client->findObject(objid);
+				if (!obj) return "No object, no hint";
+				CliScriptContext ctx{ client, obj };
+				auto condPred = [&ctx](GSCondition* cond) {return cond->test->booleval(&ctx); };
+				auto it = std::find_if_not(cmd->conditionsImpossible.begin(), cmd->conditionsImpossible.end(), condPred);
+				if (it != cmd->conditionsImpossible.end()) {
+					return (*it)->getFormattedHint(lang, &ctx);
+				}
+				it = std::find_if_not(cmd->conditionsWait.begin(), cmd->conditionsWait.end(), condPred);
+				if (it != cmd->conditionsWait.end()) {
+					return (*it)->getFormattedHint(lang, &ctx);
+				}
+				it = std::find_if_not(cmd->conditionsWarning.begin(), cmd->conditionsWarning.end(), condPred);
+				if (it != cmd->conditionsWarning.end()) {
+					return (*it)->getFormattedHint(lang, &ctx);
+				}
+				if (!cmd->defaultHint.empty())
+					return GSCondition::getFormattedHint(cmd->defaultHint, cmd->defaultHintValues, lang, &ctx);
+				return client->gameSet->commands.getString(cmd);
+			}
+		);
+		// Command list
+		enum class CSInfo {
+			ENABLED = 0,
+			IMPOSSIBLE = 1,
+			WAIT = 2
+		};
+		lua.new_enum("CSInfo",
+			"ENABLED", CSInfo::ENABLED,
+			"IMPOSSIBLE", CSInfo::IMPOSSIBLE,
+			"WAIT", CSInfo::WAIT);
+		struct CommandState {
+			const Command* command;
+			const std::string* texpath;
+			CSInfo info;
+		};
+		sol::usertype<CommandState> cs_type = lua.new_usertype<CommandState>("CommandState");
+		//cs_type.set("command", sol::readonly(&CommandState::command));
+		//cs_type.set("texpath", sol::readonly(&CommandState::texpath));
+		cs_type.set("command", sol::readonly_property([](CommandState* cs) {return cs->command; }));
+		cs_type.set("texpath", sol::readonly_property([](CommandState* cs) {return *cs->texpath; }));
+		cs_type.set("info", sol::readonly(&CommandState::info));
+		cs_type.set("buttonAvailable", sol::readonly_property([](CommandState* cs) {return cs->command->buttonAvailable; }));
+		cs_type.set("buttonDepressed", sol::readonly_property([](CommandState* cs) {return cs->command->buttonDepressed; }));
+		cs_type.set("buttonEnabled", sol::readonly_property([](CommandState* cs) {return cs->command->buttonEnabled; }));
+		cs_type.set("buttonHighlighted", sol::readonly_property([](CommandState* cs) {return cs->command->buttonHighlighted; }));
+		cs_type.set("buttonImpossible", sol::readonly_property([](CommandState* cs) {return cs->command->buttonImpossible; }));
+		cs_type.set("buttonWait", sol::readonly_property([](CommandState* cs) {return cs->command->buttonWait; }));
+		
+		lua.set_function("listSelectionCommands", [this](const std::function<bool(const std::string&)>& filter) {
+			std::vector<CommandState> cmdStates;
+			ClientGameObject* sel = nullptr; //selectedObject;
+			if (!sel && !selection.empty()) sel = *selection.begin();
+			if (sel) {
+				CliScriptContext ctx{ client, sel };
+				auto _tv = ctx.change(ctx.selectedObject, sel);
+				for (Command* cmd : sel->blueprint->offeredCommands) {
+					if (cmd->buttonAvailable.empty() && cmd->buttonEnabled.empty())
+						continue;
+					const std::string cmdname = client->gameSet->commands.names.getString(cmd->id);
+					if (!filter(cmdname))
+						continue;
+					auto iconPred = [this, &ctx](int eq) {return client->gameSet->equations[eq]->booleval(&ctx); };
+					auto condPred = [&ctx](GSCondition* cond) {return cond->test->booleval(&ctx); };
+					if (std::all_of(cmd->iconConditions.begin(), cmd->iconConditions.end(), iconPred)) {
+						// Icon is shown
+						CommandState cs;
+						cs.command = cmd;
+						if (!std::all_of(cmd->conditionsImpossible.begin(), cmd->conditionsImpossible.end(), condPred)) {
+							cs.texpath = &cmd->buttonImpossible;
+							cs.info = CSInfo::IMPOSSIBLE;
+						}
+						else if (!std::all_of(cmd->conditionsWait.begin(), cmd->conditionsWait.end(), condPred)) {
+							cs.texpath = &cmd->buttonWait;
+							cs.info = CSInfo::WAIT;
+						}
+						else {
+							cs.texpath = cmd->buttonEnabled.empty() ? &cmd->buttonAvailable : &cmd->buttonEnabled;
+							cs.info = CSInfo::ENABLED;
+						}
+						if (!cs.texpath->empty()) {
+							cmdStates.push_back(std::move(cs));
+							//cmdStates.push_back(lua.create_table_with(
+							//	"command", lua.wrapp cs.command,
+							//	"texpath", *cs.texpath,
+							//	"info", cs.info
+							//));
+						}
+					}
+				}
+			}
+			return sol::as_nested(cmdStates);
+			});
+		// Mouse
+		lua.set_function("getMouseX", []() {return g_mouseX; });
+		lua.set_function("getMouseY", []() {return g_mouseY; });
+		lua.set_function("isMousePressed", [](int button) {return g_mousePressed[button % std::size(g_mousePressed)]; });
+		lua.set_function("isMouseDown", [](int button) {return g_mouseDown[button % std::size(g_mouseDown)]; });
+		// Keyboard
+		lua.set_function("isCtrlHeld", []() {return g_modCtrl; });
+		lua.set_function("isShiftHeld", []() {return g_modShift; });
+		lua.set_function("isAltHeld", []() {return g_modAlt; });
+		// ImGui
+		lua.set_function("setTooltip",[](const std::string& str) { ImGui::SetTooltip("%s", str.c_str()); });
+		// Button
+		lua.set_function("handleButton",
+			[]() -> bool {
+				clickedScriptedUi = true;
+				if (g_mouseReleased[SDL_BUTTON_LEFT]) {
+					return true;
+				}
+				return false;
+			});
+		lua.set_function("launchCommand",
+			[this](const Command* cmd, int assignmentMode, int count) {
+				if (cmd->stampdownObject) {
+					stampdownBlueprint = cmd->stampdownObject;
+					stampdownPlayer = (*selection.begin())->getPlayer();
+					stampdownFromCommand = true;
+				}
+				else {
+					for (ClientGameObject* obj : selection)
+						if (obj)
+							if (std::find(obj->blueprint->offeredCommands.begin(), obj->blueprint->offeredCommands.end(), cmd) != obj->blueprint->offeredCommands.end())
+								for (int i = 0; i < count; i++)
+									client->sendCommand(obj, cmd, assignmentMode);
+				}
+			});
+		// Tags
+		auto addTags = [](auto& lua, auto& tagDict, const std::string& prefix) {
+			for (size_t i = 0; i < tagDict.tags.size(); ++i) {
+				lua.set(prefix + tagDict.tags[i], i);
+			}
+		};
+		addTags(lua, Tags::GAMEOBJCLASS_tagDict, "GAMEOBJCLASS_");
+		addTags(lua, Tags::ORDERASSIGNMODE_tagDict, "ORDERASSIGNMODE_");
+		// Misc
+		//lua.set_function("sin",static_cast<double(*)(double)>(&std::sin));
+		//lua.set_function("round",static_cast<double(*)(double)>(&std::round));
+
+		//luaScript = lua.load_file("redata/ClientUIScript.lua");
+		luaInitialized = true;
+		try {
+			lua.script_file("redata/ClientUIScript.lua");
+		}
+		catch (const sol::error& err) {
+			printf("Sol init error:\n%s\n", err.what());
+			uiScriptOn = false;
+		}
+	}
+	if (uiScriptOn) {
+		try {
+			lua["CCUI_PerFrame"]();
+		}
+		catch (const sol::error& err) {
+			printf("Sol error:\n%s\n", err.what());
+			uiScriptOn = false;
+		}
+	}
+	if (!uiScriptOn && luaInitialized) {
+		luaInitialized = false;
+		luaScript = {};
+		lua = {};
 	}
 
 	//----- Rendering -----//

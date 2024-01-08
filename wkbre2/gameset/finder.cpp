@@ -243,7 +243,7 @@ struct FinderLevel : ObjectFinder {
 struct FinderDisabledAssociates : ObjectFinder {
 	int category;
 	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
-		if (!ctx->isServer()) return fail(ctx);
+		if (!ctx->isServer()) return {}; // TODO: Communicate disable count
 		SrvScriptContext* sctx = (SrvScriptContext*)ctx;
 		const auto& set = sctx->getSelf()->associates[category];
 		ObjectFinderResult vec;

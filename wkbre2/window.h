@@ -13,7 +13,7 @@ extern int g_windowWidth, g_windowHeight;
 extern bool g_keyDown[512], g_keyPressed[512];
 extern bool g_modCtrl, g_modShift, g_modAlt;
 extern IRenderer *g_gfxRenderer;
-extern bool g_mouseDown[16], g_mousePressed[16];
+extern bool g_mouseDown[16], g_mousePressed[16], g_mouseReleased[16];
 extern int g_mouseX, g_mouseY, g_mouseWheel;
 
 void InitWindow();
