@@ -85,8 +85,8 @@ void ServerDebugger::draw() {
 				if (ImGui::Button("Break there")) {
 					__debugbreak();
 				}
-				for (Task *task : order.tasks) {
-					if (ImGui::TreeNode(task, "Task %i s%i: %s", task->id, task->state, server->gameSet->tasks.names.getString(task->blueprint->bpid).c_str())) {
+				for (auto& task : order.tasks) {
+					if (ImGui::TreeNode(task.get(), "Task %i s%i: %s", task->id, task->state, server->gameSet->tasks.names.getString(task->blueprint->bpid).c_str())) {
 						ImGui::TreePop();
 					}
 				}

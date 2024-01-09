@@ -164,7 +164,7 @@ void AIController::update()
 							int ordid = Server::instance->gameSet->orders.names.getIndex("Spawn " + charToSpawn.type->name);
 							OrderBlueprint* orderBp = &Server::instance->gameSet->orders[ordid];
 							Order* order = building->orderConfig.addOrder(orderBp, Tags::ORDERASSIGNMODE_DO_FIRST);
-							auto* task = (SpawnTask*)(order->tasks[0]);
+							auto* task = (SpawnTask*)(order->tasks[0].get());
 							task->toSpawn = charToSpawn.type;
 							task->aiCommissioner = obj;
 						}

@@ -37,7 +37,7 @@ struct Order {
 	ServerGameObject *gameObject;
 	int id, state = OTS_UNINITIALISED;
 	OrderBlueprint *blueprint;
-	std::vector<Task*> tasks;
+	std::vector<std::unique_ptr<Task>> tasks;
 	int nextTaskId = 0;
 	int currentTask = -1;
 
@@ -63,7 +63,7 @@ struct Task {
 	int id, state = OTS_UNINITIALISED;
 	TaskBlueprint* blueprint;
 	bool firstExecution = true, triggersStarted = false;
-	std::vector<Trigger*> triggers;
+	std::vector<std::unique_ptr<Trigger>> triggers;
 	bool startSequenceExecuted = false;
 	SrvGORef target;
 	Vector3 destination;
@@ -92,7 +92,7 @@ struct Task {
 	virtual void onStart() {}
 	virtual void onUpdate() {}
 
-	static Task* create(int id, TaskBlueprint* blueprint, Order* order);
+	static std::unique_ptr<Task> create(int id, TaskBlueprint* blueprint, Order* order);
 };
 
 struct MissileTask : Task {

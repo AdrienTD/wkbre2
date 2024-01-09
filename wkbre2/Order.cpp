@@ -17,7 +17,7 @@
 void Order::init()
 {
 	this->blueprint->initSequence.run(this->gameObject);
-	for (Task *task : this->tasks)
+	for (auto& task : this->tasks)
 		task->init();
 	this->currentTask = 0;
 }
@@ -77,7 +77,7 @@ void Order::process()
 Task * Order::getCurrentTask()
 {
 	if (currentTask == -1) return nullptr;
-	return this->tasks[this->currentTask];
+	return this->tasks[this->currentTask].get();
 }
 
 void Order::advanceToNextTask()
@@ -93,18 +93,18 @@ Task::Task(int id, TaskBlueprint * blueprint, Order * order) : order(order), id(
 	this->triggers.resize(blueprint->triggers.size());
 	for (size_t i = 0; i < this->triggers.size(); i++) {
 		auto &trigbp = blueprint->triggers[i];
-		Trigger *trigger;
+		std::unique_ptr<Trigger> trigger;
 		if (trigbp.type == Tags::TASKTRIGGER_TIMER)
-			trigger = new TimerTrigger(this, &trigbp);
+			trigger = std::make_unique<TimerTrigger>(this, &trigbp);
 		else if (trigbp.type == Tags::TASKTRIGGER_ANIMATION_LOOP)
-			trigger = new AnimationLoopTrigger(this, &trigbp);
+			trigger = std::make_unique<AnimationLoopTrigger>(this, &trigbp);
 		else if (trigbp.type == Tags::TASKTRIGGER_UNINTERRUPTIBLE_ANIMATION_LOOP)
-			trigger = new AnimationLoopTrigger(this, &trigbp);
+			trigger = std::make_unique<AnimationLoopTrigger>(this, &trigbp);
 		else if (trigbp.type == Tags::TASKTRIGGER_ATTACHMENT_POINT)
-			trigger = new AttachmentPointTrigger(this, &trigbp);
+			trigger = std::make_unique<AttachmentPointTrigger>(this, &trigbp);
 		else
-			trigger = new Trigger(this, &trigbp);
-		this->triggers[i] = trigger;
+			trigger = std::make_unique<Trigger>(this, &trigbp);
+		this->triggers[i] = std::move(trigger);
 	}
 }
 
@@ -204,7 +204,7 @@ void Task::startTriggers()
 	if (triggersStarted)
 		return;
 	triggersStarted = true;
-	for (Trigger *trigger : triggers)
+	for (auto& trigger : triggers)
 		trigger->init();
 }
 
@@ -238,16 +238,16 @@ void Task::reevaluateTarget()
 	}
 }
 
-Task* Task::create(int id, TaskBlueprint* blueprint, Order* order)
+std::unique_ptr<Task> Task::create(int id, TaskBlueprint* blueprint, Order* order)
 {
-	Task* task;
+	std::unique_ptr<Task> task;
 	switch (blueprint->classType) {
 	default:
-	case Tags::ORDTSKTYPE_OBJECT_REFERENCE: task = new ObjectReferenceTask(id, blueprint, order); break;
-	case Tags::ORDTSKTYPE_MOVE: task = new MoveTask(id, blueprint, order); break;
-	case Tags::ORDTSKTYPE_MISSILE: task = new MissileTask(id, blueprint, order); break;
-	case Tags::ORDTSKTYPE_FACE_TOWARDS: task = new FaceTowardsTask(id, blueprint, order); break;
-	case Tags::ORDTSKTYPE_SPAWN: task = new SpawnTask(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_OBJECT_REFERENCE: task = std::make_unique<ObjectReferenceTask>(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_MOVE: task = std::make_unique<MoveTask>(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_MISSILE: task = std::make_unique<MissileTask>(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_FACE_TOWARDS: task = std::make_unique<FaceTowardsTask>(id, blueprint, order); break;
+	case Tags::ORDTSKTYPE_SPAWN: task = std::make_unique<SpawnTask>(id, blueprint, order); break;
 	}
 	return task;
 }
@@ -271,6 +271,7 @@ Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignM
 		break;
 	case Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE:
 		this->cancelAllOrders();
+		[[fallthrough]];
 	default:
 	case Tags::ORDERASSIGNMODE_DO_LAST:
 		this->orders.emplace_back(this->nextOrderId++, orderBlueprint, gameobj);
@@ -600,7 +601,7 @@ void ObjectReferenceTask::onUpdate()
 			}
 		}
 		if (this->triggersStarted) {
-			for (Trigger* trigger : this->triggers)
+			for (auto& trigger : this->triggers)
 				trigger->update();
 		}
 	}
@@ -632,7 +633,7 @@ void SpawnTask::onUpdate()
 {
 	this->startTriggers();
 	if (this->triggersStarted) {
-		for (Trigger* trigger : this->triggers)
+		for (auto& trigger : this->triggers)
 			trigger->update();
 	}
 	if (this->isDone()) {

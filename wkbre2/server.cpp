@@ -287,7 +287,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 							int taskType = gameSet->tasks.names.getIndex(gsf.nextString(true)); assert(taskType != -1);
 							gsf.advanceLine();
 							TaskBlueprint &taskBp = gameSet->tasks[taskType];
-							Task *taskptr = Task::create(0, &taskBp, &order);
+							auto taskptr = Task::create(0, &taskBp, &order);
 							Task &task = *taskptr;
 							while (!gsf.eof) {
 								std::string tsktag = gsf.nextTag();
@@ -327,7 +327,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 									task.lastDestinationValid = gsf.nextInt();
 								}
 								else if (tsktag == "SPAWN_BLUEPRINT") {
-									if (SpawnTask* spawnTask = dynamic_cast<SpawnTask*>(taskptr)) {
+									if (SpawnTask* spawnTask = dynamic_cast<SpawnTask*>(taskptr.get())) {
 										spawnTask->toSpawn = gameSet->readObjBlueprintPtr(gsf);
 									}
 								}
@@ -336,7 +336,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 								}
 								gsf.advanceLine();
 							}
-							order.tasks.push_back(taskptr);
+							order.tasks.push_back(std::move(taskptr));
 						}
 						else if (ordtag == "END_ORDER") {
 							break;
