@@ -522,6 +522,7 @@ PDEVENT_ | char* {
 	ON_SEEING_OBJECT "On Seeing Object"
 	ON_STOP_SEEING_OBJECT "On Stop Seeing Object"
 	ON_COMMISSIONED "On Commissioned"
+	ON_LAST_SUBORDINATE_RELEASED "On Last Subordinate Released"
 }
 
 ORDTSKTYPE_ {
@@ -685,6 +686,7 @@ PDITEM_ | char* {
 	HIT_POINTS_OF_OBJECT_BEING_SPAWNED "Hit Points Of Object Being Spawned"
 	HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED "Hit Point Capacity Of Object Being Spawned"
 	ACTUAL_SIGHT_RANGE "Actual Sight Range"
+	NUMBER_OF_FARMERS "Number of Farmers"
 }
 
 MAPTEXDIR_ {

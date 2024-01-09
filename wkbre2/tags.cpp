@@ -551,13 +551,14 @@ TagDict<6> Tags::SORDER_tagDict({
     "UNIQUE_TASK_ID",
 });
 
-TagDict<16> Tags::PDEVENT_tagDict({
+TagDict<17> Tags::PDEVENT_tagDict({
     "ON_BUSY",
     "ON_COMMISSIONED",
     "ON_CONTROL_TRANSFERRED",
     "ON_CONVERSION_END",
     "ON_DESTRUCTION",
     "ON_IDLE",
+    "ON_LAST_SUBORDINATE_RELEASED",
     "ON_LEVEL_START",
     "ON_OBJECT_ENTERS",
     "ON_OBJECT_EXITS",
@@ -719,7 +720,7 @@ TagDict<12> Tags::BUILDINGTYPE_tagDict({
     "WALL_CROSSROADS",
 });
 
-TagDict<9> Tags::PDITEM_tagDict({
+TagDict<10> Tags::PDITEM_tagDict({
     "ACTUAL_SIGHT_RANGE",
     "FOOD",
     "GOLD",
@@ -727,6 +728,7 @@ TagDict<9> Tags::PDITEM_tagDict({
     "HIT_POINTS_OF_OBJECT_BEING_SPAWNED",
     "HIT_POINT_CAPACITY",
     "HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED",
+    "NUMBER_OF_FARMERS",
     "STONE",
     "WOOD",
 });

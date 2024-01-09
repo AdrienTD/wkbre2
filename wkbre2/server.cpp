@@ -16,6 +16,7 @@
 #include <codecvt>
 #include <atomic>
 #include <locale>
+#include "gameset/finder.h"
 
 Server *Server::instance = nullptr;
 
@@ -475,6 +476,7 @@ void Server::loadSavePredec(GSFileParser & gsf)
 void ServerGameObject::setItem(int index, float value)
 {
 	assert(index != -1);
+	if (getItem(index) == value) return;
 	items[index] = value;
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_ITEM_SET);
@@ -1187,7 +1189,7 @@ void Server::tick()
 
 	static std::vector<SrvGORef> toprocess;
 	toprocess.clear();
-	const auto processObjOrders = [](ServerGameObject *obj, auto &func) -> void {
+	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
 		if (!obj->orderConfig.orders.empty() || obj->blueprint->receiveSightRangeEvents || obj->blueprint->removeWhenNotReferenced)
 			toprocess.emplace_back(obj);
 		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_ARMY) {
@@ -1206,6 +1208,13 @@ void Server::tick()
 		}
 		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER) {
 			obj->aiController.update();
+			// Update "Number of Farmers" item (important for Food Consumption to work properly)
+			static const std::string numFarmersName = "Number of Farmers";
+			int numFarmersFinder = gameSet->objectFinderDefinitions.names.getIndex(numFarmersName);
+			if (numFarmersFinder != -1) {
+				SrvScriptContext ctx(this, obj);
+				obj->setItem(Tags::PDITEM_NUMBER_OF_FARMERS, gameSet->objectFinderDefinitions[numFarmersFinder]->eval(&ctx).size());
+			}
 		}
 		for (auto &childtype : obj->children) {
 			for (CommonGameObject* child : childtype.second)
