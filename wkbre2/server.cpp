@@ -699,14 +699,18 @@ void ServerGameObject::setScale(const Vector3& scale)
 void ServerGameObject::terminate()
 {
 	// Termination depends on the object class
-	SrvGORef ref = this;
+	if (deleted || (flags & fTerminated)) return;
 	flags |= fTerminated;
 	sendEvent(Tags::PDEVENT_ON_TERMINATION);
-	if (!ref) return;
-	sendEvent(Tags::PDEVENT_ON_DESTRUCTION);
-	if (!ref) return;
 	if (blueprint->bpClass != Tags::GAMEOBJCLASS_CHARACTER)
-		Server::instance->deleteObject(this);
+		destroy();
+}
+
+void ServerGameObject::destroy()
+{
+	if (deleted) return;
+	sendEvent(Tags::PDEVENT_ON_DESTRUCTION);
+	Server::instance->deleteObject(this);
 }
 
 void ServerGameObject::updateFlags(int value)

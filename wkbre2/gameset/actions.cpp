@@ -267,7 +267,11 @@ struct ActionTransferControl : Action {
 			return;
 		}
 		for (ServerGameObject* obj : objs) {
+			ServerGameObject* oldParent = obj->getParent();
 			obj->setParent(recipient);
+			// TODO: Event Order
+			if (oldParent->countChildren() == 0)
+				oldParent->sendEvent(Tags::PDEVENT_ON_LAST_SUBORDINATE_RELEASED);
 			obj->sendEvent(Tags::PDEVENT_ON_CONTROL_TRANSFERRED);
 			recipient->sendEvent(Tags::PDEVENT_ON_SUBORDINATE_RECEIVED, obj);
 		}
@@ -299,8 +303,10 @@ struct ActionAssignOrderVia : Action {
 struct ActionRemove : Action {
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
+		// REMOVE is like TERMINATE, but ensures that the object is completely removed (esp. for characters)
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			Server::instance->deleteObject(obj);
+			obj->terminate();
+			obj->destroy();
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {

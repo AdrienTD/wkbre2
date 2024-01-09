@@ -83,6 +83,8 @@ struct CommonGameObject {
 
 	Model* getModel() const;
 
+	size_t countChildren() const { size_t count = 0; for (auto& [_, vec] : children) count += vec.size(); return count; }
+
 	template<typename AnyGameObject> AnyGameObject* dyncast() { return (AnyGameObject*)this; }
 	template<typename AnyGameObject> const AnyGameObject* dyncast() const { return (const AnyGameObject*)this; }
 

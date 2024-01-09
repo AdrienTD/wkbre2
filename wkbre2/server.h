@@ -63,6 +63,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	void convertTo(GameObjBlueprint *postbp);
 	void setScale(const Vector3& scale);
 	void terminate();
+	void destroy();
 	void updateFlags(int value);
 	void disable();
 	void enable();
