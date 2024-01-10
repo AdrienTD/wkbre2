@@ -254,7 +254,7 @@ std::unique_ptr<Task> Task::create(int id, TaskBlueprint* blueprint, Order* orde
 
 
 
-Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination)
+Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination, bool startNow)
 {
 	if (Order* currentOrder = getCurrentOrder()) {
 		if (currentOrder->blueprint->cannotInterruptOrder && assignMode != Tags::ORDERASSIGNMODE_DO_LAST)
@@ -295,7 +295,7 @@ Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignM
 		neworder->tasks.at(0)->destination = destination;
 	}
 	neworder->init();
-	if (orderInFront) // start order (and first task) immediately if no other working order behind
+	if (orderInFront && startNow) // start order (and first task) immediately if no other working order behind
 		neworder->start();
 	return neworder;
 }

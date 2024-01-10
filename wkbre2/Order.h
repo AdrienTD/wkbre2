@@ -170,7 +170,7 @@ struct OrderConfiguration {
 
 	OrderConfiguration(ServerGameObject *gameobj) : gameobj(gameobj) {}
 	void process();
-	Order* addOrder(OrderBlueprint *orderBlueprint, int assignMode = 0, ServerGameObject *target = nullptr, const Vector3 &destination = Vector3(-1.0f,-1.0f,-1.0f));
+	Order* addOrder(OrderBlueprint *orderBlueprint, int assignMode = 0, ServerGameObject *target = nullptr, const Vector3 &destination = Vector3(-1.0f,-1.0f,-1.0f), bool startNow = true);
 	void cancelAllOrders();
 
 	Order *getCurrentOrder() { return orders.empty() ? nullptr : &orders[0]; }

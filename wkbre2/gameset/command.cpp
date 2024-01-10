@@ -72,7 +72,7 @@ void Command::execute(ServerGameObject *self, ServerGameObject *target, int assi
 	this->startSequence.run(&ctx);
 	// TODO: order (what to do first?)
 	if (this->order) {
-		Order* neworder = self->orderConfig.addOrder(this->order, assignmentMode, target, destination);
+		Order* neworder = self->orderConfig.addOrder(this->order, assignmentMode, target, destination, false);
 		// Give blueprint for spawn tasks
 		if (this->order->classType == Tags::ORDTSKTYPE_SPAWN) {
 			auto& gs = *ctx.server->gameSet;
