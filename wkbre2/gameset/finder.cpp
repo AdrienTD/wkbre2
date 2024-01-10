@@ -96,8 +96,9 @@ struct FinderTarget : ObjectFinder {
 			if (auto obj = sctx->get(ctx->target))
 				return { obj };
 			if (Order* order = sctx->getSelf()->orderConfig.getCurrentOrder())
-				if (CommonGameObject* target = order->getCurrentTask()->target.get())
-					return { target };
+				if (order->getCurrentTask()->isWorking()) // if the task is terminated/cancelled or not started, no target should be returned
+					if (CommonGameObject* target = order->getCurrentTask()->target.get())
+						return { target };
 			return {};
 		}
 		else if(ctx->isClient()) {

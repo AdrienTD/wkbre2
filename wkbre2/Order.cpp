@@ -16,7 +16,6 @@
 
 void Order::init()
 {
-	this->blueprint->initSequence.run(this->gameObject);
 	for (auto& task : this->tasks)
 		task->init();
 	this->currentTask = 0;
@@ -27,6 +26,7 @@ void Order::start()
 	if (isWorking()) return;
 	this->state = OTS_PROCESSING;
 	this->currentTask = 0;
+	this->blueprint->initSequence.run(this->gameObject);
 	this->getCurrentTask()->start();
 	this->blueprint->startSequence.run(this->gameObject);
 }
@@ -261,6 +261,7 @@ Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignM
 			return nullptr;
 	}
 	Order* neworder;
+	bool orderInFront = false;
 	switch (assignMode) {
 	case Tags::ORDERASSIGNMODE_DO_FIRST:
 		if (!this->orders.empty()) {
@@ -268,12 +269,17 @@ Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignM
 		}
 		this->orders.emplace_front(this->nextOrderId++, orderBlueprint, gameobj);
 		neworder = &this->orders.front();
+		orderInFront = true;
 		break;
 	case Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE:
 		this->cancelAllOrders();
+		orderInFront = true;
 		[[fallthrough]];
 	default:
 	case Tags::ORDERASSIGNMODE_DO_LAST:
+		// should orderInFront be set to true if no other orders present?
+		// if DO_LAST is used, it should be expected that the order cannot start immediately
+		// so let's keep it false for now
 		this->orders.emplace_back(this->nextOrderId++, orderBlueprint, gameobj);
 		neworder = &this->orders.back();
 		break;
@@ -289,14 +295,17 @@ Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignM
 		neworder->tasks.at(0)->destination = destination;
 	}
 	neworder->init();
+	if (orderInFront) // start order (and first task) immediately if no other working order behind
+		neworder->start();
 	return neworder;
 }
 
 void OrderConfiguration::cancelAllOrders()
 {
-	while (!orders.empty()) {
-		orders.front().cancel();
-		orders.pop_front();
+	// we cannot delete the orders yet, they might still be referenced
+	size_t count = orders.size(); // copy of the size, so that if new orders are created during the cancelling sequence, it won't cancel the new ones
+	for (size_t i = 0; i < count; ++i) {
+		orders[i].cancel();
 	}
 	gameobj->reportCurrentOrder(nullptr);
 }
