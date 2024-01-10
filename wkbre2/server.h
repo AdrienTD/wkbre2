@@ -163,6 +163,9 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 	void skipCameraPath(ServerGameObject* player);
 	void setGameSpeed(float nextSpeed);
 	void playMusic(ServerGameObject* player, int musicTag);
+	void assignAlias(int aliasIndex, ServerGameObject* object);
+	void unassignAlias(int aliasIndex, ServerGameObject* object);
+	void clearAlias(int aliasIndex);
 
 	void tick();
 

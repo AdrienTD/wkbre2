@@ -70,7 +70,7 @@ struct FinderAlias : ObjectFinder {
 		auto &alias = ctx->gameState->aliases[aliasIndex];
 		ObjectFinderResult res;
 		for (auto &ref : alias)
-			if (auto* obj = ref.getFrom<Server>(); obj && obj->isInteractable())
+			if (auto* obj = ref.getFrom(ctx->gameState); obj && obj->isInteractable())
 				res.push_back(obj);
 		return res;
 	}

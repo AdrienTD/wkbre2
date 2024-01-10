@@ -544,6 +544,21 @@ void Client::tick()
 				resetCameraMode();
 				break;
 			}
+			case NETCLIMSG_ALIAS_ASSIGNED: {
+				auto [aliasIndex, objectId] = br.readValues<int, uint32_t>();
+				aliases[aliasIndex].insert(objectId);
+				break;
+			}
+			case NETCLIMSG_ALIAS_UNASSIGNED: {
+				auto [aliasIndex, objectId] = br.readValues<int, uint32_t>();
+				aliases[aliasIndex].erase(objectId);
+				break;
+			}
+			case NETCLIMSG_ALIAS_CLEARED: {
+				auto [aliasIndex] = br.readValues<int>();
+				aliases[aliasIndex].clear();
+				break;
+			}
 			}
 		}
 		dbgNumMessagesInCurrentSec += dbgNumMessagesPerTick;

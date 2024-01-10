@@ -46,10 +46,9 @@ struct BinaryReader
 	inline void readTo(std::string& val) { val = readStringZ(); }
 	inline void readTo(Vector3& val) { val = readVector3(); }
 	template<typename T, typename ... Args> void readTo(T& val, Args& ... rest) { readTo(val); readTo(rest...); }
-	template<typename T> std::tuple<T> readValues() { T val; readTo(val); return { val }; }
 	template<typename T, typename ... Args> std::tuple<T, Args...> readValues() {
-		T val;
-		readTo(val);
-		return std::tuple_cat(std::tie(val), readValues<Args...>());
+		std::tuple<T, Args...> readTuple;
+		std::apply([this](auto& ... elem) { (readTo(elem), ...); }, readTuple);
+		return readTuple;
 	}
 };

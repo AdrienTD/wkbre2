@@ -320,9 +320,8 @@ struct ActionAssignAlias : Action {
 	int aliasIndex;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
-		auto &alias = Server::instance->aliases[aliasIndex];
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			alias.insert(obj->id);
+			ctx->server->assignAlias(aliasIndex, obj);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -337,9 +336,8 @@ struct ActionUnassignAlias : Action {
 	int aliasIndex;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
-		auto &alias = Server::instance->aliases[aliasIndex];
 		for (ServerGameObject *obj : finder->eval(ctx)) {
-			alias.erase(obj->id);
+			ctx->server->unassignAlias(aliasIndex, obj);
 		}
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
@@ -353,8 +351,7 @@ struct ActionUnassignAlias : Action {
 struct ActionClearAlias : Action {
 	int aliasIndex;
 	virtual void run(SrvScriptContext* ctx) override {
-		auto &alias = Server::instance->aliases[aliasIndex];
-		alias.clear();
+		ctx->server->clearAlias(aliasIndex);
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
 		aliasIndex = gs.aliases.readIndex(gsf);

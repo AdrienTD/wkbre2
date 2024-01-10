@@ -351,10 +351,10 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			break;
 		}
 		case Tags::GAMEOBJ_ALIAS: {
-			auto &alias = aliases[gameSet->aliases.readIndex(gsf)];
+			int aliasIndex = gameSet->aliases.readIndex(gsf);
 			int count = gsf.nextInt();
 			for (int i = 0; i < count; i++) {
-				alias.emplace(gsf.nextInt());
+				assignAlias(aliasIndex, findObject(gsf.nextInt()));
 			}
 			break;
 		}
@@ -1111,6 +1111,33 @@ void Server::playMusic(ServerGameObject* player, int musicTag)
 	msg.writeValues(musicTag);
 	sendTo(player, msg);
 	player->isMusicPlaying = true;
+}
+
+void Server::assignAlias(int aliasIndex, ServerGameObject* object)
+{
+	aliases[aliasIndex].insert(object->id);
+
+	NetPacketWriter msg{ NETCLIMSG_ALIAS_ASSIGNED };
+	msg.writeValues(aliasIndex, object->id);
+	sendToAll(msg);
+}
+
+void Server::unassignAlias(int aliasIndex, ServerGameObject* object)
+{
+	aliases[aliasIndex].erase(object->id);
+
+	NetPacketWriter msg{ NETCLIMSG_ALIAS_UNASSIGNED };
+	msg.writeValues(aliasIndex, object->id);
+	sendToAll(msg);
+}
+
+void Server::clearAlias(int aliasIndex)
+{
+	aliases[aliasIndex].clear();
+
+	NetPacketWriter msg{ NETCLIMSG_ALIAS_CLEARED };
+	msg.writeValues(aliasIndex);
+	sendToAll(msg);
 }
 
 void Server::addClient(NetLink* link)
