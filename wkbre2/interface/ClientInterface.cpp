@@ -358,7 +358,7 @@ void ClientInterface::iter()
 		camroton = false;
 
 	if (g_mouseWheel)
-		client->camera.position.y += g_mouseWheel;
+		client->camera.position.y += g_mouseWheel * 2;
 
 	static bool clickedScriptedUi = false;
 	if (!clickedScriptedUi && g_mousePressed[SDL_BUTTON_LEFT]) {
@@ -455,6 +455,15 @@ void ClientInterface::iter()
 	if (g_keyPressed[SDL_SCANCODE_F3]) {
 		uiScriptOn = !uiScriptOn;
 	}
+
+	static int elevatorMouseStart = 0;
+	static float elevatorCamStart = 0.0f;
+	if (g_mousePressed[SDL_BUTTON_X1]) {
+		elevatorMouseStart = g_mouseY;
+		elevatorCamStart = client->camera.position.y;
+	}
+	if (g_mouseDown[SDL_BUTTON_X1])
+		client->camera.position.y = elevatorCamStart + (elevatorMouseStart - g_mouseY) * 0.1f;
 
 	//----- ImGui -----//
 
