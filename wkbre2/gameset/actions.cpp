@@ -1332,6 +1332,37 @@ struct ActionDeactivateCommission : Action {
 	}
 };
 
+struct ActionInterpolateCameraToPosition : Action {
+	std::unique_ptr<PositionDeterminer> posdet;
+	std::unique_ptr<ValueDeterminer> duration;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		auto posori = posdet->eval(ctx);
+		float durationValue = duration->eval(ctx);
+		for (ServerGameObject* obj : finder->eval(ctx))
+			ctx->server->interpolateCameraToPosition(obj, posori.position, posori.rotation, durationValue);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		posdet.reset(PositionDeterminer::createFrom(gsf, gs));
+		duration.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionInterpolateCameraToStoredPosition : Action {
+	std::unique_ptr<ValueDeterminer> duration;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		float durationValue = duration->eval(ctx);
+		for (ServerGameObject* obj : finder->eval(ctx))
+			ctx->server->interpolateCameraToStoredPosition(obj, durationValue);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		duration.reset(ReadValueDeterminer(gsf, gs));
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1419,6 +1450,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_ABANDON_PLAN: action = new ActionAbandonPlan; break;
 	case Tags::ACTION_ACTIVATE_COMMISSION: action = new ActionActivateCommission; break;
 	case Tags::ACTION_DEACTIVATE_COMMISSION: action = new ActionDeactivateCommission; break;
+	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION: action = new ActionInterpolateCameraToPosition; break;
+	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION: action = new ActionInterpolateCameraToStoredPosition; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:
@@ -1447,8 +1480,6 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_EXIT_TO_MAIN_MENU:
 	case Tags::ACTION_CONQUER_LEVEL:
 	case Tags::ACTION_DISPLAY_LOAD_GAME_MENU:
-	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION:
-	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION:
 	case Tags::ACTION_LOCK_TIME:
 	case Tags::ACTION_UNLOCK_TIME:
 	case Tags::ACTION_ENABLE_DIPLOMATIC_REPORT_WINDOW:

@@ -1088,6 +1088,20 @@ void Server::skipCameraPath(ServerGameObject* player)
 	sendTo(player, msg);
 }
 
+void Server::interpolateCameraToPosition(ServerGameObject* player, const Vector3& position, const Vector3& orientation, float duration)
+{
+	NetPacketWriter msg{ NETCLIMSG_INTERPOLATE_CAMERA_TO_POSITION };
+	msg.writeValues(position, orientation, duration);
+	sendTo(player, msg);
+}
+
+void Server::interpolateCameraToStoredPosition(ServerGameObject* player, float duration)
+{
+	NetPacketWriter msg{ NETCLIMSG_INTERPOLATE_CAMERA_TO_STORED_POSITION };
+	msg.writeValues(duration);
+	sendTo(player, msg);
+}
+
 void Server::setGameSpeed(float nextSpeed)
 {
 	timeManager.setSpeed(nextSpeed);

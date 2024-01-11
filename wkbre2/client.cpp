@@ -348,6 +348,7 @@ void Client::tick()
 				resetCameraMode();
 				camera.position = br.readVector3();
 				camera.orientation = br.readVector3();
+				break;
 			}
 			case NETCLIMSG_STORE_CAMERA_POSITION: {
 				storedCameraPosition = camera.position;
@@ -557,6 +558,28 @@ void Client::tick()
 			case NETCLIMSG_ALIAS_CLEARED: {
 				auto [aliasIndex] = br.readValues<int>();
 				aliases[aliasIndex].clear();
+				break;
+			}
+			case NETCLIMSG_INTERPOLATE_CAMERA_TO_POSITION: {
+				resetCameraMode();
+				auto [targetPosition, targetOrientation, duration] = br.readValues<Vector3, Vector3, float>();
+				cameraMode = 1;
+				cameraCurrentPath = nullptr;
+				cameraPathIndex = -1;
+				cameraStartTime = SDL_GetTicks();
+				cameraPathPos = { {camera.position, camera.orientation}, {targetPosition, targetOrientation} };
+				cameraPathDur = { 1.0f, duration };
+				break;
+			}
+			case NETCLIMSG_INTERPOLATE_CAMERA_TO_STORED_POSITION: {
+				resetCameraMode();
+				auto [duration] = br.readValues<float>();
+				cameraMode = 1;
+				cameraCurrentPath = nullptr;
+				cameraPathIndex = -1;
+				cameraStartTime = SDL_GetTicks();
+				cameraPathPos = { {camera.position, camera.orientation}, {storedCameraPosition, storedCameraOrientation} };
+				cameraPathDur = { 1.0f, duration };
 				break;
 			}
 			}

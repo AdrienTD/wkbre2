@@ -161,6 +161,8 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 	void playCameraPath(ServerGameObject* player, int camPathIndex);
 	void stopCameraPath(ServerGameObject* player, bool skipActions);
 	void skipCameraPath(ServerGameObject* player);
+	void interpolateCameraToPosition(ServerGameObject* player, const Vector3& position, const Vector3& orientation, float duration);
+	void interpolateCameraToStoredPosition(ServerGameObject* player, float duration);
 	void setGameSpeed(float nextSpeed);
 	void playMusic(ServerGameObject* player, int musicTag);
 	void assignAlias(int aliasIndex, ServerGameObject* object);
