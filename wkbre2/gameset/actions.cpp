@@ -11,12 +11,12 @@
 #include "ScriptContext.h"
 
 struct ActionUnknown : Action {
-	std::string name, location;
+	std::string name;
 	virtual void run(SrvScriptContext* ctx) override {
-		ferr("Unknown action %s at %s!", name.c_str(), location.c_str());
+		ferr("Unknown action %s at %s!", name.c_str(), _location.asString().c_str());
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
-	ActionUnknown(const std::string& name, const std::string& location) : name(name), location(location) {}
+	ActionUnknown(const std::string& name) : name(name) {}
 };
 
 struct ActionTrace : Action {
@@ -1492,8 +1492,9 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_RESERVE_SPACE_FOR_CONSTRUCTION:
 		action = new ActionNop; break;
 		//
-	default: action = new ActionUnknown(name, gsf.locate()); printf("WARNING: Unknown ACTION %s at %s\n", name.c_str(), gsf.locate().c_str()); break;
+	default: action = new ActionUnknown(name); printf("WARNING: Unknown ACTION %s at %s\n", name.c_str(), gsf.locate().c_str()); break;
 	}
+	action->_location.set(gsf);
 	action->parse(gsf, const_cast<GameSet&>(gs));  // FIXME
 	return action;
 }

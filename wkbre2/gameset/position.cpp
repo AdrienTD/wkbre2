@@ -33,7 +33,7 @@ struct PDUnknown : PositionDeterminer {
 	std::string name;
 	virtual OrientedPosition eval(ScriptContext* ctx) override
 	{
-		ferr("Unknown position determiner %s called from %s!", name.c_str(), ctx->gameState->getProgramName());
+		ferr("Unknown position determiner %s called from %s at %s!", name.c_str(), ctx->gameState->getProgramName(), _location.asString().c_str());
 		return OrientedPosition();
 	}
 	virtual void parse(GSFileParser & gsf, GameSet & gs) override
@@ -476,6 +476,7 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet 
 	case Tags::POSITION_NEAREST_CONSTRUCTION_SITE: pos = new PDNearestConstructionSite; break;
 	default: pos = new PDUnknown(tag); break;
 	}
+	pos->_location.set(gsf);
 	pos->parse(gsf, gs);
 	return pos;
 }

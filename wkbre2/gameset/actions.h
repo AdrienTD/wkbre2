@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <memory>
+#include "../util/GSFileLocation.h"
 
 struct ServerGameObject;
 struct GSFileParser;
@@ -16,6 +17,8 @@ struct Action {
 	virtual ~Action() {}
 	virtual void run(SrvScriptContext* ctx) = 0;
 	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
+	
+	GSFileLocation _location;
 };
 
 struct ActionSequence {

@@ -15,7 +15,7 @@
 #include <iterator>
 
 ObjectFinderResult ObjectFinder::fail(ScriptContext* ctx) {
-	ferr("Invalid object finder call from %s", ctx->gameState->getProgramName());
+	ferr("Invalid object finder call from %s at %s", ctx->gameState->getProgramName(), _location.asString().c_str());
 	return {};
 }
 
@@ -389,6 +389,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 		if (findername == "AG_ALL_OF_TYPE") { finder = new FinderAgAllOfType; break; }
 		finder = new FinderUnknown(strtag); break;
 	}
+	finder->_location.set(gsf);
 	finder->parse(gsf, const_cast<GameSet&>(gs));
 	return finder;
 }
@@ -779,6 +780,7 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 				gsf.cursor = oldcur;
 				return ReadFinder(gsf, gs);
 			}
+			finder->_location.set(gsf);
 			finder->parse(gsf, const_cast<GameSet&>(gs));
 			return finder;
 		}

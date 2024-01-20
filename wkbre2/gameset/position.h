@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../util/vecmat.h"
+#include "../util/GSFileLocation.h"
 
 struct ServerGameObject;
 struct GSFileParser;
@@ -33,6 +34,8 @@ struct PositionDeterminer {
 	virtual ~PositionDeterminer() {}
 	virtual OrientedPosition eval(ScriptContext* ctx) = 0;
 	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
+
+	GSFileLocation _location;
 
 	static PositionDeterminer *createFrom(GSFileParser &gsf, GameSet &gs);
 };

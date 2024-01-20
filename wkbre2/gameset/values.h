@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "../util/GSFileLocation.h"
+
 struct GSFileParser;
 struct GameSet;
 struct ServerGameObject;
@@ -22,6 +24,8 @@ struct ValueDeterminer {
 	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
 	bool booleval(ScriptContext* ctx) { return eval(ctx) > 0.0f; }
 	float fail(ScriptContext* ctx);
+
+	GSFileLocation _location;
 };
 
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs);

@@ -21,6 +21,7 @@ struct GSFileParser
 	int linenum = 1;
 
 	std::string fileName = "somewhere"; // used to indicate file locations in gameset errors
+	uint16_t fileIndex = -1;
 
 	static bool isnewline(char c) { return (c == '\n') || (c == '\r'); }
 	static bool iswhitespace(char c) { return isspace((unsigned char)c); }

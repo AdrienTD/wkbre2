@@ -25,7 +25,7 @@ namespace {
 //{
 
 float ValueDeterminer::fail(ScriptContext* ctx) {
-	ferr("Invalid value determiner call from %s", ctx->gameState->getProgramName());
+	ferr("Invalid value determiner call from %s at %s", ctx->gameState->getProgramName(), _location.asString().c_str());
 	return 0.0f;
 }
 
@@ -792,6 +792,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_CAN_AFFORD_COMMISSION: vd = new ValueCanAffordCommission; break;
 	default: vd = new ValueUnknown(strtag); break;
 	}
+	vd->_location.set(gsf);
 	vd->parse(gsf, const_cast<GameSet&>(gs));
 	return vd;
 }
@@ -1021,6 +1022,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 				gsf.cursor = oldcur;
 				return ReadValueDeterminer(gsf, gs);
 			}
+			vd->_location.set(gsf);
 			vd->parse(gsf, const_cast<GameSet&>(gs));
 			return vd;
 		}

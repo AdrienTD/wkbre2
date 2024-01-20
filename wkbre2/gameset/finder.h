@@ -5,6 +5,7 @@
 #pragma once
 
 #include <vector>
+#include "../util/GSFileLocation.h"
 
 struct CommonGameObject;
 struct ServerGameObject;
@@ -131,6 +132,8 @@ struct ObjectFinder {
 	ClientGameObject* getFirst(CliScriptContext* ctx) {
 		return (ClientGameObject*)getFirst((ScriptContext*)ctx);
 	}
+
+	GSFileLocation _location;
 };
 
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs);
