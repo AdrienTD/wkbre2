@@ -30,12 +30,15 @@ struct IndexedStringList
 		str2idMap.clear();
 	}
 
-	void insertString(const std::string &str)
+	int insertString(const std::string &str)
 	{
 		int nextid = static_cast<int>(id2strVector.size());
-		auto p = str2idMap.insert({ str, nextid });
-		if (p.second) // If the string was inserted correctly
-			id2strVector.push_back(p.first);
+		auto [iterator, inserted] = str2idMap.try_emplace(str, nextid);
+		if (inserted) { // If the string was inserted correctly
+			id2strVector.push_back(iterator);
+			return nextid;
+		}
+		return iterator->second;
 	}
 
 	int getIndex(const std::string &str) const
