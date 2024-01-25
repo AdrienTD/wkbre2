@@ -378,10 +378,21 @@ void AnimationLoopTrigger::update()
 {
 	ServerGameObject* obj = this->task->order->gameObject;
 	Model* model = obj->blueprint->getModel(obj->subtype, obj->appearance, obj->animationIndex, obj->animationVariant);
-	float period = model ? model->getDuration() : 1.5f;
-	if (Server::instance->timeManager.currentTime >= referenceTime + period) {
-		this->blueprint->actions.run(this->task->order->gameObject);
-		this->referenceTime += period;
+	if (obj->animSynchronizedTask != -1) {
+		// TODO: We might need to prevent the trigger to happen twice if the task is not terminated in the trigger sequence
+		// The Construction Animation tasks do terminate the order, so it's not "that" important.
+		SrvScriptContext ctx{ Server::instance, obj };
+		float frac = Server::instance->gameSet->tasks[obj->animSynchronizedTask].synchAnimationToFraction->eval(&ctx);
+		if (frac >= 1.0f) {
+			this->blueprint->actions.run(this->task->order->gameObject);
+		}
+	}
+	else {
+		float period = model ? model->getDuration() : 1.5f;
+		if (Server::instance->timeManager.currentTime >= referenceTime + period) {
+			this->blueprint->actions.run(this->task->order->gameObject);
+			this->referenceTime += period;
+		}
 	}
 }
 
@@ -584,7 +595,7 @@ void ObjectReferenceTask::onUpdate()
 				if (animtoplay == -1)
 					animtoplay = blueprint->defaultAnim;
 				if (animtoplay != -1)
-					go->setAnimation(animtoplay, blueprint->playAnimationOnce);
+					go->setAnimation(animtoplay, blueprint->playAnimationOnce, blueprint->synchAnimationToFraction ? blueprint->bpid : -1);
 
 				// Set orientation towards target, TODO: update when target moves (perhaps on Client?)
 				if (go->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {

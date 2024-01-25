@@ -53,7 +53,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	void setOrientation(const Vector3 &orientation);
 	void setSubtypeAndAppearance(int new_subtype, int new_appearance);
 	void setColor(int color);
-	void setAnimation(int animationIndex, bool isClamped = false);
+	void setAnimation(int animationIndex, bool isClamped = false, int synchronizedTask = -1);
 	void startMovement(const Vector3 &destination);
 	void stopMovement();
 	void sendEvent(int evt, ServerGameObject *sender = nullptr);

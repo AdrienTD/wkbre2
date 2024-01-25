@@ -565,18 +565,20 @@ void ServerGameObject::setColor(int color)
 	Server::instance->sendToAll(msg);
 }
 
-void ServerGameObject::setAnimation(int animationIndex, bool isClamped)
+void ServerGameObject::setAnimation(int animationIndex, bool isClamped, int synchronizedTask)
 {
 	this->animationIndex = animationIndex;
 	this->animationVariant = animationVariant;
 	this->animStartTime = Server::instance->timeManager.currentTime;
 	this->animClamped = isClamped;
+	this->animSynchronizedTask = synchronizedTask;
 	NetPacketWriter msg(NETCLIMSG_OBJECT_ANIM_SET);
 	msg.writeUint32(this->id);
 	msg.writeUint32(this->animationIndex);
 	msg.writeUint32(this->animationVariant);
 	msg.writeFloat(this->animStartTime);
 	msg.writeUint8(this->animClamped);
+	msg.writeUint32(this->animSynchronizedTask);
 	Server::instance->sendToAll(msg);
 }
 

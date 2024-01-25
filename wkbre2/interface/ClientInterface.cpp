@@ -184,7 +184,13 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				obj->sceneEntity.model = model;
 				obj->sceneEntity.transform = obj->getWorldMatrix();
 				obj->sceneEntity.color = obj->getPlayer()->color;
-				obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
+				if (obj->animSynchronizedTask != -1) {
+					CliScriptContext ctx{ client, obj };
+					float frac = client->gameSet->tasks[obj->animSynchronizedTask].synchAnimationToFraction->eval(&ctx);
+					obj->sceneEntity.animTime = (uint32_t)(model->getDuration() * frac * 1000.0f);
+				}
+				else
+					obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
 				obj->sceneEntity.flags = 0;
 				if (obj->animClamped) obj->sceneEntity.flags |= SceneEntity::SEFLAG_ANIM_CLAMP_END;
 				if (selection.count(obj) >= 1) obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
@@ -618,6 +624,7 @@ void ClientInterface::iter()
 				ClientGameObject* obj = client->findObject(objid);
 				if (!obj) return "No object, no hint";
 				CliScriptContext ctx{ client, obj };
+				auto _ = ctx.change(ctx.selectedObject, obj);
 				auto condPred = [&ctx](GSCondition* cond) {return cond->test->booleval(&ctx); };
 				auto it = std::find_if_not(cmd->conditionsImpossible.begin(), cmd->conditionsImpossible.end(), condPred);
 				if (it != cmd->conditionsImpossible.end()) {

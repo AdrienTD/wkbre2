@@ -54,6 +54,8 @@ struct TaskBlueprint {
 
 	ActionSequence movementCompletedSequence;
 
+	ValueDeterminer* synchAnimationToFraction = nullptr;
+
 	void parse(GSFileParser &gsf, GameSet &gs);
 };
 
