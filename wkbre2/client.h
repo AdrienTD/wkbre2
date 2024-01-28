@@ -103,6 +103,7 @@ struct Client : SpecificGameState<ClientGameObject, ProgramType::CLIENT>
 	void sendGameSpeedChange(float nextSpeed);
 	void sendTerminateObject(ClientGameObject* obj);
 	void sendBuildLastStampdownedObject(ClientGameObject* obj, int assignmentMode);
+	void sendCancelCommand(ClientGameObject* obj, const Command* cmd);
 
 	void attachInterface(ClientInterface *cliIface) { cliInterface = cliIface; }
 

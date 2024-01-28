@@ -109,9 +109,10 @@ function CCUI_PerFrame()
 				end
 				setTooltip(getCommandHint(cs.command, sel))
 				local clicked = handleButton()
-				if clicked then
-					print("Clicked!")
+				if clicked == 1 then
 					launchCommand(cs.command, assignMode, count)
+				elseif clicked == 3 then
+					cancelCommand(cs.command, count)
 				end
 			end
 			drawImage(x, y, w, h, tex)

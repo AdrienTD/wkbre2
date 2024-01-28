@@ -671,6 +671,13 @@ void Client::sendBuildLastStampdownedObject(ClientGameObject* obj, int assignmen
 	serverLink->send(msg);
 }
 
+void Client::sendCancelCommand(ClientGameObject* obj, const Command* cmd)
+{
+	NetPacketWriter msg{ NETSRVMSG_CANCEL_COMMAND };
+	msg.writeValues(obj->id, cmd->id);
+	serverLink->send(msg);
+}
+
 ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t id)
 {
 	ClientGameObject *obj = new ClientGameObject(id, blueprint);

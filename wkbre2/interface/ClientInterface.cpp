@@ -378,7 +378,6 @@ void ClientInterface::iter()
 		selBoxStartY = selBoxEndY = g_mouseY;
 		selBoxOn = true;
 	}
-	clickedScriptedUi = false;
 
 	if (g_mouseDown[SDL_BUTTON_LEFT]) {
 		selBoxEndX = g_mouseX;
@@ -393,7 +392,7 @@ void ClientInterface::iter()
 		}
 	}
 
-	if (g_mousePressed[SDL_BUTTON_RIGHT]) {
+	if (!clickedScriptedUi && g_mousePressed[SDL_BUTTON_RIGHT]) {
 		if (stampdownBlueprint && stampdownPlayer) {
 			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos, sendStampdownEvent);
 			if (stampdownFromCommand) {
@@ -435,6 +434,8 @@ void ClientInterface::iter()
 			}
 		}
 	}
+
+	clickedScriptedUi = false;
 
 	if (g_keyPressed[SDL_SCANCODE_P]) {
 		static bool pauseState = false;
@@ -747,12 +748,15 @@ void ClientInterface::iter()
 		lua.set_function("setTooltip",[](const std::string& str) { ImGui::SetTooltip("%s", str.c_str()); });
 		// Button
 		lua.set_function("handleButton",
-			[]() -> bool {
+			[]() -> int {
 				clickedScriptedUi = true;
 				if (g_mouseReleased[SDL_BUTTON_LEFT]) {
-					return true;
+					return 1;
 				}
-				return false;
+				if (g_mouseReleased[SDL_BUTTON_RIGHT]) {
+					return 3;
+				}
+				return 0;
 			});
 		lua.set_function("launchCommand",
 			[this](const Command* cmd, int assignmentMode, int count) {
@@ -768,6 +772,13 @@ void ClientInterface::iter()
 								for (int i = 0; i < count; i++)
 									client->sendCommand(obj, cmd, assignmentMode);
 				}
+			});
+		lua.set_function("cancelCommand",
+			[this](const Command* cmd, int count) {
+				for (ClientGameObject* obj : selection)
+					if (obj)
+						for (int i = 0; i < count; ++i)
+							client->sendCancelCommand(obj, cmd);
 			});
 		// Tags
 		auto addTags = [](auto& lua, auto& tagDict, const std::string& prefix) {

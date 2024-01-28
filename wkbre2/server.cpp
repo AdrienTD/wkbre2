@@ -1428,6 +1428,19 @@ void Server::tick()
 				}
 				break;
 			}
+			case NETSRVMSG_CANCEL_COMMAND: {
+				auto [objectId, commandId] = br.readValues<uint32_t, int>();
+				if (ServerGameObject* obj = findObject(objectId)) {
+					OrderBlueprint* orderBp = gameSet->commands[commandId].order;
+					for (Order& order : obj->orderConfig.orders) {
+						if (order.blueprint == orderBp && !order.isDone()) {
+							order.cancel();
+							break;
+						}
+					}
+				}
+				break;
+			}
 			}
 		}
 	}

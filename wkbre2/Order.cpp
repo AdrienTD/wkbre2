@@ -48,7 +48,7 @@ void Order::resume()
 
 void Order::cancel()
 {
-	if (!isWorking()) return;
+	if (isDone()) return;
 	this->state = OTS_CANCELLED;
 	this->tasks[this->currentTask]->cancel();
 	this->blueprint->cancellationSequence.run(this->gameObject);
@@ -57,7 +57,7 @@ void Order::cancel()
 
 void Order::terminate()
 {
-	if (!isWorking()) return;
+	if (isDone()) return;
 	this->state = OTS_TERMINATED;
 	this->tasks[this->currentTask]->terminate();
 	this->blueprint->terminationSequence.run(this->gameObject);
@@ -167,7 +167,7 @@ void Task::resume()
 
 void Task::cancel()
 {
-	if (!isWorking()) return;
+	if (isDone()) return;
 	this->state = OTS_CANCELLED;
 	this->stopTriggers();
 	ServerGameObject *go = this->order->gameObject;
@@ -179,7 +179,7 @@ void Task::cancel()
 
 void Task::terminate()
 {
-	if (!isWorking()) return;
+	if (isDone()) return;
 	this->state = OTS_TERMINATED;
 	this->stopTriggers();
 	ServerGameObject *go = this->order->gameObject;
