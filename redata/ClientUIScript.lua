@@ -44,7 +44,7 @@ function CCUI_PerFrame()
 		drawImage((650+8) * tpm - 8, 22, 16, 36, "Interface/InGame/Top Panel/Player" .. tostring(color) .. ".tga")
 
 		local foodCons = getItem(player, "Food Consumption")
-		local foodProd = getItem(player, "Food Production")
+		local foodProd = computeEquation("Support by Total Farmers by Player", player)
 		if foodProd > 0 then
 			local foodRatio = math.min(1, foodCons / foodProd)
 			if foodRatio < 1 then

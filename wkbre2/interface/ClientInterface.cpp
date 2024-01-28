@@ -591,6 +591,7 @@ void ClientInterface::iter()
 				return obj ? obj->blueprint->bpClass : -1;
 			}
 		);
+		// Client
 		lua.set_function("getWKVersion",
 			[this]() {return client->gameSet ? client->gameSet->version : 0; }
 		);
@@ -598,6 +599,15 @@ void ClientInterface::iter()
 		lua.set("GSVERSION_WKBATTLES", GameSet::GSVERSION_WKBATTLES);
 		lua.set_function("getGameTime", [this]() {return client->timeManager.currentTime; });
 		lua.set_function("getSystemTime", [this]() {return (float)SDL_GetTicks() / 1000.0f; });
+		// Game set
+		lua.set_function("computeEquation",
+			[this](const std::string& equationName, uint32_t objId) -> float {
+				int equationIndex = client->gameSet->equations.names.getIndex(equationName);
+				if (equationIndex == -1) return 0.0f;
+				CliScriptContext ctx{ client, client->findObject(objId) };
+				return client->gameSet->equations[equationIndex]->eval(&ctx);
+			}
+		);
 		// Blueprint
 		lua.set_function("getBlueprint",
 			[this](uint32_t id) -> const GameObjBlueprint* {
