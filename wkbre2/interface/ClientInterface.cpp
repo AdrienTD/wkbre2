@@ -657,6 +657,8 @@ void ClientInterface::iter()
 			const Command* command;
 			const std::string* texpath;
 			CSInfo info;
+			int count = 0;
+			bool isCurrentOrder = false;
 		};
 		sol::usertype<CommandState> cs_type = lua.new_usertype<CommandState>("CommandState");
 		//cs_type.set("command", sol::readonly(&CommandState::command));
@@ -664,6 +666,8 @@ void ClientInterface::iter()
 		cs_type.set("command", sol::readonly_property([](CommandState* cs) {return cs->command; }));
 		cs_type.set("texpath", sol::readonly_property([](CommandState* cs) {return *cs->texpath; }));
 		cs_type.set("info", sol::readonly(&CommandState::info));
+		cs_type.set("count", sol::readonly(&CommandState::count));
+		cs_type.set("isCurrentOrder", sol::readonly(&CommandState::isCurrentOrder));
 		cs_type.set("buttonAvailable", sol::readonly_property([](CommandState* cs) {return cs->command->buttonAvailable; }));
 		cs_type.set("buttonDepressed", sol::readonly_property([](CommandState* cs) {return cs->command->buttonDepressed; }));
 		cs_type.set("buttonEnabled", sol::readonly_property([](CommandState* cs) {return cs->command->buttonEnabled; }));
@@ -703,6 +707,11 @@ void ClientInterface::iter()
 							cs.info = CSInfo::ENABLED;
 						}
 						if (!cs.texpath->empty()) {
+							if (cmd->order) {
+								cs.isCurrentOrder = cmd->order->bpid == sel->reportedCurrentOrder;
+								if (auto it = sel->buildingOrderCountMap.find(cmd->order->bpid); it != sel->buildingOrderCountMap.end())
+									cs.count = it->second;
+							}
 							cmdStates.push_back(std::move(cs));
 							//cmdStates.push_back(lua.create_table_with(
 							//	"command", lua.wrapp cs.command,

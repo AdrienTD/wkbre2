@@ -825,6 +825,22 @@ void ServerGameObject::detachLoopingSpecialEffect(int sfxTag)
 	Server::instance->sendToAll(npw);
 }
 
+void ServerGameObject::updateBuildingOrderCount(OrderBlueprint* orderBp)
+{
+	if (this->blueprint->bpClass != Tags::GAMEOBJCLASS_BUILDING)
+		return;
+
+	int count = 0;
+	for (const Order& order : orderConfig.orders) {
+		if (order.blueprint == orderBp && !order.isDone())
+			count += 1;
+	}
+
+	NetPacketWriter npw{ NETCLIMSG_UPDATE_BUILDING_ORDER_COUNT_MAP };
+	npw.writeValues(this->id, orderBp->bpid, count);
+	Server::instance->sendTo(this->getPlayer(), npw);
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;

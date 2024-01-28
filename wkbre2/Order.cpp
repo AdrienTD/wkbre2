@@ -52,6 +52,7 @@ void Order::cancel()
 	this->state = OTS_CANCELLED;
 	this->tasks[this->currentTask]->cancel();
 	this->blueprint->cancellationSequence.run(this->gameObject);
+	this->gameObject->updateBuildingOrderCount(this->blueprint);
 }
 
 void Order::terminate()
@@ -60,6 +61,7 @@ void Order::terminate()
 	this->state = OTS_TERMINATED;
 	this->tasks[this->currentTask]->terminate();
 	this->blueprint->terminationSequence.run(this->gameObject);
+	this->gameObject->updateBuildingOrderCount(this->blueprint);
 }
 
 void Order::process()
@@ -297,6 +299,7 @@ Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignM
 	neworder->init();
 	if (orderInFront && startNow) // start order (and first task) immediately if no other working order behind
 		neworder->start();
+	this->gameobj->updateBuildingOrderCount(orderBlueprint);
 	return neworder;
 }
 

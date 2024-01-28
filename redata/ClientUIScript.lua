@@ -2,8 +2,15 @@
 -- and is responsible for drawing and handling the in-game user interface.
 -- This way, the UI can be easily modded.
 
--- Global variable
+-- Global variables
 frame = 0
+if getWKVersion() == GSVERSION_WKONE then
+	progressColor = 0xFFFFC000
+	progressColorDark = 0xFF806000
+else
+	progressColor = 0xFF0000FF
+	progressColorDark = 0xFF000080
+end
 
 -- This function is executed every frame
 function CCUI_PerFrame()
@@ -154,6 +161,20 @@ function CCUI_PerFrame()
 				end
 			end
 		elseif bp.bpClass == GAMEOBJCLASS_BUILDING then
+			function commandProgress( x, y, width, height, cs )
+				if cs.count > 0 then
+					drawText(x+5, y+height-18, tostring(cs.count))
+					if cs.isCurrentOrder then
+						local progress = math.max(0, getItem(sel, "Hit Points Of Object Being Spawned"))
+						local progressCapacity = math.max(1, getItem(sel, "Hit Point Capacity Of Object Being Spawned"))
+						local progressFraction = math.max(0, math.min(1, progress / progressCapacity))
+						local progressLength = math.floor(width * progressFraction)
+						drawRect(x, y, progressLength, 10, progressColor)
+						drawRect(x + progressLength, y, width - progressLength, 10, progressColorDark)
+					end
+				end
+			end
+
 			-- Spawn commands
 			local vec = listSelectionCommands(function (x) return string.find(x, "Spawn ") == 1 end )
 			for i = 1,#vec do
@@ -165,6 +186,7 @@ function CCUI_PerFrame()
 					local count = 1
 					if isShiftHeld() then count = 10 end
 					commandButton(x, y, hi, hi, cs, ORDERASSIGNMODE_DO_LAST, count)
+					commandProgress(x, y, hi, hi, cs)
 				end
 			end
 
@@ -177,6 +199,7 @@ function CCUI_PerFrame()
 					x = 24 + hi+2
 					y = 64 + (i-1) * (hi+2)
 					commandButton(x, y, hi, hi, cs, ORDERASSIGNMODE_DO_LAST, 1)
+					commandProgress(x, y, hi, hi, cs)
 				end
 			end
 		end

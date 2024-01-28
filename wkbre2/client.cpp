@@ -583,6 +583,12 @@ void Client::tick()
 				cameraPathDur = { 1.0f, duration };
 				break;
 			}
+			case NETCLIMSG_UPDATE_BUILDING_ORDER_COUNT_MAP: {
+				auto [objectId, orderBlueprintId, updatedCount] = br.readValues<uint32_t, int, int>();
+				if (ClientGameObject* obj = findObject(objectId))
+					obj->buildingOrderCountMap[orderBlueprintId] = updatedCount;
+				break;
+			}
 			}
 		}
 		dbgNumMessagesInCurrentSec += dbgNumMessagesPerTick;
