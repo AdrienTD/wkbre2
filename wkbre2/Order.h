@@ -96,7 +96,7 @@ struct Task {
 };
 
 struct MissileTask : Task {
-	float msStartTime; Vector3 msInitialPosition, msInitialVelocity;
+	float msStartTime; Vector3 msInitialPosition, msInitialVelocity, msPrevPosition;
 	using Task::Task;
 	virtual void onStart() override;
 	virtual void onUpdate() override;

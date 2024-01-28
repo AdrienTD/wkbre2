@@ -489,11 +489,31 @@ void MissileTask::onStart()
 	this->msInitialPosition = pos_i;
 	this->msStartTime = Server::instance->timeManager.currentTime;
 	this->order->gameObject->startTrajectory(msInitialPosition, msInitialVelocity, msStartTime);
+	this->msPrevPosition = this->msInitialPosition;
+}
+
+static bool LineSegmentIntersectsSphere(const Vector3& lineStart, const Vector3& lineEnd, const Vector3& center, float radius)
+{
+	float lineLength = (lineEnd - lineStart).len3();
+	Vector3 lineDir = (lineEnd - lineStart).normal();
+	Vector3 smc = lineStart - center;
+	float ddt = lineDir.dot(smc);
+	float delta = ddt * ddt - (smc.sqlen3() - radius * radius);
+	if (delta < 0.0f)
+		return false;
+	float k1 = -ddt + sqrtf(delta),
+		k2 = -ddt - sqrtf(delta);
+	if ((k1 >= 0.0f && k1 <= lineLength) || (k2 >= 0.0f && k2 <= lineLength))
+		return true;
+	return false;
 }
 
 void MissileTask::onUpdate()
 {
 	ServerGameObject* go = this->order->gameObject;
+
+	Vector3 prevPosition = msPrevPosition;
+	msPrevPosition = go->position;
 
 	// unit collision
 	NNSearch nns;
@@ -504,8 +524,7 @@ void MissileTask::onUpdate()
 				if (Model* model = col->blueprint->getModel(col->subtype, col->appearance, col->animationIndex, col->animationVariant)) {
 					Vector3 sCenter = model->getSphereCenter().transform(col->getWorldMatrix());
 					float sRadius = model->getSphereRadius();
-					float squareDistance = (go->position - sCenter).sqlen3();
-					if (squareDistance <= sRadius*sRadius) {
+					if (LineSegmentIntersectsSphere(prevPosition, go->position, sCenter, sRadius)) {
 						SrvScriptContext ctx(Server::instance, go);
 						auto _ = ctx.change(ctx.collisionSubject, col);
 						this->blueprint->collisionTrigger.run(&ctx);
