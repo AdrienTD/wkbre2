@@ -297,8 +297,11 @@ void ClientInterface::iter()
 
 	//----- Command cursors -----//
 
+	static Command* selectedCursorCommand = nullptr;
 	WndCursor *nextCursor = nullptr;
 	Command *rightClickCommand = nullptr;
+	static std::vector<std::pair<WndCursor*, Command*>> availableCursorCommands;
+	availableCursorCommands.clear();
 	for (ClientGameObject *sel : selection) {
 		if (sel) {
 			CliScriptContext ctx(client, sel);
@@ -315,14 +318,23 @@ void ClientInterface::iter()
 					cmdCursor = cmd->cursor;
 				if (cmdCursor) {
 					if (std::all_of(cmd->cursorConditions.begin(), cmd->cursorConditions.end(), [&](int eq) {return client->gameSet->equations[eq]->eval(&ctx) > 0.0f; })) {
-						nextCursor = cmdCursor;
-						rightClickCommand = cmd;
-						break;
+						if (!nextCursor) {
+							nextCursor = cmdCursor;
+							rightClickCommand = cmd;
+						}
+						if (std::find_if(availableCursorCommands.begin(), availableCursorCommands.end(), [&](auto& pair) {return pair.second == cmd; }) == availableCursorCommands.end())
+							availableCursorCommands.emplace_back(cmdCursor, cmd);
 					}
 				}
 			}
-			if (rightClickCommand)
-				break;
+		}
+	}
+	if (selectedCursorCommand) {
+		// if a specfic cursor command is selected, check that it is still valid, and use it instead
+		auto it = std::find_if(availableCursorCommands.begin(), availableCursorCommands.end(), [](auto& pair) {return pair.second == selectedCursorCommand; });
+		if (it != availableCursorCommands.end()) {
+			nextCursor = it->first;
+			rightClickCommand = it->second;
 		}
 	}
 	if (!nextCursor)
@@ -377,6 +389,7 @@ void ClientInterface::iter()
 		selBoxStartX = selBoxEndX = g_mouseX;
 		selBoxStartY = selBoxEndY = g_mouseY;
 		selBoxOn = true;
+		selectedCursorCommand = nullptr;
 	}
 
 	if (g_mouseDown[SDL_BUTTON_LEFT]) {
@@ -471,6 +484,18 @@ void ClientInterface::iter()
 	}
 	if (g_mouseDown[SDL_BUTTON_X1])
 		client->camera.position.y = elevatorCamStart + (elevatorMouseStart - g_mouseY) * 0.1f;
+
+	if (g_keyPressed[SDL_SCANCODE_E]) {
+		// select available cursor command next to the one currently shown
+		auto it = std::find_if(availableCursorCommands.begin(), availableCursorCommands.end(), [&](auto& pair) { return pair.second == rightClickCommand; });
+		if (it != availableCursorCommands.end()) {
+			size_t index = it - availableCursorCommands.begin();
+			if (index == availableCursorCommands.size() - 1)
+				selectedCursorCommand = nullptr;
+			else
+				selectedCursorCommand = availableCursorCommands[index + 1].second;
+		}
+	}
 
 	//----- ImGui -----//
 
