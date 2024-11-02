@@ -203,6 +203,31 @@ function CCUI_PerFrame()
 					commandProgress(x, y, hi, hi, cs)
 				end
 			end
+		elseif bp.bpClass == GAMEOBJCLASS_FORMATION then
+			local formationNames = { "Line", "Column", "Wedge", "Orb" }
+			for i = 1,#formationNames do
+				local x = 360 + (i-1)*70
+				local y = getWindowHeight() - 100
+				local w = 64
+				local h = 64
+				local mx = getMouseX()
+				local my = getMouseY()
+				local tex = ""
+				if bp.name == formationNames[i] then
+					tex = "Interface/Icons/I_Formation_" .. formationNames[i] .. "_Dep.tga"
+				else
+					tex = "Interface/Icons/I_Formation_" .. formationNames[i] .. ".tga"
+				end
+				if x <= mx and mx < x+w and y <= my and my < y+h then
+					setTooltip(formationNames[i])
+					local clicked = handleButton()
+					if clicked == 1 then
+						forceLaunchCommand(getCommand(formationNames[i]), ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE)
+					end
+				end
+				drawImage(x, y, w, h, tex)
+
+			end
 		end
 
 	end

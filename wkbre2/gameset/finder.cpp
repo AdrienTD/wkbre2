@@ -354,6 +354,22 @@ struct FinderAgAllOfType : ObjectFinder {
 	}
 };
 
+struct FinderAgAsObj : ObjectFinder {
+	int objId;
+	std::unique_ptr<ObjectFinder> finder;
+
+	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
+		ServerGameObject* obj = Server::instance->findObject(objId);
+		if (!obj) return {};
+		auto _ = ctx->changeSelf(obj);
+		return finder->eval(ctx);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		objId = gsf.nextInt();
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
@@ -387,6 +403,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	case Tags::FINDER_SELECTED_OBJECT: finder = new FinderSelectedObject; break;
 	default:
 		if (findername == "AG_ALL_OF_TYPE") { finder = new FinderAgAllOfType; break; }
+		if (findername == "AG_AS_OBJ") { finder = new FinderAgAsObj; break; }
 		finder = new FinderUnknown(strtag); break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));

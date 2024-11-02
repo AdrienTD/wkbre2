@@ -152,6 +152,10 @@ void Server::deleteObject(ServerGameObject * obj)
 		objToDelete = obj;
 		objToDeleteLast = obj;
 	}
+
+	if (obj->parent) {
+		obj->parent->dyncast<ServerGameObject>()->notifySubordinateRemoved();
+	}
 }
 
 void Server::destroyObject(ServerGameObject* obj)
@@ -489,10 +493,14 @@ void ServerGameObject::setItem(int index, float value)
 
 void ServerGameObject::setParent(ServerGameObject * newParent)
 {
+	if (this->parent == newParent)
+		return;
+
 	if (this->parent) {
 		auto &vec = this->parent->children[this->blueprint->getFullId()];
 		vec.erase(std::remove(vec.begin(), vec.end(), this), vec.end()); // is order important?
 	}
+	auto* oldParent = this->parent;
 	this->parent = newParent;
 	if(newParent)
 		newParent->children[this->blueprint->getFullId()].push_back(this);
@@ -502,6 +510,9 @@ void ServerGameObject::setParent(ServerGameObject * newParent)
 	msg.writeUint32(newParent->id);
 	Server::instance->sendToAll(msg);
 	
+	if (oldParent) {
+		oldParent->dyncast<ServerGameObject>()->notifySubordinateRemoved();
+	}
 }
 
 void ServerGameObject::setPosition(const Vector3 & position)
@@ -1004,6 +1015,22 @@ float ServerGameObject::computeSpeed()
 	return speed;
 }
 
+void ServerGameObject::notifySubordinateRemoved()
+{
+	size_t count = 0;
+	for (auto& [_, vec] : children)
+		for (const auto* sub : vec)
+			if (!sub->dyncast<ServerGameObject>()->deleted)
+				count += 1;
+
+	if (count == 0) {
+		this->sendEvent(Tags::PDEVENT_ON_LAST_SUBORDINATE_RELEASED);
+		if (this->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+			Server::instance->deleteObject(this);
+		}
+	}
+}
+
 void Server::sendToAll(const NetPacket & packet)
 {
 	for (NetLink *cli : clientLinks)
@@ -1279,6 +1306,9 @@ void Server::tick()
 				obj->setItem(Tags::PDITEM_NUMBER_OF_FARMERS, gameSet->objectFinderDefinitions[numFarmersFinder]->eval(&ctx).size());
 			}
 		}
+		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+			obj->formationController.update();
+		}
 		for (auto &childtype : obj->children) {
 			for (CommonGameObject* child : childtype.second)
 				func((ServerGameObject*)child, func);
@@ -1439,6 +1469,25 @@ void Server::tick()
 						}
 					}
 				}
+				break;
+			}
+			case NETSRVMSG_PUT_UNIT_INTO_NEW_FORMATION: {
+				uint32_t objId = br.readUint32();
+				clientInfos[clientIndex].unitsForNewFormation.push_back(objId);
+				break;
+			}
+			case NETSRVMSG_CREATE_NEW_FORMATION: {
+				GameObjBlueprint* blueprint = &gameSet->objBlueprints[Tags::GAMEOBJCLASS_FORMATION][0];
+				ServerGameObject* formation = spawnObject(blueprint, player, {}, {});
+				Vector3 positionSum; int numUnits = 0;
+				for (ServerGameObject* sub : clientInfos[clientIndex].unitsForNewFormation) {
+					positionSum += sub->position;
+					numUnits += 1;
+					sub->setParent(formation);
+				}
+				formation->setPosition(positionSum / numUnits);
+				formation->sendEvent(Tags::PDEVENT_ON_SPAWN);
+				clientInfos[clientIndex].unitsForNewFormation.clear();
 				break;
 			}
 			}

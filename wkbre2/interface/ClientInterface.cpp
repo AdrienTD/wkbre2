@@ -641,6 +641,11 @@ void ClientInterface::iter()
 				return obj ? obj->blueprint : nullptr;
 			}
 		);
+		lua.set_function("getCommand", [this](const std::string& name) -> const Command* {
+			int commandIndex = client->gameSet->commands.names.getIndex(name);
+			if (commandIndex == -1) return nullptr;
+			return &client->gameSet->commands[commandIndex];
+			});
 		sol::usertype<GameObjBlueprint> blueprint_type = lua.new_usertype<GameObjBlueprint>("GameObjBlueprint");
 		blueprint_type.set("name", sol::readonly(&GameObjBlueprint::name));
 		blueprint_type.set("bpClass", sol::readonly(&GameObjBlueprint::bpClass));
@@ -790,6 +795,12 @@ void ClientInterface::iter()
 					stampdownPlayer = (*selection.begin())->getPlayer();
 					stampdownFromCommand = true;
 				}
+				else if (client->gameSet->commands.getString(cmd) == "Formation") {
+					for (ClientGameObject* obj : selection) {
+						client->sendPutUnitIntoNewFormation(obj);
+					}
+					client->sendCreateNewFormation();
+				}
 				else {
 					for (ClientGameObject* obj : selection)
 						if (obj)
@@ -797,6 +808,12 @@ void ClientInterface::iter()
 								for (int i = 0; i < count; i++)
 									client->sendCommand(obj, cmd, assignmentMode);
 				}
+			});
+		lua.set_function("forceLaunchCommand",
+			[this](const Command* cmd, int assignmentMode) {
+				for (ClientGameObject* obj : selection)
+					if (obj)
+						client->sendCommand(obj, cmd, assignmentMode);
 			});
 		lua.set_function("cancelCommand",
 			[this](const Command* cmd, int count) {

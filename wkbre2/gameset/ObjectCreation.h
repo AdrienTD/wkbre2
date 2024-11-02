@@ -19,6 +19,7 @@ struct ObjectCreation {
 	ObjectFinder *controller;
 	PositionDeterminer *createAt = nullptr;
 	ActionSequence postCreationSequence;
+	ObjectFinder* subordinates = nullptr;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
 	void run(ServerGameObject* creator, SrvScriptContext* ctx);

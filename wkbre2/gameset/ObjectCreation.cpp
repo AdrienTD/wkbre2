@@ -32,6 +32,9 @@ void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
 		else if (tag == "POST_CREATION_SEQUENCE") {
 			postCreationSequence.init(gsf, gs, "END_POST_CREATION_SEQUENCE");
 		}
+		else if (tag == "SUBORDINATES") {
+			subordinates = ReadFinder(gsf, gs);
+		}
 		else if (tag == "END_OBJECT_CREATION")
 			break;
 		gsf.advanceLine();
@@ -62,6 +65,13 @@ void ObjectCreation::run(ServerGameObject * creator, SrvScriptContext* ctx)
 	}
 	OrientedPosition opos = createAt ? createAt->eval(ctx) : OrientedPosition({ creator->position, creator->orientation });
 	ServerGameObject* created = Server::instance->spawnObject(type, ctrl, opos.position, opos.rotation);
+	if (subordinates) {
+		for (ServerGameObject* sub : subordinates->eval(ctx))
+			sub->setParent(created);
+	}
+	if (type->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+		created->sendEvent(Tags::PDEVENT_ON_SPAWN);
+	}
 	auto _2 = ctx->changeSelf(created);
 	postCreationSequence.run(ctx);
 }

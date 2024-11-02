@@ -678,6 +678,19 @@ void Client::sendCancelCommand(ClientGameObject* obj, const Command* cmd)
 	serverLink->send(msg);
 }
 
+void Client::sendPutUnitIntoNewFormation(ClientGameObject* obj)
+{
+	NetPacketWriter msg{ NETSRVMSG_PUT_UNIT_INTO_NEW_FORMATION };
+	msg.writeValues(obj->id);
+	serverLink->send(msg);
+}
+
+void Client::sendCreateNewFormation()
+{
+	NetPacketWriter msg{ NETSRVMSG_CREATE_NEW_FORMATION };
+	serverLink->send(msg);
+}
+
 ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t id)
 {
 	ClientGameObject *obj = new ClientGameObject(id, blueprint);

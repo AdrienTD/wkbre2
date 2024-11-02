@@ -16,6 +16,7 @@
 #include <set>
 #include "MovementController.h"
 #include "AIController.h"
+#include "FormationController.h"
 
 struct GameSet;
 struct GSFileParser;
@@ -44,6 +45,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	float currentSpeed = 0.0f;
 	MovementController movementController{ this };
 	AIController aiController{ this };
+	FormationController formationController{ this };
 
 	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : SpecificGameObject<Server, ServerGameObject>(id, blueprint), orderConfig(this) {}
 
@@ -88,6 +90,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	void updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
 	void removeIfNotReferenced();
 	float computeSpeed();
+	void notifySubordinateRemoved();
 };
 
 struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
@@ -127,6 +130,7 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 
 	struct ClientInfo {
 		SrvGORef lastStampdown;
+		std::vector<SrvGORef> unitsForNewFormation;
 	};
 	std::vector<ClientInfo> clientInfos;
 

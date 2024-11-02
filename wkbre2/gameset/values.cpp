@@ -739,6 +739,46 @@ struct ValueCanAffordCommission : ValueDeterminer {
 	}
 };
 
+struct ValueAverageItemValue : ValueDeterminer {
+	int item;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual float eval(ScriptContext* ctx) override {
+		auto objList = finder->eval(ctx);
+		if (objList.empty()) {
+			return 0.0f;
+		}
+		float sum = 0.0f;
+		for (CommonGameObject* obj : objList) {
+			sum += obj->getItem(item);
+		}
+		return sum / (float)objList.size();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		item = gs.items.readIndex(gsf);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ValueIsInFrontOf : ValueDeterminer {
+	std::unique_ptr<ObjectFinder> subjectFinder, objectFinder;
+	virtual float eval(ScriptContext* ctx) override {
+		// TODO Handle multiple objects from the finder
+		const auto* subject = subjectFinder->getFirst(ctx);
+		const auto* object = objectFinder->getFirst(ctx);
+		if (!subject || !object)
+			return 0.0f;
+		const float angle = object->orientation.y;
+		const Vector3 objectDirection = { std::cos(angle), 0.0f, std::sin(angle) };
+		const Vector3 objectToSubject = subject->position - object->position;
+		const bool inFront = objectDirection.dot(objectToSubject) > 0.0f;
+		return inFront ? 1.0f : 0.0f;
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		subjectFinder.reset(ReadFinder(gsf, gs));
+		objectFinder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 {
 	ValueDeterminer *vd;
@@ -790,6 +830,8 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_GRADIENT_IN_FRONT: vd = new ValueGradientInFront; break;
 	case Tags::VALUE_AVERAGE_EQUATION_RESULT: vd = new ValueAverageEquationResult; break;
 	case Tags::VALUE_CAN_AFFORD_COMMISSION: vd = new ValueCanAffordCommission; break;
+	case Tags::VALUE_AVERAGE_ITEM_VALUE: vd = new ValueAverageItemValue; break;
+	case Tags::VALUE_IS_IN_FRONT_OF: vd = new ValueIsInFrontOf; break;
 	default: vd = new ValueUnknown(strtag); break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));

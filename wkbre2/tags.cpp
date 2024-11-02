@@ -128,11 +128,12 @@ TagDict<37> Tags::CBLUEPRINT_tagDict({
     "VARY_Z_SCALE",
 });
 
-TagDict<48> Tags::VALUE_tagDict({
+TagDict<50> Tags::VALUE_tagDict({
     "AI_CONTROLLED",
     "ANGLE_BETWEEN",
     "ARE_ASSOCIATED",
     "AVERAGE_EQUATION_RESULT",
+    "AVERAGE_ITEM_VALUE",
     "BLUEPRINT_ITEM_VALUE",
     "BUILDING_TYPE",
     "BUILDING_TYPE_OPERAND",
@@ -157,6 +158,7 @@ TagDict<48> Tags::VALUE_tagDict({
     "IS_DISABLED",
     "IS_DISCOVERED",
     "IS_IDLE",
+    "IS_IN_FRONT_OF",
     "IS_MUSIC_PLAYING",
     "IS_SUBSET_OF",
     "IS_VISIBLE",
@@ -551,12 +553,13 @@ TagDict<6> Tags::SORDER_tagDict({
     "UNIQUE_TASK_ID",
 });
 
-TagDict<17> Tags::PDEVENT_tagDict({
+TagDict<18> Tags::PDEVENT_tagDict({
     "ON_BUSY",
     "ON_COMMISSIONED",
     "ON_CONTROL_TRANSFERRED",
     "ON_CONVERSION_END",
     "ON_DESTRUCTION",
+    "ON_FORMATION_DISBAND",
     "ON_IDLE",
     "ON_LAST_SUBORDINATE_RELEASED",
     "ON_LEVEL_START",

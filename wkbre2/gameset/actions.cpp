@@ -9,6 +9,7 @@
 #include "../util/util.h"
 #include "../server.h"
 #include "ScriptContext.h"
+#include <cassert>
 
 struct ActionUnknown : Action {
 	std::string name, location;
@@ -914,10 +915,69 @@ struct ActionCreateFormation : Action {
 	GameObjBlueprint* formationType;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
-		ServerGameObject* formation = ctx->server->createObject(formationType);
-		formation->setParent(ctx->getSelf());
-		for (ServerGameObject* obj : finder->eval(ctx))
-			obj->setParent(formation);
+		auto objList = finder->eval(ctx);
+		if (objList.empty())
+			return;
+		if (objList.size() == 1 && objList[0]->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+			objList[0]->convertTo(formationType);
+			return;
+		}
+
+		// Reuse a formation object if available in the list or used by an unit, otherwise create a new one.
+		// Reusing is important if we want to change the type of formation without losing the orders!
+		ServerGameObject* formation = nullptr;
+		for (ServerGameObject* obj : objList) {
+			if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+				formation = obj;
+				formation->convertTo(formationType);
+				break;
+			}
+			if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER && obj->getParent()->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+				formation = obj->getParent();
+				formation->convertTo(formationType);
+				break;
+			}
+		}
+		if (!formation) {
+			ServerGameObject* parent = ctx->getSelf()->blueprint->bpClass == Tags::GAMEOBJCLASS_ARMY ? ctx->getSelf() : ctx->getSelf()->getPlayer();
+			formation = ctx->server->spawnObject(formationType, parent, {}, {});
+		}
+
+		printf("== CREATE_FORMATION %s %i\n", formation->blueprint->getFullName().c_str(), formation->id);
+		for (ServerGameObject* obj : objList) {
+			if (obj == formation) {
+				continue;
+			}
+			if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+				printf("from formation %s %i\n", obj->blueprint->getFullName().c_str(), obj->id);
+				for (auto& [unitType, units] : obj->children) {
+					if ((unitType & 63) == Tags::GAMEOBJCLASS_CHARACTER) {
+						auto unitsCopy = units;
+						for (CommonGameObject* unit : unitsCopy) {
+							assert(unit->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER);
+							printf("  unit %s %i\n", unit->blueprint->getFullName().c_str(), unit->id);
+							unit->dyncast<ServerGameObject>()->setParent(formation);
+						}
+					}
+				}
+			}
+			else {
+				assert(obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER);
+				printf("unit %s %i\n", obj->blueprint->getFullName().c_str(), obj->id);
+				obj->setParent(formation);
+			}
+		}
+
+		Vector3 center{ 0.0f, 0.0f, 0.0f };
+		int numUnits = 0;
+		for (auto& [unitType, units] : formation->children) {
+			for (CommonGameObject* unit : units) {
+				center += unit->position;
+				numUnits += 1;
+			}
+		}
+		center /= numUnits;
+		formation->setPosition(center);
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		formationType = gs.objBlueprints[Tags::GAMEOBJCLASS_FORMATION].readPtr(gsf);
@@ -1363,6 +1423,27 @@ struct ActionInterpolateCameraToStoredPosition : Action {
 	}
 };
 
+struct ActionDisbandFormation : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* formation : finder->eval(ctx)) {
+			if (formation->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+				ServerGameObject* parent = formation->getParent();
+				for (auto& [_, subType] : formation->children) {
+					auto subTypeCopy = subType;
+					for (auto* sub : subTypeCopy) {
+						((ServerGameObject*)sub)->setParent(parent);
+					}
+				}
+				formation->sendEvent(Tags::PDEVENT_ON_FORMATION_DISBAND);
+			}
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1452,6 +1533,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_DEACTIVATE_COMMISSION: action = new ActionDeactivateCommission; break;
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION: action = new ActionInterpolateCameraToPosition; break;
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION: action = new ActionInterpolateCameraToStoredPosition; break;
+	case Tags::ACTION_DISBAND_FORMATION: action = new ActionDisbandFormation; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:
