@@ -16,6 +16,7 @@ bool g_modCtrl = false, g_modShift = false, g_modAlt = false;
 IRenderer *g_gfxRenderer = nullptr;
 bool g_mouseDown[16], g_mousePressed[16], g_mouseReleased[16];
 int g_mouseX, g_mouseY, g_mouseWheel;
+int g_mouseDoubleClicked = 0;
 
 void InitWindow()
 {
@@ -71,6 +72,7 @@ void HandleWindow()
 	for (bool& b : g_mouseReleased)
 		b = false;
 	g_mouseWheel = 0;
+	g_mouseDoubleClicked = 0;
 
 	bool igWantsMouse = false;
 	if (imguion) {
@@ -92,7 +94,8 @@ void HandleWindow()
 			break;
 		case SDL_KEYDOWN:
 			g_keyDown[event.key.keysym.scancode] = true;
-			g_keyPressed[event.key.keysym.scancode] = true; break;
+			g_keyPressed[event.key.keysym.scancode] = true;
+			break;
 		case SDL_KEYUP:
 			g_keyDown[event.key.keysym.scancode] = false; break;
 		case SDL_WINDOWEVENT:
@@ -111,6 +114,8 @@ void HandleWindow()
 			if (!igWantsMouse) {
 				g_mouseDown[event.button.button] = true;
 				g_mousePressed[event.button.button] = true;
+				if (event.button.clicks == 2)
+					g_mouseDoubleClicked = event.button.button;
 			}
 			break;
 		case SDL_MOUSEBUTTONUP:

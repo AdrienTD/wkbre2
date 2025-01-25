@@ -383,8 +383,26 @@ void ClientInterface::iter()
 		debugger.selectObject(nextSelectedObject);
 		if (!g_modShift)
 			selection.clear();
-		if (nextSelectedObject)
+		if (nextSelectedObject) {
 			selection.insert(nextSelectedObject);
+			if (g_mouseDoubleClicked == SDL_BUTTON_LEFT) {
+				printf("Double click!\n");
+				// select nearby units of same type
+				auto walkObj = [&](ClientGameObject* obj, const auto& rec) -> void {
+					if (obj->blueprint == nextSelectedObject->blueprint) {
+						if ((obj->position - nextSelectedObject->position).len2xz() < 25.0f) {
+							selection.insert(obj);
+						}
+					}
+					for (const auto& [type, objList] : obj->children) {
+						for (const auto& child : objList) {
+							rec((ClientGameObject*)child, rec);
+						}
+					}
+					};
+				walkObj(nextSelectedObject->getPlayer(), walkObj);
+			}
+		}
 		stampdownBlueprint = nullptr;
 		selBoxStartX = selBoxEndX = g_mouseX;
 		selBoxStartY = selBoxEndY = g_mouseY;

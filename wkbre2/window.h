@@ -15,6 +15,7 @@ extern bool g_modCtrl, g_modShift, g_modAlt;
 extern IRenderer *g_gfxRenderer;
 extern bool g_mouseDown[16], g_mousePressed[16], g_mouseReleased[16];
 extern int g_mouseX, g_mouseY, g_mouseWheel;
+extern int g_mouseDoubleClicked;
 
 void InitWindow();
 void HandleWindow();
