@@ -832,7 +832,10 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 	case Tags::VALUE_CAN_AFFORD_COMMISSION: vd = new ValueCanAffordCommission; break;
 	case Tags::VALUE_AVERAGE_ITEM_VALUE: vd = new ValueAverageItemValue; break;
 	case Tags::VALUE_IS_IN_FRONT_OF: vd = new ValueIsInFrontOf; break;
-	default: vd = new ValueUnknown(strtag); break;
+	default:
+		vd = new ValueUnknown(strtag);
+		printf("WARNING: Unknown value determiner %s at %s\n", strtag.c_str(), gsf.locate().c_str());
+		break;
 	}
 	vd->parse(gsf, const_cast<GameSet&>(gs));
 	return vd;

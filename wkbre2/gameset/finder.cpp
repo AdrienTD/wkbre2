@@ -373,8 +373,10 @@ struct FinderAgAsObj : ObjectFinder {
 ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 {
 	std::string strtag = gsf.nextString();
-	if (strtag.substr(0, 7) != "FINDER_")
+	if (strtag.substr(0, 7) != "FINDER_") {
+		printf("WARNING: Invalid finder %s at %s\n", strtag.c_str(), gsf.locate().c_str());
 		return new FinderUnknown(strtag); // no need to call parse for unknown finders
+	}
 	std::string findername = strtag.substr(7);
 	ObjectFinder *finder;
 	switch (Tags::FINDER_tagDict.getTagID(findername.c_str())) {
@@ -404,7 +406,9 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 	default:
 		if (findername == "AG_ALL_OF_TYPE") { finder = new FinderAgAllOfType; break; }
 		if (findername == "AG_AS_OBJ") { finder = new FinderAgAsObj; break; }
-		finder = new FinderUnknown(strtag); break;
+		finder = new FinderUnknown(strtag);
+		printf("WARNING: Unknown finder %s at %s\n", strtag.c_str(), gsf.locate().c_str());
+		break;
 	}
 	finder->parse(gsf, const_cast<GameSet&>(gs));
 	return finder;
