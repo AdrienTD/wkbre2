@@ -61,6 +61,38 @@ struct ActionTraceFinderResults : Action {
 	}
 };
 
+struct ActionTracePosition : Action {
+	std::string message;
+	std::unique_ptr<PositionDeterminer> position;
+	virtual void run(SrvScriptContext* ctx) override {
+		OrientedPosition result = position->eval(ctx);
+		printf("Trace Position: %s\n   Position: %f %f %f\n   Orientation: %f %f %f\n", message.c_str(),
+			result.position.x, result.position.y, result.position.z,
+			result.rotation.x, result.rotation.y, result.rotation.z);
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		message = gsf.nextString(true);
+		position.reset(PositionDeterminer::createFrom(gsf, gs));
+	}
+};
+
+struct ActionTracePositionsOf : Action {
+	std::string message;
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		auto vec = finder->eval(ctx);
+		printf("Trace Positions of objects: %s\n %zi objects:\n", message.c_str(), vec.size());
+		for (ServerGameObject* obj : vec) {
+			printf(" - %i %s\n   Position: %f %f %f\n", obj->id, obj->blueprint->getFullName().c_str(),
+				obj->position.x, obj->position.y, obj->position.z);
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		message = gsf.nextString(true);
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 struct ActionUponCondition : Action {
 	std::unique_ptr<ValueDeterminer> value;
 	ActionSequence trueList, falseList;
@@ -252,6 +284,18 @@ struct ActionTerminateOrder : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			if (Order* order = obj->orderConfig.getCurrentOrder())
 				order->terminate();
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
+struct ActionCancelOrder : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* obj : finder->eval(ctx))
+			if (Order* order = obj->orderConfig.getCurrentOrder())
+				order->cancel();
 	}
 	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
@@ -1444,6 +1488,21 @@ struct ActionDisbandFormation : Action {
 	}
 };
 
+struct ActionLeaveFormation : Action {
+	std::unique_ptr<ObjectFinder> finder;
+	virtual void run(SrvScriptContext* ctx) override {
+		for (ServerGameObject* object : finder->eval(ctx)) {
+			if (object->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+				object->setParent(object->getPlayer());
+				// TODO: events?
+			}
+		}
+	}
+	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+		finder.reset(ReadFinder(gsf, gs));
+	}
+};
+
 Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 {
 	Action *action;
@@ -1452,6 +1511,8 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_TRACE: action = new ActionTrace; break;
 	case Tags::ACTION_TRACE_VALUE: action = new ActionTraceValue; break;
 	case Tags::ACTION_TRACE_FINDER_RESULTS: action = new ActionTraceFinderResults; break;
+	case Tags::ACTION_TRACE_POSITION: action = new ActionTracePosition; break;
+	case Tags::ACTION_TRACE_POSITIONS_OF: action = new ActionTracePositionsOf; break;
 	case Tags::ACTION_SET_ITEM: action = new ActionSetItem; break;
 	case Tags::ACTION_INCREASE_ITEM: action = new ActionIncreaseItem; break;
 	case Tags::ACTION_DECREASE_ITEM: action = new ActionDecreaseItem; break;
@@ -1464,6 +1525,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_TERMINATE_THIS_ORDER: action = new ActionTerminateThisOrder; break;
 	case Tags::ACTION_TERMINATE_TASK: action = new ActionTerminateTask; break;
 	case Tags::ACTION_TERMINATE_ORDER: action = new ActionTerminateOrder; break;
+	case Tags::ACTION_CANCEL_ORDER: action = new ActionCancelOrder; break;
 	case Tags::ACTION_TRANSFER_CONTROL: action = new ActionTransferControl; break;
 	case Tags::ACTION_ASSIGN_ORDER_VIA: action = new ActionAssignOrderVia; break;
 	case Tags::ACTION_REMOVE: action = new ActionRemove; break;
@@ -1534,6 +1596,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_POSITION: action = new ActionInterpolateCameraToPosition; break;
 	case Tags::ACTION_INTERPOLATE_CAMERA_TO_STORED_POSITION: action = new ActionInterpolateCameraToStoredPosition; break;
 	case Tags::ACTION_DISBAND_FORMATION: action = new ActionDisbandFormation; break;
+	case Tags::ACTION_LEAVE_FORMATION: action = new ActionLeaveFormation; break;
 		// Below are ignored actions (that should not affect gameplay very much)
 	case Tags::ACTION_STOP_SOUND:
 	case Tags::ACTION_REVEAL_FOG_OF_WAR:
@@ -1566,12 +1629,15 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 	case Tags::ACTION_UNLOCK_TIME:
 	case Tags::ACTION_ENABLE_DIPLOMATIC_REPORT_WINDOW:
 	case Tags::ACTION_DISABLE_DIPLOMATIC_REPORT_WINDOW:
+	case Tags::ACTION_ENABLE_DIPLOMACY_WINDOW:
+	case Tags::ACTION_DISABLE_DIPLOMACY_WINDOW:
 	case Tags::ACTION_ENABLE_TRIBUTES_WINDOW:
 	case Tags::ACTION_DISABLE_TRIBUTES_WINDOW:
 	case Tags::ACTION_SET_RECONNAISSANCE:
 	case Tags::ACTION_REMOVE_MULTIPLAYER_PLAYER:
 	case Tags::ACTION_RESERVE_TILE_FOR_CONSTRUCTION:
 	case Tags::ACTION_RESERVE_SPACE_FOR_CONSTRUCTION:
+	case Tags::ACTION_REGISTER_VICTOR:
 		action = new ActionNop; break;
 		//
 	default: action = new ActionUnknown(name, gsf.locate()); printf("WARNING: Unknown ACTION %s at %s\n", name.c_str(), gsf.locate().c_str()); break;
