@@ -34,6 +34,17 @@ void Footprint::parse(GSFileParser& gsf, GameSet& gs)
 				gsf.advanceLine();
 			}
 		}
+		else if (tag == "WALL_ORIGIN_DEFAULT") {
+			auto corner = gsf.nextString();
+			if (corner == "TOP_LEFT") {
+				wallOriginDefaultMinX = gsf.nextInt();
+				wallOriginDefaultMinY = gsf.nextInt();
+			}
+			else if (corner == "BOTTOM_RIGHT") {
+				wallOriginDefaultMaxX = gsf.nextInt();
+				wallOriginDefaultMaxY = gsf.nextInt();
+			}
+		}
 		else if (tag == "END_FOOTPRINT")
 			break;
 		gsf.advanceLine();

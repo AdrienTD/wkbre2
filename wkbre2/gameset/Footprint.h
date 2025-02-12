@@ -19,6 +19,9 @@ struct Footprint {
 	};
 	std::vector<TileOffset> tiles;
 
+	int wallOriginDefaultMinX = 0, wallOriginDefaultMinY = 0;
+	int wallOriginDefaultMaxX = 0, wallOriginDefaultMaxY = 0;
+
 	void parse(GSFileParser& gsf, GameSet& gs);
 	std::pair<float, float> rotateOrigin(float angle) const;
 };

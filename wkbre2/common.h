@@ -66,6 +66,12 @@ struct CommonGameObject {
 
 	int tileIndex = -1;
 
+	// City
+	struct CityRectangle {
+		int xStart, yStart, xEnd, yEnd;
+	};
+	std::vector<CityRectangle> cityRectangles;
+
 	float getItem(int item) const;
 	float getIndexedItem(int item, int index) const;
 

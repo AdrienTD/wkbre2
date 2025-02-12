@@ -17,6 +17,7 @@
 #include <atomic>
 #include <locale>
 #include "gameset/finder.h"
+#include "StampdownPlan.h"
 
 Server *Server::instance = nullptr;
 
@@ -422,6 +423,15 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 		}
 		case Tags::GAMEOBJ_PLAYER_TERMINATED: {
 			obj->updateFlags(obj->flags | ServerGameObject::fPlayerTerminated);
+			break;
+		}
+		case Tags::GAMEOBJ_RECTANGLE: {
+			ServerGameObject::CityRectangle rect;
+			rect.xStart = gsf.nextInt();
+			rect.yStart = gsf.nextInt();
+			rect.xEnd = gsf.nextInt();
+			rect.yEnd = gsf.nextInt();
+			obj->addCityRectangle(rect);
 			break;
 		}
 		case Tags::GAMEOBJ_PLAYER:
@@ -850,6 +860,15 @@ void ServerGameObject::updateBuildingOrderCount(OrderBlueprint* orderBp)
 	NetPacketWriter npw{ NETCLIMSG_UPDATE_BUILDING_ORDER_COUNT_MAP };
 	npw.writeValues(this->id, orderBp->bpid, count);
 	Server::instance->sendTo(this->getPlayer(), npw);
+}
+
+void ServerGameObject::addCityRectangle(const CityRectangle& rectangle)
+{
+	cityRectangles.push_back(rectangle);
+
+	NetPacketWriter npw{ NETCLIMSG_CITY_RECTANGLE_ADDED };
+	npw.writeValues(this->id, rectangle.xStart, rectangle.yStart, rectangle.xEnd, rectangle.yEnd);
+	Server::instance->sendToAll(npw);
 }
 
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
@@ -1401,11 +1420,44 @@ void Server::tick()
 				break;
 			}
 			case NETSRVMSG_STAMPDOWN: {
-				uint32_t bpid = br.readUint32();
-				uint32_t playerid = br.readUint32();
-				Vector3 pos = br.readVector3();
-				bool sendEvent = br.readUint8();
-				ServerGameObject* obj = spawnObject(gameSet->getBlueprint(bpid), findObject(playerid), pos, Vector3(0,0,0));
+				const uint32_t bpid = br.readUint32();
+				const uint32_t playerid = br.readUint32();
+				const Vector3 pos = br.readVector3();
+				const uint8_t flags = br.readUint8();
+				const bool sendEvent = flags & 1;
+				const bool inGameplay = flags & 2;
+
+				clientInfos[clientIndex].lastStampdown = nullptr;
+
+				GameObjBlueprint* blueprint = gameSet->getBlueprint(bpid);
+				ServerGameObject* owningPlayer = findObject(playerid);
+				if (!blueprint || !owningPlayer)
+					break;
+
+				ServerGameObject* parent = owningPlayer;
+
+				if (inGameplay) {
+					StampdownPlan plan = StampdownPlan::getStampdownPlan(this, owningPlayer, blueprint, pos, Vector3(0, 0, 0));
+					if (plan.status != StampdownPlan::Status::Valid)
+						break;
+
+					if (auto* pparent = plan.ownerObject.getFrom<Server>())
+						parent = pparent;
+					else if (plan.newOwnerBlueprint)
+						parent = spawnObject(plan.newOwnerBlueprint, owningPlayer, Vector3(0, 0, 0), Vector3(0, 0, 0));
+
+					if (parent->blueprint->bpClass == Tags::GAMEOBJCLASS_CITY)
+						parent->cityRectangles.push_back(plan.cityRectangle);
+					
+					for (const auto& removal : plan.toRemove) {
+						destroyObject(removal.object.getFrom<Server>());
+					}
+					for (const auto& creation : plan.toCreate) {
+						spawnObject(creation.blueprint, parent, creation.position, creation.orientation);
+					}
+				}
+
+				ServerGameObject* obj = spawnObject(blueprint, parent, pos, Vector3(0,0,0));
 				if (sendEvent)
 					obj->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
 				clientInfos[clientIndex].lastStampdown = obj;

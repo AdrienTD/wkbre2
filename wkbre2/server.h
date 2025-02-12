@@ -81,6 +81,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	void attachLoopingSpecialEffect(int sfxTag, const Vector3& position);
 	void detachLoopingSpecialEffect(int sfxTag);
 	void updateBuildingOrderCount(OrderBlueprint* orderBp);
+	void addCityRectangle(const CityRectangle& rectangle);
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();

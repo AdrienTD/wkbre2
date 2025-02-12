@@ -589,6 +589,16 @@ void Client::tick()
 					obj->buildingOrderCountMap[orderBlueprintId] = updatedCount;
 				break;
 			}
+			case NETCLIMSG_CITY_RECTANGLE_ADDED: {
+				auto [objectId, xStart, yStart, xEnd, yEnd] = br.readValues<uint32_t, int, int, int, int>();
+				ClientGameObject::CityRectangle rect;
+				rect.xStart = xStart;
+				rect.yStart = yStart;
+				rect.xEnd = xEnd;
+				rect.yEnd = yEnd;
+				if (ClientGameObject* obj = findObject(objectId))
+					obj->cityRectangles.push_back(rect);
+			}
 			}
 		}
 		dbgNumMessagesInCurrentSec += dbgNumMessagesPerTick;
@@ -619,13 +629,16 @@ void Client::sendPauseRequest(uint8_t pauseState)
 	serverLink->send(packet);
 }
 
-void Client::sendStampdown(GameObjBlueprint * blueprint, ClientGameObject * player, const Vector3 & position, bool sendEvent)
+void Client::sendStampdown(GameObjBlueprint * blueprint, ClientGameObject * player, const Vector3 & position, bool sendEvent, bool inGameplay)
 {
 	NetPacketWriter msg(NETSRVMSG_STAMPDOWN);
 	msg.writeUint32(blueprint->getFullId());
 	msg.writeUint32(player->id);
 	msg.writeVector3(position);
-	msg.writeUint8(sendEvent);
+	uint8_t flags = 0;
+	flags |= sendEvent ? 1 : 0;
+	flags |= inGameplay ? 2 : 0;
+	msg.writeUint8(flags);
 	serverLink->send(msg);
 }
 

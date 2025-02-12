@@ -425,7 +425,7 @@ void ClientInterface::iter()
 
 	if (!clickedScriptedUi && g_mousePressed[SDL_BUTTON_RIGHT]) {
 		if (stampdownBlueprint && stampdownPlayer) {
-			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos, sendStampdownEvent);
+			client->sendStampdown(stampdownBlueprint, stampdownPlayer, peapos, sendStampdownEvent, stampdownFromCommand);
 			if (stampdownFromCommand) {
 				const Command* cmd = &client->gameSet->commands[client->gameSet->commands.names.getIndex("Build")];
 				for (ClientGameObject* obj : selection) {
