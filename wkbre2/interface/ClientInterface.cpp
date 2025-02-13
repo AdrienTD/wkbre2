@@ -29,6 +29,7 @@
 #include "../settings.h"
 #include <nlohmann/json.hpp>
 #include "../gfx/D3D11EnhancedSceneRenderer.h"
+#include "../StampdownPlan.h"
 
 namespace {
 	Vector3 getRay(const Camera &cam) {
@@ -928,6 +929,20 @@ void ClientInterface::iter()
 				test.transform = Matrix::getTranslationMatrix(peapos);
 				test.color = stampdownPlayer->color;
 				scene->add(&test);
+
+				static std::vector<SceneEntity> planEntities;
+				planEntities.clear();
+				auto plan = StampdownPlan::getStampdownPlan(client, client->clientPlayer.get(), stampdownBlueprint, peapos, Vector3(0, 0, 0));
+				planEntities.reserve(plan.toCreate.size());
+				for (auto& creation : plan.toCreate) {
+					auto& entity = planEntities.emplace_back();
+					entity.transform = Matrix::getRotationYMatrix(-creation.orientation.y) * Matrix::getTranslationMatrix(creation.position);
+					entity.model = creation.blueprint->subtypes.at(0).appearances.at(0).animations.at(0).at(0);
+					entity.color = stampdownPlayer->color;
+				}
+				for (auto& entity : planEntities) {
+					scene->add(&entity);
+				}
 			}
 			catch (const std::out_of_range &) {
 				// nop

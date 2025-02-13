@@ -99,6 +99,8 @@ StampdownPlan StampdownPlan::getStampdownPlan(
 						};
 						auto tileType = [&](int tx, int tz) {
 							if (cityContainsTile(cityRectangles, tx, tz)) {
+								if (!gameState->tiles)
+									return TInside;
 								//auto* tileBuilding = tiles[tz * tileWidth + tx].building.getFrom<Server>();
 								//if (tileBuilding) {
 								for (const auto& tileObjRef : gameState->tiles[tz * tileWidth + tx].objList) {
@@ -170,6 +172,8 @@ StampdownPlan StampdownPlan::getStampdownPlan(
 						}
 					}
 					else {
+						if (!gameState->tiles)
+							continue;
 						for (const auto& tileObjRef : gameState->tiles[wz * tileWidth + wx].objList) {
 							if (CommonGameObject* tileBuilding = tileObjRef.getFrom(gameState)) {
 								auto it = std::find(std::begin(wallBuildingTypes), std::end(wallBuildingTypes), tileBuilding->blueprint->buildingType);
