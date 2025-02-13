@@ -134,6 +134,8 @@ struct CommonGameState {
 	const char* getProgramName() const { return isServer() ? "Server" : isClient() ? "Client" : "?"; }
 
 	CommonGameState(ProgramType programType) : programType(programType) {}
+
+	void updateOccupiedTiles(CommonGameObject* object, const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation);
 };
 
 template<typename AnyGameObject, ProgramType PROGTYPE> struct SpecificGameState : CommonGameState {

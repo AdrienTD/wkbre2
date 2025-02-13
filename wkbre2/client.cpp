@@ -746,43 +746,5 @@ void ClientGameObject::updatePosition(const Vector3& newposition)
 
 void ClientGameObject::updateOccupiedTiles(const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation)
 {
-	// TODO: Generalize with server equivalent instead of duplicating code
-	Client* prog = Client::instance;
-	if (!prog->tiles) return;
-	int trnNumX, trnNumZ;
-	std::tie(trnNumX, trnNumZ) = prog->terrain->getNumPlayableTiles();
-	if (blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING && blueprint->footprint) {
-		// free tiles from old position
-		auto rotOrigin = blueprint->footprint->rotateOrigin(oldorientation.y);
-		int ox = (int)((oldposition.x - rotOrigin.first) / 5.0f);
-		int oz = (int)((oldposition.z - rotOrigin.second) / 5.0f);
-		for (auto& to : blueprint->footprint->tiles) {
-			if (true /*!to.mode*/) {
-				auto ro = to.rotate(oldorientation.y);
-				int px = ox + ro.first, pz = oz + ro.second;
-				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
-					auto& tile = prog->tiles[pz * trnNumX + px];
-					if (tile.building == this->id)
-						tile.building = nullptr;
-				}
-			}
-		}
-		// take tiles from new position
-		rotOrigin = blueprint->footprint->rotateOrigin(neworientation.y);
-		ox = (int)((newposition.x - rotOrigin.first) / 5.0f);
-		oz = (int)((newposition.z - rotOrigin.second) / 5.0f);
-		for (auto& to : blueprint->footprint->tiles) {
-			if (true /*!to.mode*/) {
-				auto ro = to.rotate(neworientation.y);
-				int px = ox + ro.first, pz = oz + ro.second;
-				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
-					auto& tile = prog->tiles[pz * trnNumX + px];
-					if (!tile.building.getFrom<Client>() || tile.buildingPassable) {
-						tile.building = this->id;
-						tile.buildingPassable = to.mode;
-					}
-				}
-			}
-		}
-	}
+	Client::instance->updateOccupiedTiles(this, oldposition, oldorientation, newposition, neworientation);
 }

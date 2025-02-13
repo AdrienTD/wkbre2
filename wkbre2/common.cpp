@@ -5,6 +5,7 @@
 #include "common.h"
 #include "gameset/GameObjBlueprint.h"
 #include "gameset/gameset.h"
+#include "terrain.h"
 
 float CommonGameObject::getItem(int item) const
 {
@@ -43,4 +44,45 @@ int CommonGameState::getDiplomaticStatus(CommonGameObject* a, CommonGameObject* 
 		return it->second;
 	else
 		return gameSet->defaultDiplomaticStatus;
+}
+
+void CommonGameState::updateOccupiedTiles(CommonGameObject* object, const Vector3& oldposition, const Vector3& oldorientation, const Vector3& newposition, const Vector3& neworientation)
+{
+	if (!this->tiles) return;
+	int trnNumX, trnNumZ;
+	std::tie(trnNumX, trnNumZ) = this->terrain->getNumPlayableTiles();
+	if (object->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING && object->blueprint->footprint) {
+		// free tiles from old position
+		auto rotOrigin = object->blueprint->footprint->rotateOrigin(oldorientation.y);
+		int ox = (int)((oldposition.x - rotOrigin.first) / 5.0f);
+		int oz = (int)((oldposition.z - rotOrigin.second) / 5.0f);
+		for (auto& to : object->blueprint->footprint->tiles) {
+			if (true /*!to.mode*/) {
+				auto ro = to.rotate(oldorientation.y);
+				int px = ox + ro.first, pz = oz + ro.second;
+				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
+					auto& tile = this->tiles[pz * trnNumX + px];
+					if (tile.building == object->id)
+						tile.building = nullptr;
+				}
+			}
+		}
+		// take tiles from new position
+		rotOrigin = object->blueprint->footprint->rotateOrigin(neworientation.y);
+		ox = (int)((newposition.x - rotOrigin.first) / 5.0f);
+		oz = (int)((newposition.z - rotOrigin.second) / 5.0f);
+		for (auto& to : object->blueprint->footprint->tiles) {
+			if (true /*!to.mode*/) {
+				auto ro = to.rotate(neworientation.y);
+				int px = ox + ro.first, pz = oz + ro.second;
+				if (px >= 0 && px < trnNumX && pz >= 0 && pz < trnNumZ) {
+					auto& tile = this->tiles[pz * trnNumX + px];
+					if (!tile.building.getFrom(this) || tile.buildingPassable) {
+						tile.building = object->id;
+						tile.buildingPassable = to.mode;
+					}
+				}
+			}
+		}
+	}
 }
