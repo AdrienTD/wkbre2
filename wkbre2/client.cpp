@@ -200,6 +200,8 @@ void Client::tick()
 				terrain->readFromFile(mapfp.c_str());
 				if (cliInterface)
 					cliInterface->updateTerrain();
+				auto area = this->terrain->getNumPlayableTiles();
+				this->tiles = std::make_unique<Tile[]>(area.first * area.second);
 				break;
 			}
 			case NETCLIMSG_OBJECT_POSITION_SET: {
