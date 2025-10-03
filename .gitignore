@@ -39,5 +39,7 @@
 build*/
 imgui.ini
 .vs/
+.vscode/
 CMakeSettings.json
+CMakeUserPresets.json
 wkconfig.json
