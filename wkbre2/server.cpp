@@ -871,6 +871,30 @@ void ServerGameObject::addCityRectangle(const CityRectangle& rectangle)
 	Server::instance->sendToAll(npw);
 }
 
+void ServerGameObject::setBuildingSpawnedUnitOrderToTarget(int commandIndex, ServerGameObject* target)
+{
+	this->spawnedUnitCommand = commandIndex;
+	this->spawnedUnitTarget = target->id;
+	this->spawnedUnitDestination = Vector3(-1.0, 0.0, 0.0);
+	this->spawnedUnitFaceTo = Vector3(-1.0, 0.0, 0.0);
+
+	NetPacketWriter npw{ NETCLIMSG_BUILDING_SPAWNED_UNIT_ORDER_CHANGED };
+	npw.writeValues(this->id, this->spawnedUnitCommand, this->spawnedUnitTarget.objid, this->spawnedUnitDestination, this->spawnedUnitFaceTo);
+	Server::instance->sendTo(this->getPlayer(), npw);
+}
+
+void ServerGameObject::setBuildingSpawnedUnitOrderToDestination(int commandIndex, Vector3 destination, Vector3 positionToFace)
+{
+	this->spawnedUnitCommand = commandIndex;
+	this->spawnedUnitTarget = nullptr;
+	this->spawnedUnitDestination = destination;
+	this->spawnedUnitFaceTo = positionToFace;
+
+	NetPacketWriter npw{ NETCLIMSG_BUILDING_SPAWNED_UNIT_ORDER_CHANGED };
+	npw.writeValues(this->id, this->spawnedUnitCommand, this->spawnedUnitTarget.objid, this->spawnedUnitDestination, this->spawnedUnitFaceTo);
+	Server::instance->sendTo(this->getPlayer(), npw);
+}
+
 void ServerGameObject::updatePosition(const Vector3 & newposition, bool events)
 {
 	Server *server = Server::instance;
@@ -1503,6 +1527,25 @@ void Server::tick()
 				formation->setPosition(positionSum / numUnits);
 				formation->sendEvent(Tags::PDEVENT_ON_SPAWN);
 				clientInfos[clientIndex].unitsForNewFormation.clear();
+				break;
+			}
+			case NETSRVMSG_SET_BUILDING_SPAWNED_UNIT_ORDER_TO_TARGET: {
+				auto [objectId, commandIndex, targetId] = br.readValues<uint32_t, uint32_t, uint32_t>();
+				ServerGameObject* obj = findObject(objectId);
+				Command* command = gameSet->commands.getPointer(commandIndex);
+				ServerGameObject* target = findObject(targetId);
+				if (!(obj && command))
+					break;
+				obj->setBuildingSpawnedUnitOrderToTarget(commandIndex, target);
+				break;
+			}
+			case NETSRVMSG_SET_BUILDING_SPAWNED_UNIT_ORDER_TO_DESTINATION: {
+				auto [objectId, commandIndex, destination, faceTo] = br.readValues<uint32_t, uint32_t, Vector3, Vector3>();
+				ServerGameObject* obj = findObject(objectId);
+				Command* command = gameSet->commands.getPointer(commandIndex);
+				if (!(obj && command))
+					break;
+				obj->setBuildingSpawnedUnitOrderToDestination(commandIndex, destination, faceTo);
 				break;
 			}
 			}

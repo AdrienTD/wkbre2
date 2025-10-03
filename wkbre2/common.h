@@ -72,6 +72,12 @@ struct CommonGameObject {
 	};
 	std::vector<CityRectangle> cityRectangles;
 
+	// Building: Spawn order
+	int spawnedUnitCommand = -1;
+	CmnGORef spawnedUnitTarget = -1;
+	Vector3 spawnedUnitDestination;
+	Vector3 spawnedUnitFaceTo;
+
 	float getItem(int item) const;
 	float getIndexedItem(int item, int index) const;
 

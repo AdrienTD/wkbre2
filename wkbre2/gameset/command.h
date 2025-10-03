@@ -28,6 +28,7 @@ struct Command {
 	GameObjBlueprint* stampdownObject = nullptr;
 	std::string defaultHint;
 	std::vector<ValueDeterminer*> defaultHintValues;
+	bool canBeAssignedToSpawnedUnits = false;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
 	void execute(ServerGameObject *self, ServerGameObject *target = nullptr, int assignmentMode = 0, const Vector3 &destination = Vector3());

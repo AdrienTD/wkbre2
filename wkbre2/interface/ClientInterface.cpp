@@ -307,7 +307,32 @@ void ClientInterface::iter()
 		if (sel) {
 			CliScriptContext ctx(client, sel);
 			auto _ = ctx.change(ctx.target, nextSelectedObject);
-			for (Command* cmd : sel->blueprint->offeredCommands) {
+
+			static std::vector<Command*> availableCommands;
+			availableCommands.clear();
+
+			for (Command* scmd : sel->blueprint->offeredCommands) {
+				availableCommands.push_back(scmd);
+
+				// commands for auto ordering spawned characters from building
+				if (sel->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING) {
+					const std::string_view name = client->gameSet->commands.getString(scmd);
+					if (name.substr(0, 6) == "Spawn ") {
+						auto unitName = std::string(name.substr(6));
+						int x = client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].names.getIndex(unitName);
+						if (x >= 0) {
+							GameObjBlueprint* unitType = &client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
+							for (Command* cmd : unitType->offeredCommands) {
+								if (cmd->canBeAssignedToSpawnedUnits) {
+									availableCommands.push_back(cmd);
+								}
+							}
+						}
+					}
+				}
+			}
+
+			for (Command* cmd : availableCommands) {
 				WndCursor* cmdCursor = nullptr;
 				for (auto& avcond : cmd->cursorAvailable) {
 					if (avcond.first->test->eval(&ctx)) {
@@ -460,6 +485,29 @@ void ClientInterface::iter()
 						if (nextPosDir >= TWOPI) {
 							nextPosDir = 0.0f;
 							nextPosRadius += SEPARATION;
+						}
+					}
+					else if (sel->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING) {
+						for (const auto* scmd : sel->blueprint->offeredCommands) {
+							const std::string_view name = client->gameSet->commands.getString(scmd);
+							if (name.substr(0, 6) == "Spawn ") {
+								auto unitName = std::string(name.substr(6));
+								int x = client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].names.getIndex(unitName);
+								if (x >= 0) {
+									GameObjBlueprint* unitType = &client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
+									for (const auto* cmd : unitType->offeredCommands) {
+										if (cmd == rightClickCommand && cmd->canBeAssignedToSpawnedUnits) {
+											printf("Order for spawned unit changed to: %s\n", client->gameSet->commands.getString(cmd).c_str());
+											if (cmd->order && cmd->order->classType == Tags::ORDTSKTYPE_MOVE) {
+												client->sendSetBuildingSpawnedUnitOrderToDestination(sel, client->gameSet->commands.getIndex(cmd), peapos);
+											}
+											else {
+												client->sendSetBuildingSpawnedUnitOrderToTarget(sel, client->gameSet->commands.getIndex(cmd), nextSelectedObject);
+											}
+										}
+									}
+								}
+							}
 						}
 					}
 				}
@@ -703,6 +751,17 @@ void ClientInterface::iter()
 				return client->gameSet->commands.getString(cmd);
 			}
 		);
+		lua.set_function("getBuildingSpawnedUnitCommand", [this](uint32_t objid) -> const Command* {
+			ClientGameObject* obj = client->findObject(objid);
+			return client->gameSet->commands.getPointer(obj->spawnedUnitCommand);
+			});
+		lua.set_function("getBuildingSpawnedUnitIcon", [this](uint32_t objid) -> std::string {
+			ClientGameObject* obj = client->findObject(objid);
+			if (!obj) return {};
+			const Command* cmd = client->gameSet->commands.getPointer(obj->spawnedUnitCommand);
+			if (!cmd) return {};
+			return cmd->buttonEnabled;
+			});
 		// Command list
 		enum class CSInfo {
 			ENABLED = 0,

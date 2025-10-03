@@ -57,6 +57,9 @@ template<typename T> struct GSBlueprintList {
 	int getIndex(const T* ptr) { return (int)(ptr - blueprints.data()); }
 	const std::string& getString(int index) { return names.getString(index); }
 	const std::string& getString(const T* ptr) { return getString(getIndex(ptr)); }
+
+	T* getPointer(int index) { return (index >= 0 && index < size()) ? &blueprints[index] : nullptr; }
+	const T* getPointer(int index) const { return (index >= 0 && index < size()) ? &blueprints[index] : nullptr; }
 };
 
 template<> struct GSBlueprintList<void> {

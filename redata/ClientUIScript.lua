@@ -145,6 +145,11 @@ function CCUI_PerFrame()
 				x = x+hi+2
 			end
 		end
+		-- For buildings: Icon for command assigned to spawned unit
+		local spawnedUnitIcon = getBuildingSpawnedUnitIcon(sel)
+		if spawnedUnitIcon ~= "" then
+			drawImage(0, getWindowHeight()-64, 64, 64, spawnedUnitIcon)
+		end
 
 		if bp.bpClass == GAMEOBJCLASS_CHARACTER then
 			-- Build commands

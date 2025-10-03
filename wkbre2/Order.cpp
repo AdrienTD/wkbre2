@@ -682,8 +682,18 @@ void SpawnTask::onUpdate()
 		ServerGameObject* obj = order->gameObject;
 		if (obj->getItem(Tags::PDITEM_HIT_POINTS_OF_OBJECT_BEING_SPAWNED) >= obj->getItem(Tags::PDITEM_HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED)) {
 			ServerGameObject* spawned = Server::instance->spawnObject(toSpawn, obj->getPlayer(), obj->position, Vector3(0,0,0));
-			if (ServerGameObject* com = aiCommissioner.get())
+			if (obj->spawnedUnitCommand >= 0) {
+				Command* command = &Server::instance->gameSet->commands[obj->spawnedUnitCommand];
+				const auto& spawnedOfferedCommands = spawned->blueprint->offeredCommands;
+				const auto it = std::find(spawnedOfferedCommands.begin(), spawnedOfferedCommands.end(), command);
+				if (it != spawnedOfferedCommands.end()) {
+					command->execute(
+						spawned, obj->spawnedUnitTarget.getFrom<Server>(), Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE, obj->spawnedUnitDestination);
+				}
+			}
+			if (ServerGameObject* com = aiCommissioner.get()) {
 				com->sendEvent(Tags::PDEVENT_ON_COMMISSIONED, spawned);
 		}
 	}
+}
 }

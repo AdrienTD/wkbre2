@@ -59,6 +59,12 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 				defaultHintValues.push_back(ReadValueDeterminer(gsf, gs));
 			}
 		}
+		else if (strtag == "FLAG") {
+			auto flagName = gsf.nextString();
+			if (flagName == "CAN_BE_ASSIGNED_TO_SPAWNED_UNITS") {
+				canBeAssignedToSpawnedUnits = true;
+			}
+		}
 		else if (strtag == "END_COMMAND")
 			return;
 		gsf.advanceLine();

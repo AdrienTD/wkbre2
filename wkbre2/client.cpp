@@ -600,6 +600,20 @@ void Client::tick()
 				rect.yEnd = yEnd;
 				if (ClientGameObject* obj = findObject(objectId))
 					obj->cityRectangles.push_back(rect);
+				break;
+			}
+			case NETCLIMSG_BUILDING_SPAWNED_UNIT_ORDER_CHANGED: {
+				auto [objectId, commandIndex, targetId, destination, faceTo] = br.readValues<uint32_t, uint32_t, uint32_t, Vector3, Vector3>();
+				ClientGameObject* obj = findObject(objectId);
+				if (!obj)
+					break;
+				if (!(commandIndex >= 0 && commandIndex < gameSet->commands.size()))
+					break;
+				obj->spawnedUnitCommand = commandIndex;
+				obj->spawnedUnitTarget = objectId;
+				obj->spawnedUnitDestination = destination;
+				obj->spawnedUnitFaceTo = faceTo;
+				break;
 			}
 			}
 		}
@@ -703,6 +717,20 @@ void Client::sendPutUnitIntoNewFormation(ClientGameObject* obj)
 void Client::sendCreateNewFormation()
 {
 	NetPacketWriter msg{ NETSRVMSG_CREATE_NEW_FORMATION };
+	serverLink->send(msg);
+}
+
+void Client::sendSetBuildingSpawnedUnitOrderToTarget(ClientGameObject* obj, int commandIndex, ClientGameObject* target)
+{
+	NetPacketWriter msg{ NETSRVMSG_SET_BUILDING_SPAWNED_UNIT_ORDER_TO_TARGET };
+	msg.writeValues(obj->id, commandIndex, target->id);
+	serverLink->send(msg);
+}
+
+void Client::sendSetBuildingSpawnedUnitOrderToDestination(ClientGameObject* obj, int commandIndex, Vector3 destination, Vector3 faceTo)
+{
+	NetPacketWriter msg{ NETSRVMSG_SET_BUILDING_SPAWNED_UNIT_ORDER_TO_DESTINATION };
+	msg.writeValues(obj->id, commandIndex, destination, faceTo);
 	serverLink->send(msg);
 }
 

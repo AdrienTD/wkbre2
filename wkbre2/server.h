@@ -82,6 +82,8 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	void detachLoopingSpecialEffect(int sfxTag);
 	void updateBuildingOrderCount(OrderBlueprint* orderBp);
 	void addCityRectangle(const CityRectangle& rectangle);
+	void setBuildingSpawnedUnitOrderToTarget(int orderIndex, ServerGameObject* target);
+	void setBuildingSpawnedUnitOrderToDestination(int orderIndex, Vector3 destination, Vector3 positionToFace = Vector3{ -1.0f, 0.0f, 0.0f });
 
 	void updatePosition(const Vector3 &newposition, bool events = false);
 	void lookForSightRangeEvents();
