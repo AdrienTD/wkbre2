@@ -628,18 +628,25 @@ void ObjectReferenceTask::onUpdate()
 			}
 		}
 		else {
-			this->stopTriggers();
-			if (!go->movementController.isMoving())
-				destination = go->movementController.startMovement(this->target->position);
-			// If target slightly moves during the movement, restart the movement
-			if (target->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER)
-				if (go->movementController.isMoving())
-					if ((this->target->position - go->movementController.getDestination()).sqlen2xz() > 0.1f)
-						destination = go->movementController.startMovement(this->target->position);
-			if (proximitySatisfied) {
-				proximitySatisfied = false;
-				//if (blueprint->defaultAnim != -1)
-				//	go->setAnimation(0);
+			ServerGameObject* obj = order->gameObject;
+			Model* model = obj->blueprint->getModel(obj->subtype, obj->appearance, obj->animationIndex, obj->animationVariant);
+			float period = model ? model->getDuration() : 0.2f;
+			if (obj->animationIndex == 0 || Server::instance->timeManager.currentTime >= obj->animStartTime + period) {
+				// only then the proximity can be dissatisfied
+
+				this->stopTriggers();
+				if (!go->movementController.isMoving())
+					destination = go->movementController.startMovement(this->target->position);
+				// If target slightly moves during the movement, restart the movement
+				if (target->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER)
+					if (go->movementController.isMoving())
+						if ((this->target->position - go->movementController.getDestination()).sqlen2xz() > 0.01f)
+							destination = go->movementController.startMovement(this->target->position);
+				if (proximitySatisfied) {
+					proximitySatisfied = false;
+					//if (blueprint->defaultAnim != -1)
+					//	go->setAnimation(0);
+				}
 			}
 		}
 		if (this->triggersStarted) {
@@ -693,7 +700,7 @@ void SpawnTask::onUpdate()
 			}
 			if (ServerGameObject* com = aiCommissioner.get()) {
 				com->sendEvent(Tags::PDEVENT_ON_COMMISSIONED, spawned);
+			}
 		}
 	}
-}
 }
