@@ -310,7 +310,7 @@ struct PDFiringAttachmentPoint : PositionDeterminer {
 };
 
 struct PDNearestValidStampdownPos : PositionDeterminer {
-	GameObjBlueprint* objbp;
+	const GameObjBlueprint* objbp;
 	std::unique_ptr<PositionDeterminer> p;
 	std::unique_ptr<ObjectFinder> fdExemptTilesReservedBy;
 	bool isTileFree(CommonGameState* server, int tx, int tz) {

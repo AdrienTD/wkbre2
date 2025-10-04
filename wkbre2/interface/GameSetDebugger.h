@@ -7,9 +7,9 @@
 struct GameSet;
 
 struct GameSetDebugger {
-	GameSet* gameSet = nullptr;
+	const GameSet* gameSet = nullptr;
 	GameSetDebugger() {}
-	GameSetDebugger(GameSet* gameSet) : gameSet(gameSet) {}
-	void setGameSet(GameSet* newGameSet) { gameSet = newGameSet; }
+	GameSetDebugger(const GameSet* gameSet) : gameSet(gameSet) {}
+	void setGameSet(const GameSet* newGameSet) { gameSet = newGameSet; }
 	void draw();
 };

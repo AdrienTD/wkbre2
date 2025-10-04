@@ -328,7 +328,7 @@ struct FinderSelectedObject : ObjectFinder {
 };
 
 struct FinderAgAllOfType : ObjectFinder {
-	GameObjBlueprint* blueprint;
+	const GameObjBlueprint* blueprint;
 	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		uint32_t bpid = blueprint->getFullId();
 		ObjectFinderResult vec;
@@ -418,7 +418,7 @@ struct FinderSubordinates : ObjectFinder {
 	std::unique_ptr<ObjectFinder> finder;
 	int equation = -1;
 	int bpclass = -1;
-	GameObjBlueprint *objbp = nullptr;
+	const GameObjBlueprint *objbp = nullptr;
 	bool immediateLevel = false;
 	static thread_local ObjectFinderResult results;
 	bool eligible(CommonGameObject *obj, ScriptContext *ctx) {

@@ -209,7 +209,7 @@ struct ValueSamePlayer : ValueDeterminer {
 };
 
 struct ValueObjectType : ValueDeterminer {
-	GameObjBlueprint *type;
+	const GameObjBlueprint *type;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual float eval(ScriptContext* ctx) override {
 		auto vec = finder->eval(ctx);
@@ -316,7 +316,7 @@ struct ValueAreAssociated : ValueDeterminer {
 
 struct ValueBlueprintItemValue : ValueDeterminer {
 	int item;
-	GameObjBlueprint *type;
+	const GameObjBlueprint *type;
 	virtual float eval(ScriptContext* ctx) override {
 		auto it = type->startItemValues.find(item);
 		if (it != type->startItemValues.end())
@@ -672,7 +672,7 @@ struct ValueIsVisible : ValueDeterminer {
 	}
 };
 struct ValueCouldReach : ValueDeterminer {
-	GameObjBlueprint* objtype;
+	const GameObjBlueprint* objtype;
 	std::unique_ptr<PositionDeterminer> pStart, pEnd;
 	virtual float eval(ScriptContext* ctx) override {
 		// TODO

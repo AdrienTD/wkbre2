@@ -6,7 +6,7 @@
 #include "terrain.h"
 
 StampdownPlan StampdownPlan::getStampdownPlan(
-	CommonGameState* gameState, CommonGameObject* playerObj, GameObjBlueprint* blueprint, Vector3 position, Vector3 orientation)
+	CommonGameState* gameState, CommonGameObject* playerObj, const GameObjBlueprint* blueprint, Vector3 position, Vector3 orientation)
 {
 	StampdownPlan plan;
 
@@ -41,11 +41,11 @@ StampdownPlan StampdownPlan::getStampdownPlan(
 			return false;
 			};
 
-		GameSet* gameSet = gameState->gameSet;
-		GameObjBlueprint* bpWall = gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, "Stockade Foundation");
-		GameObjBlueprint* bpWallCornerIn = gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, "Stockade Corner In Foundation");
-		GameObjBlueprint* bpWallCornerOut = gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, "Stockade Corner Out Foundation");
-		GameObjBlueprint* bpWallCrossPiece = gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, "Stockade Cross Piece Foundation");
+		const GameSet* gameSet = gameState->gameSet.get();
+		const GameObjBlueprint* bpWall = gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, "Stockade Foundation");
+		const GameObjBlueprint* bpWallCornerIn = gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, "Stockade Corner In Foundation");
+		const GameObjBlueprint* bpWallCornerOut = gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, "Stockade Corner Out Foundation");
+		const GameObjBlueprint* bpWallCrossPiece = gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, "Stockade Cross Piece Foundation");
 		Footprint* footprint = blueprint->footprint;
 		if (bpWall && footprint) {
 			auto [tileWidth, tileHeight] = gameState->terrain->getNumPlayableTiles();
@@ -116,7 +116,7 @@ StampdownPlan StampdownPlan::getStampdownPlan(
 							return TOutside;
 							};
 
-						GameObjBlueprint* needWall = nullptr;
+						const GameObjBlueprint* needWall = nullptr;
 						float needAngle = 0.0f;
 
 						TileType leftType = tileType(wx - 1, wz);

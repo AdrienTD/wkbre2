@@ -45,7 +45,7 @@ struct CommissionInstance {
 
 struct AIController {
 	ServerGameObject* gameObj;
-	PlanNodeSequence* planBlueprint = nullptr; PlanNodeSequence::State planState;
+	const PlanNodeSequence* planBlueprint = nullptr; PlanNodeSequence::State planState;
 	std::vector<WorkOrderInstance> workOrderInstances;
 	std::vector<CommissionInstance> commissionInstances;
 	

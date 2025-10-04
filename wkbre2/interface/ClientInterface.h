@@ -42,7 +42,7 @@ struct ClientInterface {
 		sceneRenderer(nullptr), debugger(client, this), scene(nullptr), particlesContainer(nullptr), psCache(nullptr),
 		particleRenderer(nullptr), uiTexCache(gfx) {}
 
-	GameObjBlueprint *stampdownBlueprint = nullptr;
+	const GameObjBlueprint *stampdownBlueprint = nullptr;
 	CliGORef stampdownPlayer;
 	bool sendStampdownEvent = false;
 	bool stampdownFromCommand = false;

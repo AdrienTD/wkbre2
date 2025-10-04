@@ -13,11 +13,11 @@ struct PackageReceiptTrigger;
 
 struct Reaction {
 	std::vector<int> events;
-	std::vector<PackageReceiptTrigger*> prTriggers;
+	std::vector<const PackageReceiptTrigger*> prTriggers;
 	ActionSequence actions;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
-	bool canBeTriggeredBy(int evt, ServerGameObject* obj, ServerGameObject* sender);
+	bool canBeTriggeredBy(int evt, ServerGameObject* obj, ServerGameObject* sender) const;
 };
 
 struct PackageReceiptTrigger {
@@ -25,5 +25,5 @@ struct PackageReceiptTrigger {
 	std::vector<int> assessments;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
-	bool canBeTriggeredBy(int evt, ServerGameObject* obj, ServerGameObject* sender);
+	bool canBeTriggeredBy(int evt, ServerGameObject* obj, ServerGameObject* sender) const;
 };

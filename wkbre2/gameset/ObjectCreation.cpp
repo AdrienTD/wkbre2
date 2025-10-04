@@ -45,7 +45,7 @@ void ObjectCreation::run(ServerGameObject * creator, SrvScriptContext* ctx)
 {
 	auto _0 = ctx->changeSelf(creator);
 	auto _1 = ctx->change(ctx->creator, creator);
-	GameObjBlueprint* type = nullptr;
+	const GameObjBlueprint* type = nullptr;
 	if (typeToCreate)
 		type = typeToCreate;
 	else if (mappedTypeFrom) {

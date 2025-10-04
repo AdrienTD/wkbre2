@@ -29,7 +29,7 @@ struct CameraPath;
 
 struct ClientGameObject : SpecificGameObject<Client, ClientGameObject> {
 	using Program = Client;
-	ClientGameObject(uint32_t id, GameObjBlueprint *blueprint) : SpecificGameObject<Client, ClientGameObject>(id, blueprint) {}
+	ClientGameObject(uint32_t id, const GameObjBlueprint *blueprint) : SpecificGameObject<Client, ClientGameObject>(id, blueprint) {}
 	SceneEntity sceneEntity;
 	std::unordered_map<int, int> buildingOrderCountMap;
 
@@ -96,7 +96,7 @@ struct Client : SpecificGameState<ClientGameObject, ProgramType::CLIENT>
 	void sendMessage(const std::string &msg);
 	void sendCommand(ClientGameObject *obj, const Command *cmd, int assignmentMode, ClientGameObject *target = nullptr, const Vector3 & destination = Vector3());
 	void sendPauseRequest(uint8_t pauseState);
-	void sendStampdown(GameObjBlueprint *blueprint, ClientGameObject *player, const Vector3 &position, bool sendEvent = false, bool inGameplay = false);
+	void sendStampdown(const GameObjBlueprint *blueprint, ClientGameObject *player, const Vector3 &position, bool sendEvent = false, bool inGameplay = false);
 	void sendStartLevelRequest();
 	void sendGameTextWindowButtonClicked(int gtwIndex, int buttonIndex);
 	void sendCameraPathEnded(int camPathIndex);
@@ -113,7 +113,7 @@ struct Client : SpecificGameState<ClientGameObject, ProgramType::CLIENT>
 
 private:
 	//ClientGameObject * loadObject(GSFileParser & gsf, const std::string & clsname);
-	ClientGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
+	ClientGameObject *createObject(const GameObjBlueprint *blueprint, uint32_t id = 0);
 	void info(const char *fmt, ...) {
 		va_list args;
 		va_start(args, fmt);

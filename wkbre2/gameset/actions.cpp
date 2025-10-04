@@ -508,7 +508,7 @@ struct ActionClearAssociates : Action {
 };
 
 struct ActionConvertTo : Action {
-	GameObjBlueprint *postbp;
+	const GameObjBlueprint *postbp;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject* obj : finder->eval(ctx)) {
@@ -579,7 +579,7 @@ struct ActionRepeatSequence : Action {
 };
 
 struct ActionIdentifyAndMarkClusters : Action {
-	GameObjBlueprint* objtype;
+	const GameObjBlueprint* objtype;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> vcr;
 	std::unique_ptr<ValueDeterminer> vir;
@@ -956,7 +956,7 @@ struct ActionStopCameraPathPlayback : Action {
 };
 
 struct ActionCreateFormation : Action {
-	GameObjBlueprint* formationType;
+	const GameObjBlueprint* formationType;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		auto objList = finder->eval(ctx);
@@ -1312,7 +1312,7 @@ struct ActionAttachSpecialEffect :Action {
 };
 
 struct ActionCreateObject : Action {
-	GameObjBlueprint* objbp;
+	const GameObjBlueprint* objbp;
 	std::unique_ptr<PositionDeterminer> pPosition;
 	virtual void run(SrvScriptContext* ctx) override {
 		auto posori = pPosition->eval(ctx);

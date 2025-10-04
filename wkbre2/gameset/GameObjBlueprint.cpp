@@ -307,11 +307,11 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 	}
 }
 
-std::string GameObjBlueprint::getFullName() {
+std::string GameObjBlueprint::getFullName() const {
 	return std::string(Tags::GAMEOBJCLASS_tagDict.getStringFromID(bpClass)) + " \"" + name + "\"";
 }
 
-std::tuple<std::string, float, float> GameObjBlueprint::getSound(int sndTag, int subtype)
+std::tuple<std::string, float, float> GameObjBlueprint::getSound(int sndTag, int subtype) const
 {
 	const std::vector<GameObjBlueprint::SoundRef>* sndVars = nullptr;
 	auto it = soundMap.find(sndTag);
@@ -350,9 +350,25 @@ std::tuple<std::string, float, float> GameObjBlueprint::getSound(int sndTag, int
 	return {};
 }
 
-Model* GameObjBlueprint::getModel(int subtype, int appearance, int animationIndex, int animationVariant)
+const GameObjBlueprint::BPAppearance* GameObjBlueprint::getAppearance(int subtype, int appear) const
 {
-	const auto& ap = subtypes[subtype].appearances[appearance];
+	const auto itSubtype = subtypes.find(subtype);
+	if (itSubtype == subtypes.end())
+		return nullptr;
+	const auto itAppear = itSubtype->second.appearances.find(appear);
+	if (itAppear == itSubtype->second.appearances.end())
+		return nullptr;
+	return &itAppear->second;
+}
+
+Model* GameObjBlueprint::getModel(int subtype, int appearance, int animationIndex, int animationVariant) const
+{
+	const auto* appear = getAppearance(subtype, appearance);
+	if (!appear) {
+		return nullptr;
+	}
+
+	const auto& ap = *appear;
 	auto it = ap.animations.find(animationIndex);
 	if (it == ap.animations.end())
 		it = ap.animations.find(0);
@@ -364,10 +380,10 @@ Model* GameObjBlueprint::getModel(int subtype, int appearance, int animationInde
 	return nullptr;
 }
 
-Model* GameObjBlueprint::getSpecialEffect(int sfxTag)
+Model* GameObjBlueprint::getSpecialEffect(int sfxTag) const
 {
 	auto it = specialEffectMap.find(sfxTag);
-	std::vector<Model*>* vec;
+	const std::vector<Model*>* vec;
 	if (it == specialEffectMap.end())
 		vec = &gameSet->specialEffectTags[sfxTag];
 	else

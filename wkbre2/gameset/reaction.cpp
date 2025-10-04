@@ -35,11 +35,11 @@ void Reaction::parse(GSFileParser & gsf, GameSet & gs)
 	}
 }
 
-bool Reaction::canBeTriggeredBy(int evt, ServerGameObject *obj, ServerGameObject* sender)
+bool Reaction::canBeTriggeredBy(int evt, ServerGameObject *obj, ServerGameObject* sender) const
 {
 	if (std::find(events.begin(), events.end(), evt) != events.end())
 		return true;
-	for (PackageReceiptTrigger *prt : prTriggers)
+	for (const PackageReceiptTrigger *prt : prTriggers)
 		if (prt->canBeTriggeredBy(evt, obj, sender))
 			return true;
 	return false;
@@ -68,7 +68,7 @@ void PackageReceiptTrigger::parse(GSFileParser & gsf, GameSet & gs)
 	}
 }
 
-bool PackageReceiptTrigger::canBeTriggeredBy(int evt, ServerGameObject *obj, ServerGameObject* sender)
+bool PackageReceiptTrigger::canBeTriggeredBy(int evt, ServerGameObject *obj, ServerGameObject* sender) const
 {
 	if(std::find(events.begin(), events.end(), evt) == events.end())
 		return false;

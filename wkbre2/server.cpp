@@ -39,7 +39,7 @@ void Server::loadSaveGame(const char * filename)
 		case Tags::SAVEGAME_GAME_SET: {
 			std::string gsFileName = gsf.nextString(true);
 			int version = g_settings.at("gameVersion").get<int>();
-			gameSet = new GameSet(gsFileName.c_str(), version);
+			gameSet = std::make_shared<GameSet>(gsFileName.c_str(), version);
 			NetPacketWriter msg(NETCLIMSG_GAME_SET);
 			msg.writeStringZ(gsFileName);
 			msg.writeUint8((uint8_t)version);
@@ -81,7 +81,7 @@ void Server::loadSaveGame(const char * filename)
 	lastSync = time(nullptr);
 }
 
-ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id)
+ServerGameObject* Server::createObject(const GameObjBlueprint * blueprint, uint32_t id)
 {
 	if (!id) {
 		while (idmap.count(++nextUniqueId) != 0);
@@ -91,11 +91,14 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 	idmap[id] = obj;
 
 	obj->subtype = rand() % blueprint->subtypeNames.size();
-	auto& stappearances = blueprint->subtypes[obj->subtype].appearances;
-	if (stappearances.count(0))
-		obj->appearance = 0;
-	else if (!stappearances.empty())
-		obj->appearance = std::next(stappearances.begin(), rand() % stappearances.size())->first;
+	auto bpSubtype = blueprint->subtypes.find(obj->subtype);
+	if (bpSubtype != blueprint->subtypes.end()) {
+		auto& stappearances = bpSubtype->second.appearances;
+		if (stappearances.count(0))
+			obj->appearance = 0;
+		else if (!stappearances.empty())
+			obj->appearance = std::next(stappearances.begin(), rand() % stappearances.size())->first;
+	}
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_CREATED);
 	msg.writeUint32(id);
@@ -113,7 +116,7 @@ ServerGameObject* Server::createObject(GameObjBlueprint * blueprint, uint32_t id
 	return obj;
 }
 
-ServerGameObject* Server::spawnObject(GameObjBlueprint* blueprint, ServerGameObject* parent, const Vector3& initialPosition, const Vector3& initialOrientation)
+ServerGameObject* Server::spawnObject(const GameObjBlueprint* blueprint, ServerGameObject* parent, const Vector3& initialPosition, const Vector3& initialOrientation)
 {
 	if (blueprint->buildingType == Tags::BUILDINGTYPE_RURAL_CENTRE) {
 		ServerGameObject* town = createObject(&gameSet->objBlueprints[Tags::GAMEOBJCLASS_TOWN][0]);
@@ -198,7 +201,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 	int goid = gsf.nextInt();
 	std::string bpname = gsf.nextString(true);
 
-	GameObjBlueprint *blueprint;
+	const GameObjBlueprint *blueprint;
 	if (bpname.empty())
 		blueprint = predec[goid];
 	else
@@ -271,7 +274,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 					auto orderName = gsf.nextString(true);
 					int orderType = gameSet->orders.names.getIndex(orderName); assert(orderType != -1);
 					gsf.advanceLine();
-					OrderBlueprint &orderBp = gameSet->orders[orderType];
+					const OrderBlueprint &orderBp = gameSet->orders[orderType];
 					obj->orderConfig.orders.emplace_back(0, &orderBp, obj);
 					Order &order = obj->orderConfig.orders.back();
 					while(!gsf.eof) {
@@ -291,7 +294,7 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 						else if (ordtag == "TASK") {
 							int taskType = gameSet->tasks.names.getIndex(gsf.nextString(true)); assert(taskType != -1);
 							gsf.advanceLine();
-							TaskBlueprint &taskBp = gameSet->tasks[taskType];
+							const TaskBlueprint &taskBp = gameSet->tasks[taskType];
 							auto taskptr = Task::create(0, &taskBp, &order);
 							Task &task = *taskptr;
 							while (!gsf.eof) {
@@ -469,7 +472,7 @@ void Server::loadSavePredec(GSFileParser & gsf)
 		int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
 		if (cls != -1) {
 			std::string bpname = gsf.nextString(true);
-			GameObjBlueprint *bp = gameSet->findBlueprint(cls, bpname);
+			const GameObjBlueprint *bp = gameSet->findBlueprint(cls, bpname);
 			int numObjs = gsf.nextInt();
 			int i = 0;
 			while (i < numObjs) {
@@ -551,11 +554,16 @@ void ServerGameObject::setOrientation(const Vector3 & orientation)
 
 void ServerGameObject::setSubtypeAndAppearance(int new_subtype, int new_appearance)
 {
-	if (this->blueprint->subtypes[new_subtype].appearances.count(new_appearance) == 0) {
+	auto bpSubtype = blueprint->subtypes.find(new_subtype);
+	if (bpSubtype == blueprint->subtypes.end()) {
+		// To keep pre-refactor behavior, but might not really make sense
+		new_appearance = 0;
+	}
+	else if (bpSubtype->second.appearances.count(new_appearance) == 0) {
 		if (new_appearance != 0)
 			new_appearance = this->appearance;
 		// If default or original appearance does not exist, use random one (needed for Death animations)
-		auto& stappearances = blueprint->subtypes[new_subtype].appearances;
+		auto& stappearances = bpSubtype->second.appearances;
 		if (stappearances.count(new_appearance) == 0) {
 			if (!stappearances.empty())
 				new_appearance = std::next(stappearances.begin(), rand() % stappearances.size())->first;
@@ -620,7 +628,7 @@ void ServerGameObject::startMovement(const Vector3 & destination)
 	int anim = -1;
 	if (!blueprint->movementBands.empty()) {
 		// take movement band with nearest natural speed
-		auto mbcmp = [speed](GameObjBlueprint::MovementBand& mb1, GameObjBlueprint::MovementBand& mb2) {
+		auto mbcmp = [speed](const GameObjBlueprint::MovementBand& mb1, const GameObjBlueprint::MovementBand& mb2) {
 			return std::abs(mb1.naturalMovementSpeed - speed) < std::abs(mb2.naturalMovementSpeed - speed);
 		};
 		auto it = std::min_element(blueprint->movementBands.begin(), blueprint->movementBands.end(), mbcmp);
@@ -634,7 +642,8 @@ void ServerGameObject::startMovement(const Vector3 & destination)
 			}
 		}
 	}
-	if (anim == -1 || blueprint->subtypes[subtype].appearances[appearance].animations.count(anim) == 0)
+	auto* currentAppearance = blueprint->getAppearance(subtype, appearance);
+	if (anim == -1 || !currentAppearance || currentAppearance->animations.count(anim) == 0)
 		anim = Server::instance->gameSet->animations.names["Move"];
 	setAnimation(anim);
 }
@@ -655,10 +664,10 @@ void ServerGameObject::sendEvent(int evt, ServerGameObject * sender)
 	SrvScriptContext ctx(Server::instance, this);
 	auto _ = ctx.change(ctx.packageSender, sender);
 	const auto ircopy = individualReactions;
-	for (Reaction* r : ircopy)
+	for (const Reaction* r : ircopy)
 		if (r->canBeTriggeredBy(evt, this, sender))
 			r->actions.run(&ctx);
-	for (Reaction *r : blueprint->intrinsicReactions)
+	for (const Reaction *r : blueprint->intrinsicReactions)
 		if (r->canBeTriggeredBy(evt, this, sender))
 			r->actions.run(&ctx);
 }
@@ -685,7 +694,7 @@ void ServerGameObject::clearAssociates(int category)
 	associates[category].clear();
 }
 
-void ServerGameObject::convertTo(GameObjBlueprint * postbp)
+void ServerGameObject::convertTo(const GameObjBlueprint * postbp)
 {
 	// remove from parent's children
 	auto &vec = parent->children.at(blueprint->getFullId());
@@ -693,7 +702,7 @@ void ServerGameObject::convertTo(GameObjBlueprint * postbp)
 	// add it back at the correct blueprint key
 	parent->children[postbp->getFullId()].push_back(this);
 	// backup of previous blueprint
-	GameObjBlueprint* prevbp = blueprint;
+	const GameObjBlueprint* prevbp = blueprint;
 	// now converted!
 	blueprint = postbp;
 	// inform the clients
@@ -820,7 +829,7 @@ void ServerGameObject::setName(const std::string& name)
 	Server::instance->sendToAll(npw);
 }
 
-void ServerGameObject::reportCurrentOrder(OrderBlueprint* orderBp)
+void ServerGameObject::reportCurrentOrder(const OrderBlueprint* orderBp)
 {
 	int orderIndex = orderBp ? Server::instance->gameSet->orders.getIndex(orderBp) : -1;
 	if (reportedCurrentOrder == orderIndex)
@@ -846,7 +855,7 @@ void ServerGameObject::detachLoopingSpecialEffect(int sfxTag)
 	Server::instance->sendToAll(npw);
 }
 
-void ServerGameObject::updateBuildingOrderCount(OrderBlueprint* orderBp)
+void ServerGameObject::updateBuildingOrderCount(const OrderBlueprint* orderBp)
 {
 	if (this->blueprint->bpClass != Tags::GAMEOBJCLASS_BUILDING)
 		return;
@@ -1416,7 +1425,7 @@ void Server::tick()
 
 				clientInfos[clientIndex].lastStampdown = nullptr;
 
-				GameObjBlueprint* blueprint = gameSet->getBlueprint(bpid);
+				const GameObjBlueprint* blueprint = gameSet->getBlueprint(bpid);
 				ServerGameObject* owningPlayer = findObject(playerid);
 				if (!blueprint || !owningPlayer)
 					break;
@@ -1516,7 +1525,7 @@ void Server::tick()
 				break;
 			}
 			case NETSRVMSG_CREATE_NEW_FORMATION: {
-				GameObjBlueprint* blueprint = &gameSet->objBlueprints[Tags::GAMEOBJCLASS_FORMATION][0];
+				const GameObjBlueprint* blueprint = &gameSet->objBlueprints[Tags::GAMEOBJCLASS_FORMATION][0];
 				ServerGameObject* formation = spawnObject(blueprint, player, {}, {});
 				Vector3 positionSum; int numUnits = 0;
 				for (ServerGameObject* sub : clientInfos[clientIndex].unitsForNewFormation) {
@@ -1532,7 +1541,7 @@ void Server::tick()
 			case NETSRVMSG_SET_BUILDING_SPAWNED_UNIT_ORDER_TO_TARGET: {
 				auto [objectId, commandIndex, targetId] = br.readValues<uint32_t, uint32_t, uint32_t>();
 				ServerGameObject* obj = findObject(objectId);
-				Command* command = gameSet->commands.getPointer(commandIndex);
+				const Command* command = gameSet->commands.getPointer(commandIndex);
 				ServerGameObject* target = findObject(targetId);
 				if (!(obj && command))
 					break;
@@ -1542,7 +1551,7 @@ void Server::tick()
 			case NETSRVMSG_SET_BUILDING_SPAWNED_UNIT_ORDER_TO_DESTINATION: {
 				auto [objectId, commandIndex, destination, faceTo] = br.readValues<uint32_t, uint32_t, Vector3, Vector3>();
 				ServerGameObject* obj = findObject(objectId);
-				Command* command = gameSet->commands.getPointer(commandIndex);
+				const Command* command = gameSet->commands.getPointer(commandIndex);
 				if (!(obj && command))
 					break;
 				obj->setBuildingSpawnedUnitOrderToDestination(commandIndex, destination, faceTo);

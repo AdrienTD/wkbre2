@@ -153,14 +153,16 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 		//	goto drawsub;
 
 		Model* model = nullptr;
-		const auto& ap = obj->blueprint->subtypes[obj->subtype].appearances[obj->appearance];
-		auto it = ap.animations.find(obj->animationIndex);
-		if (it == ap.animations.end())
-			it = ap.animations.find(0);
-		if (it != ap.animations.end()) {
-			const auto& anim = it->second;
-			if (!anim.empty())
-				model = anim[obj->animationVariant];
+		if (const auto* appear = obj->blueprint->getAppearance(obj->subtype, obj->appearance)) {
+			const auto& ap = *appear;
+			auto it = ap.animations.find(obj->animationIndex);
+			if (it == ap.animations.end())
+				it = ap.animations.find(0);
+			if (it != ap.animations.end()) {
+				const auto& anim = it->second;
+				if (!anim.empty())
+					model = anim[obj->animationVariant];
+			}
 		}
 		if (!model)
 			model = obj->blueprint->representAs;
@@ -321,7 +323,7 @@ void ClientInterface::iter()
 						auto unitName = std::string(name.substr(6));
 						int x = client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].names.getIndex(unitName);
 						if (x >= 0) {
-							GameObjBlueprint* unitType = &client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
+							const GameObjBlueprint* unitType = &client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
 							for (Command* cmd : unitType->offeredCommands) {
 								if (cmd->canBeAssignedToSpawnedUnits) {
 									availableCommands.push_back(cmd);
@@ -494,7 +496,7 @@ void ClientInterface::iter()
 								auto unitName = std::string(name.substr(6));
 								int x = client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].names.getIndex(unitName);
 								if (x >= 0) {
-									GameObjBlueprint* unitType = &client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
+									const GameObjBlueprint* unitType = &client->gameSet->objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
 									for (const auto* cmd : unitType->offeredCommands) {
 										if (cmd == rightClickCommand && cmd->canBeAssignedToSpawnedUnits) {
 											printf("Order for spawned unit changed to: %s\n", client->gameSet->commands.getString(cmd).c_str());

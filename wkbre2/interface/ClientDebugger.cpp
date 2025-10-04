@@ -161,7 +161,7 @@ void ClientDebugger::draw()
 		ImGui::BeginChild("StampdownList", ImVec2(0, 0), false);
 		for (auto &cls : client->gameSet->objBlueprints) {
 			for (auto &el : cls.names.str2idMap) {
-				GameObjBlueprint &type = cls.blueprints[el.second];
+				const GameObjBlueprint &type = cls.blueprints[el.second];
 				if (ImGui::Selectable(type.getFullName().c_str())) {
 					cliUi->stampdownBlueprint = &type;
 					cliUi->stampdownFromCommand = false;
@@ -267,7 +267,7 @@ void ClientDebugger::draw()
 	client->timeManager.imgui();
 
 	if (client->gameSet) {
-		gsDebugger.setGameSet(client->gameSet);
+		gsDebugger.setGameSet(client->gameSet.get());
 		gsDebugger.draw();
 	}
 }

@@ -362,7 +362,7 @@ void PlanNodeSequence::parse(GSFileParser& gsf, const GameSet& gs, const char* e
 	ferr("Plan node sequence reached end of file without %s!", endtag);
 }
 
-PlanNodeSequence::State PlanNodeSequence::createState()
+PlanNodeSequence::State PlanNodeSequence::createState() const
 {
 	State s;
 	for (auto& node : nodes)
@@ -370,13 +370,13 @@ PlanNodeSequence::State PlanNodeSequence::createState()
 	return s;
 }
 
-void PlanNodeSequence::reset(State* state)
+void PlanNodeSequence::reset(State* state) const
 {
 	state->currentNode = 0;
 	nodes[0]->reset(state->nodeStates[0]);
 }
 
-bool PlanNodeSequence::execute(State* state, SrvScriptContext* ctx)
+bool PlanNodeSequence::execute(State* state, SrvScriptContext* ctx) const
 {
 	while (state->currentNode < nodes.size()) {
 		bool done = nodes[state->currentNode]->execute(state->nodeStates[state->currentNode], ctx);

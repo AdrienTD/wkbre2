@@ -25,11 +25,11 @@ struct Command {
 	std::vector<std::pair<GSCondition*, WndCursor*>> cursorAvailable;
 	std::string buttonEnabled, buttonWait, buttonDepressed, buttonHighlighted, buttonAvailable, buttonImpossible;
 	std::vector<GSCondition*> conditionsImpossible, conditionsWait, conditionsWarning;
-	GameObjBlueprint* stampdownObject = nullptr;
+	const GameObjBlueprint* stampdownObject = nullptr;
 	std::string defaultHint;
 	std::vector<ValueDeterminer*> defaultHintValues;
 	bool canBeAssignedToSpawnedUnits = false;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
-	void execute(ServerGameObject *self, ServerGameObject *target = nullptr, int assignmentMode = 0, const Vector3 &destination = Vector3());
+	void execute(ServerGameObject *self, ServerGameObject *target = nullptr, int assignmentMode = 0, const Vector3 &destination = Vector3()) const;
 };

@@ -59,7 +59,7 @@ struct GameObjBlueprint {
 
 	std::vector<Reaction*> intrinsicReactions;
 
-	std::map<int, GameObjBlueprint*> mappedTypeTags;
+	std::map<int, const GameObjBlueprint*> mappedTypeTags;
 	std::map<int, ValueDeterminer*> mappedValueTags;
 
 	Model* representAs = nullptr;
@@ -100,12 +100,13 @@ struct GameObjBlueprint {
 		bpClass = i_bpClass; bpId = i_bpId; name = i_name; gameSet = i_gameSet;
 	}
 
-	uint32_t getFullId() { return bpClass | (bpId << 6); }
-	std::string getFullName();
+	uint32_t getFullId() const { return bpClass | (bpId << 6); }
+	std::string getFullName() const;
 
-	std::tuple<std::string, float, float> getSound(int sndTag, int subtype);
-	Model* getModel(int subtype, int appear, int anim, int variant);
-	Model* getSpecialEffect(int sfxTag);
+	std::tuple<std::string, float, float> getSound(int sndTag, int subtype) const;
+	const BPAppearance* getAppearance(int subtype, int appear) const;
+	Model* getModel(int subtype, int appear, int anim, int variant) const;
+	Model* getSpecialEffect(int sfxTag) const;
 
 	bool canWalkOnWater() const;
 

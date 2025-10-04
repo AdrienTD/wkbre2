@@ -62,6 +62,6 @@ struct IndexedStringList
 	auto begin() const { return iterator(id2strVector.begin()); }
 	auto end() const { return iterator(id2strVector.end()); }
 
-	int operator[] (const std::string &str) { return getIndex(str); }
-	const std::string& operator[] (int id) { return getString(id); }
+	int operator[] (const std::string &str) const { return getIndex(str); }
+	const std::string& operator[] (int id) const { return getString(id); }
 };

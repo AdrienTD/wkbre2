@@ -29,7 +29,7 @@ enum class ProgramType {
 
 struct CommonGameObject {
 	uint32_t id;
-	GameObjBlueprint* blueprint;
+	const GameObjBlueprint* blueprint;
 
 	CommonGameObject* parent;
 	std::map<int, std::vector<CommonGameObject*>> children;
@@ -101,7 +101,7 @@ struct CommonGameObject {
 	template<typename AnyGameObject> AnyGameObject* dyncast() { return (AnyGameObject*)this; }
 	template<typename AnyGameObject> const AnyGameObject* dyncast() const { return (const AnyGameObject*)this; }
 
-	CommonGameObject(uint32_t id, GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr) {}
+	CommonGameObject(uint32_t id, const GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr) {}
 };
 
 template<typename Program, typename AnyGameObject> struct SpecificGameObject : CommonGameObject {
@@ -112,7 +112,7 @@ template<typename Program, typename AnyGameObject> struct SpecificGameObject : C
 
 struct CommonGameState {
 	ProgramType programType;
-	GameSet* gameSet = nullptr;
+	std::shared_ptr<const GameSet> gameSet = nullptr;
 
 	CommonGameObject* level = nullptr;
 	std::map<uint32_t, CommonGameObject*> idmap;

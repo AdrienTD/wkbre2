@@ -36,12 +36,12 @@ enum OrderTaskState {
 struct Order {
 	ServerGameObject *gameObject;
 	int id, state = OTS_UNINITIALISED;
-	OrderBlueprint *blueprint;
+	const OrderBlueprint *blueprint;
 	std::vector<std::unique_ptr<Task>> tasks;
 	int nextTaskId = 0;
 	int currentTask = -1;
 
-	Order(int id, OrderBlueprint *blueprint, ServerGameObject *gameObject) : gameObject(gameObject), id(id), blueprint(blueprint) {}
+	Order(int id, const OrderBlueprint *blueprint, ServerGameObject *gameObject) : gameObject(gameObject), id(id), blueprint(blueprint) {}
 
 	bool isDone() const { return state >= OTS_ABORTED; }
 	bool isWorking() const { return (state == OTS_PROCESSING) || (state == OTS_SUSPENDED); }
@@ -61,7 +61,7 @@ struct Order {
 struct Task {
 	Order* order;
 	int id, state = OTS_UNINITIALISED;
-	TaskBlueprint* blueprint;
+	const TaskBlueprint* blueprint;
 	bool firstExecution = true, triggersStarted = false;
 	std::vector<std::unique_ptr<Trigger>> triggers;
 	bool startSequenceExecuted = false;
@@ -69,7 +69,7 @@ struct Task {
 	Vector3 destination;
 	float proximity = -1.0f; bool proximitySatisfied = false, lastDestinationValid = false;
 
-	Task(int id, TaskBlueprint* blueprint, Order* order);
+	Task(int id, const TaskBlueprint* blueprint, Order* order);
 	virtual ~Task();
 
 	bool isDone() const { return state >= OTS_ABORTED; }
@@ -92,7 +92,7 @@ struct Task {
 	virtual void onStart() {}
 	virtual void onUpdate() {}
 
-	static std::unique_ptr<Task> create(int id, TaskBlueprint* blueprint, Order* order);
+	static std::unique_ptr<Task> create(int id, const TaskBlueprint* blueprint, Order* order);
 };
 
 struct MissileTask : Task {
@@ -121,7 +121,7 @@ struct FaceTowardsTask : Task {
 };
 
 struct SpawnTask : Task {
-	GameObjBlueprint* toSpawn = nullptr;
+	const GameObjBlueprint* toSpawn = nullptr;
 	SrvGORef aiCommissioner; // temp
 	using Task::Task;
 	virtual void onStart() override;
@@ -131,11 +131,11 @@ struct SpawnTask : Task {
 
 struct Trigger {
 	Task *task;
-	TriggerBlueprint *blueprint;
-	Trigger(Task *task, TriggerBlueprint *blueprint) : task(task), blueprint(blueprint) {}
+	const TriggerBlueprint *blueprint;
+	Trigger(Task *task, const TriggerBlueprint *blueprint) : task(task), blueprint(blueprint) {}
 	virtual void init() {}
 	virtual void update() {}
-	virtual void parse(GSFileParser &gsf, GameSet &gs);
+	virtual void parse(GSFileParser &gsf, const GameSet &gs);
 };
 
 struct TimerTrigger : Trigger {
@@ -143,7 +143,7 @@ struct TimerTrigger : Trigger {
 	using Trigger::Trigger;
 	void init() override;
 	void update() override;
-	void parse(GSFileParser &gsf, GameSet &gs) override;
+	void parse(GSFileParser &gsf, const GameSet &gs) override;
 };
 
 struct AnimationLoopTrigger : Trigger {
@@ -151,7 +151,7 @@ struct AnimationLoopTrigger : Trigger {
 	using Trigger::Trigger;
 	void init() override;
 	void update() override;
-	void parse(GSFileParser &gsf, GameSet &gs) override;
+	void parse(GSFileParser &gsf, const GameSet &gs) override;
 };
 
 struct AttachmentPointTrigger : Trigger {
@@ -159,7 +159,7 @@ struct AttachmentPointTrigger : Trigger {
 	using Trigger::Trigger;
 	void init() override;
 	void update() override;
-	void parse(GSFileParser& gsf, GameSet& gs) override;
+	void parse(GSFileParser& gsf, const GameSet& gs) override;
 };
 
 struct OrderConfiguration {
@@ -170,7 +170,7 @@ struct OrderConfiguration {
 
 	OrderConfiguration(ServerGameObject *gameobj) : gameobj(gameobj) {}
 	void process();
-	Order* addOrder(OrderBlueprint *orderBlueprint, int assignMode = 0, ServerGameObject *target = nullptr, const Vector3 &destination = Vector3(-1.0f,-1.0f,-1.0f), bool startNow = true);
+	Order* addOrder(const OrderBlueprint *orderBlueprint, int assignMode = 0, ServerGameObject *target = nullptr, const Vector3 &destination = Vector3(-1.0f,-1.0f,-1.0f), bool startNow = true);
 	void cancelAllOrders();
 
 	Order *getCurrentOrder() { return orders.empty() ? nullptr : &orders[0]; }

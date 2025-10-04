@@ -40,7 +40,7 @@ struct PlanNodeSequence {
 	};
 	std::vector<std::unique_ptr<PlanNodeBlueprint>> nodes;
 	void parse(GSFileParser& gsf, const GameSet& gs, const char* endtag);
-	State createState();
-	void reset(State* state);
-	bool execute(State* state, SrvScriptContext* ctx);
+	State createState() const;
+	void reset(State* state) const;
+	bool execute(State* state, SrvScriptContext* ctx) const;
 };

@@ -162,7 +162,7 @@ void AIController::update()
 					if (building->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING) {
 						if (building->orderConfig.getCurrentOrder() == nullptr) {
 							int ordid = Server::instance->gameSet->orders.names.getIndex("Spawn " + charToSpawn.type->name);
-							OrderBlueprint* orderBp = &Server::instance->gameSet->orders[ordid];
+							const OrderBlueprint* orderBp = &Server::instance->gameSet->orders[ordid];
 							Order* order = building->orderConfig.addOrder(orderBp, Tags::ORDERASSIGNMODE_DO_FIRST, nullptr, {-1,-1,-1}, false);
 							auto* task = (SpawnTask*)(order->tasks[0].get());
 							task->toSpawn = charToSpawn.type;
@@ -190,7 +190,7 @@ void AIController::update()
 			size_t inCtrCount = reqinst.foundations.size();
 			while (existingCount + inCtrCount < requiredCount) {
 				auto posori = gsreq.pdBuildPosition->eval(&ctx);
-				GameObjBlueprint* bpFoundation = Server::instance->gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, gsreq.bpBuilding->name + " Foundation");
+				const GameObjBlueprint* bpFoundation = Server::instance->gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, gsreq.bpBuilding->name + " Foundation");
 				ServerGameObject* foundation = Server::instance->spawnObject(bpFoundation, obj->getPlayer(), posori.position, Vector3(0,0,0));
 				obj->sendEvent(Tags::PDEVENT_ON_COMMISSIONED, foundation);
 				reqinst.foundations.emplace_back(foundation);

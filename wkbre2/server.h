@@ -35,7 +35,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	bool deleted = false; ServerGameObject* nextDeleted = nullptr;
 
 	OrderConfiguration orderConfig;
-	std::unordered_set<Reaction*> individualReactions;
+	std::unordered_set<const Reaction*> individualReactions;
 	std::unordered_map<int, std::unordered_set<SrvGORef>> associates, associators;
 	std::vector<SrvGORef> referencers;
 	std::unordered_set<SrvGORef> seenObjects;
@@ -47,7 +47,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	AIController aiController{ this };
 	FormationController formationController{ this };
 
-	ServerGameObject(uint32_t id, GameObjBlueprint *blueprint) : SpecificGameObject<Server, ServerGameObject>(id, blueprint), orderConfig(this) {}
+	ServerGameObject(uint32_t id, const GameObjBlueprint *blueprint) : SpecificGameObject<Server, ServerGameObject>(id, blueprint), orderConfig(this) {}
 
 	void setItem(int index, float value);
 	void setParent(ServerGameObject *newParent);
@@ -62,7 +62,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	void associateObject(int category, ServerGameObject *associated);
 	void dissociateObject(int category, ServerGameObject *associated);
 	void clearAssociates(int category);
-	void convertTo(GameObjBlueprint *postbp);
+	void convertTo(const GameObjBlueprint *postbp);
 	void setScale(const Vector3& scale);
 	void terminate();
 	void destroy();
@@ -77,10 +77,10 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	void playSpecialEffectBetween(int sfxTag, const Vector3& position1, const Vector3& position2);
 	void playAttachedSpecialEffect(int sfxTag, ServerGameObject* target);
 	void setName(const std::string& name);
-	void reportCurrentOrder(OrderBlueprint* orderBp);
+	void reportCurrentOrder(const OrderBlueprint* orderBp);
 	void attachLoopingSpecialEffect(int sfxTag, const Vector3& position);
 	void detachLoopingSpecialEffect(int sfxTag);
-	void updateBuildingOrderCount(OrderBlueprint* orderBp);
+	void updateBuildingOrderCount(const OrderBlueprint* orderBp);
 	void addCityRectangle(const CityRectangle& rectangle);
 	void setBuildingSpawnedUnitOrderToTarget(int orderIndex, ServerGameObject* target);
 	void setBuildingSpawnedUnitOrderToDestination(int orderIndex, Vector3 destination, Vector3 positionToFace = Vector3{ -1.0f, 0.0f, 0.0f });
@@ -146,8 +146,8 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 	Server() { instance = this; }
 
 	void loadSaveGame(const char *filename);
-	ServerGameObject *createObject(GameObjBlueprint *blueprint, uint32_t id = 0);
-	ServerGameObject* spawnObject(GameObjBlueprint* blueprint, ServerGameObject* parent, const Vector3& initialPosition, const Vector3& initialOrientation);
+	ServerGameObject *createObject(const GameObjBlueprint *blueprint, uint32_t id = 0);
+	ServerGameObject* spawnObject(const GameObjBlueprint* blueprint, ServerGameObject* parent, const Vector3& initialPosition, const Vector3& initialOrientation);
 	void deleteObject(ServerGameObject *obj);
 	void destroyObject(ServerGameObject* obj);
 
@@ -180,7 +180,7 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 	void tick();
 
 private:
-	std::map<uint32_t, GameObjBlueprint*> predec;
+	std::map<uint32_t, const GameObjBlueprint*> predec;
 
 	ServerGameObject * loadObject(GSFileParser & gsf, const std::string & clsname);
 	void loadSavePredec(GSFileParser & gsf);

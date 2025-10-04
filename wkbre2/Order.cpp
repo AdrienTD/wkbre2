@@ -90,7 +90,7 @@ void Order::advanceToNextTask()
 	}
 }
 
-Task::Task(int id, TaskBlueprint * blueprint, Order * order) : order(order), id(id), blueprint(blueprint)
+Task::Task(int id, const TaskBlueprint * blueprint, Order * order) : order(order), id(id), blueprint(blueprint)
 {
 	this->triggers.resize(blueprint->triggers.size());
 	for (size_t i = 0; i < this->triggers.size(); i++) {
@@ -240,7 +240,7 @@ void Task::reevaluateTarget()
 	}
 }
 
-std::unique_ptr<Task> Task::create(int id, TaskBlueprint* blueprint, Order* order)
+std::unique_ptr<Task> Task::create(int id, const TaskBlueprint* blueprint, Order* order)
 {
 	std::unique_ptr<Task> task;
 	switch (blueprint->classType) {
@@ -256,7 +256,7 @@ std::unique_ptr<Task> Task::create(int id, TaskBlueprint* blueprint, Order* orde
 
 
 
-Order* OrderConfiguration::addOrder(OrderBlueprint * orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination, bool startNow)
+Order* OrderConfiguration::addOrder(const OrderBlueprint* orderBlueprint, int assignMode, ServerGameObject *target, const Vector3 &destination, bool startNow)
 {
 	if (Order* currentOrder = getCurrentOrder()) {
 		if (currentOrder->blueprint->cannotInterruptOrder && assignMode != Tags::ORDERASSIGNMODE_DO_LAST)
@@ -330,7 +330,7 @@ void OrderConfiguration::process()
 	gameobj->reportCurrentOrder(curorder ? curorder->blueprint : nullptr);
 }
 
-void Trigger::parse(GSFileParser &gsf, GameSet &gs)
+void Trigger::parse(GSFileParser &gsf, const GameSet &gs)
 {
 	gsf.advanceLine();
 	while (!gsf.eof) {
@@ -357,7 +357,7 @@ void TimerTrigger::update()
 	}
 }
 
-void TimerTrigger::parse(GSFileParser & gsf, GameSet & gs)
+void TimerTrigger::parse(GSFileParser & gsf, const GameSet & gs)
 {
 	gsf.advanceLine();
 	while (!gsf.eof) {
@@ -399,7 +399,7 @@ void AnimationLoopTrigger::update()
 	}
 }
 
-void AnimationLoopTrigger::parse(GSFileParser & gsf, GameSet & gs)
+void AnimationLoopTrigger::parse(GSFileParser & gsf, const GameSet & gs)
 {
 	gsf.advanceLine();
 	while (!gsf.eof) {
@@ -438,7 +438,7 @@ void AttachmentPointTrigger::update()
 	}
 }
 
-void AttachmentPointTrigger::parse(GSFileParser& gsf, GameSet& gs)
+void AttachmentPointTrigger::parse(GSFileParser& gsf, const GameSet& gs)
 {
 	gsf.advanceLine();
 	while (!gsf.eof) {
@@ -690,7 +690,7 @@ void SpawnTask::onUpdate()
 		if (obj->getItem(Tags::PDITEM_HIT_POINTS_OF_OBJECT_BEING_SPAWNED) >= obj->getItem(Tags::PDITEM_HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED)) {
 			ServerGameObject* spawned = Server::instance->spawnObject(toSpawn, obj->getPlayer(), obj->position, Vector3(0,0,0));
 			if (obj->spawnedUnitCommand >= 0) {
-				Command* command = &Server::instance->gameSet->commands[obj->spawnedUnitCommand];
+				const Command* command = &Server::instance->gameSet->commands[obj->spawnedUnitCommand];
 				const auto& spawnedOfferedCommands = spawned->blueprint->offeredCommands;
 				const auto it = std::find(spawnedOfferedCommands.begin(), spawnedOfferedCommands.end(), command);
 				if (it != spawnedOfferedCommands.end()) {

@@ -147,7 +147,7 @@ void Client::tick()
 				}
 				else {
 					info("Loading game set: %s\n", gsFileName.c_str());
-					gameSet = new GameSet(gsFileName.c_str(), gsVersion);
+					gameSet = std::make_shared<GameSet>(gsFileName.c_str(), gsVersion);
 				}
 				break;
 			}
@@ -160,7 +160,7 @@ void Client::tick()
 				uint32_t bpid = br.readUint32();
 				uint32_t subtype = br.readUint32();
 				uint32_t appear = br.readUint32();
-				GameObjBlueprint *blueprint = gameSet->getBlueprint(bpid);
+				const GameObjBlueprint *blueprint = gameSet->getBlueprint(bpid);
 				info("Object %u of type %s is created.\n", objid, blueprint->getFullName().c_str());
 				ClientGameObject *obj = createObject(blueprint, objid);
 				obj->subtype = subtype;
@@ -293,7 +293,7 @@ void Client::tick()
 				uint32_t objid = br.readUint32();
 				uint32_t postbpid = br.readUint32();
 				if (ClientGameObject *obj = findObject(objid)) {
-					GameObjBlueprint *postbp = gameSet->getBlueprint(postbpid);
+					const GameObjBlueprint *postbp = gameSet->getBlueprint(postbpid);
 					// remove from parent's children
 					auto &vec = obj->parent->children.at(obj->blueprint->getFullId());
 					vec.erase(std::find(vec.begin(), vec.end(), obj));
@@ -645,7 +645,7 @@ void Client::sendPauseRequest(uint8_t pauseState)
 	serverLink->send(packet);
 }
 
-void Client::sendStampdown(GameObjBlueprint * blueprint, ClientGameObject * player, const Vector3 & position, bool sendEvent, bool inGameplay)
+void Client::sendStampdown(const GameObjBlueprint * blueprint, ClientGameObject * player, const Vector3 & position, bool sendEvent, bool inGameplay)
 {
 	NetPacketWriter msg(NETSRVMSG_STAMPDOWN);
 	msg.writeUint32(blueprint->getFullId());
@@ -734,7 +734,7 @@ void Client::sendSetBuildingSpawnedUnitOrderToDestination(ClientGameObject* obj,
 	serverLink->send(msg);
 }
 
-ClientGameObject * Client::createObject(GameObjBlueprint * blueprint, uint32_t id)
+ClientGameObject * Client::createObject(const GameObjBlueprint * blueprint, uint32_t id)
 {
 	ClientGameObject *obj = new ClientGameObject(id, blueprint);
 	assert(idmap[id] == nullptr);

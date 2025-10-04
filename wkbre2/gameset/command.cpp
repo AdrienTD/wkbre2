@@ -72,7 +72,7 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 	ferr("Command reached end of file without END_COMMAND!");
 }
 
-void Command::execute(ServerGameObject *self, ServerGameObject *target, int assignmentMode, const Vector3 &destination) {
+void Command::execute(ServerGameObject *self, ServerGameObject *target, int assignmentMode, const Vector3 &destination) const {
 	SrvScriptContext ctx(Server::instance, self);
 	auto _ = ctx.change(ctx.target, target);
 	this->startSequence.run(&ctx);
@@ -86,7 +86,7 @@ void Command::execute(ServerGameObject *self, ServerGameObject *target, int assi
 			if (name.substr(0, 6) == "Spawn ") {
 				int x = gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].names.getIndex(name.substr(6));
 				if (x != -1) {
-					GameObjBlueprint* bp = &gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
+					const GameObjBlueprint* bp = &gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
 					((SpawnTask*)neworder->tasks[0].get())->toSpawn = bp;
 				}
 			}

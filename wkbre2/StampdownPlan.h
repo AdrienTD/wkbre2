@@ -16,7 +16,7 @@ struct StampdownPlan {
 		InvalidOccupied
 	};
 	struct StampdownCreateAction {
-		GameObjBlueprint* blueprint;
+		const GameObjBlueprint* blueprint;
 		Vector3 position;
 		Vector3 orientation;
 	};
@@ -29,9 +29,9 @@ struct StampdownPlan {
 	std::vector<StampdownRemoveAction> toRemove;
 
 	GameObjectRef ownerObject;
-	GameObjBlueprint* newOwnerBlueprint = nullptr;
+	const GameObjBlueprint* newOwnerBlueprint = nullptr;
 	CommonGameObject::CityRectangle cityRectangle;
 
 	static StampdownPlan getStampdownPlan(
-		CommonGameState* gameState, CommonGameObject* playerObj, GameObjBlueprint* blueprint, Vector3 position, Vector3 orientation);
+		CommonGameState* gameState, CommonGameObject* playerObj, const GameObjBlueprint* blueprint, Vector3 position, Vector3 orientation);
 };

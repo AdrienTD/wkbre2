@@ -67,7 +67,7 @@ void Test_GameSet()
 	//	printf("%s -> %f\n", gameSet.equationNames[i].c_str(), v);
 	//}
 
-	if (GameObjBlueprint *bp = gameSet.findBlueprint(Tags::GAMEOBJCLASS_CHARACTER, "Peasant")) {
+	if (const GameObjBlueprint *bp = gameSet.findBlueprint(Tags::GAMEOBJCLASS_CHARACTER, "Peasant")) {
 		printf("%p", bp);
 	}
 

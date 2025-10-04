@@ -14,7 +14,7 @@ struct GameSet;
 struct SrvScriptContext;
 
 struct ObjectCreation {
-	GameObjBlueprint *typeToCreate = nullptr;
+	const GameObjBlueprint *typeToCreate = nullptr;
 	int mappedTypeToCreate = -1; ObjectFinder* mappedTypeFrom = nullptr;
 	ObjectFinder *controller;
 	PositionDeterminer *createAt = nullptr;

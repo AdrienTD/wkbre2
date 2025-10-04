@@ -54,9 +54,9 @@ template<typename T> struct GSBlueprintList {
 	T* readPtr(GSFileParser& gsf) { int x = readIndex(gsf); return (x != -1) ? &blueprints[x] : nullptr; }
 	const T * readPtr(GSFileParser &gsf) const { return &blueprints[readIndex(gsf)]; }
 
-	int getIndex(const T* ptr) { return (int)(ptr - blueprints.data()); }
-	const std::string& getString(int index) { return names.getString(index); }
-	const std::string& getString(const T* ptr) { return getString(getIndex(ptr)); }
+	int getIndex(const T* ptr) const { return (int)(ptr - blueprints.data()); }
+	const std::string& getString(int index) const { return names.getString(index); }
+	const std::string& getString(const T* ptr) const { return getString(getIndex(ptr)); }
 
 	T* getPointer(int index) { return (index >= 0 && index < size()) ? &blueprints[index] : nullptr; }
 	const T* getPointer(int index) const { return (index >= 0 && index < size()) ? &blueprints[index] : nullptr; }
@@ -115,7 +115,7 @@ struct GameSet
 	std::map<int, std::vector<GameObjBlueprint::SoundRef>> globalSoundMap;
 	std::map<std::string, GSTerrain*> associatedTileTexGroups;
 
-	ModelCache modelCache;
+	mutable ModelCache modelCache;
 
 	enum {
 		GSVERSION_UNKNOWN = 0,
@@ -127,19 +127,19 @@ struct GameSet
 	void parseFile(const char *fn, int pass);
 	void load(const char *fn);
 
-	GameObjBlueprint *findBlueprint(int cls, const std::string &name)
+	const GameObjBlueprint* findBlueprint(int cls, const std::string& name) const
 	{
 		int x = objBlueprints[cls].names.getIndex(name);
 		if (x == -1) return nullptr;
 		else return &objBlueprints[cls][x];
 	}
 
-	GameObjBlueprint *getBlueprint(uint32_t fullId) {
+	const GameObjBlueprint* getBlueprint(uint32_t fullId) const {
 		uint32_t clid = fullId & 63, tyid = fullId >> 6;
 		return &objBlueprints[clid][tyid];
 	}
 
-	GameObjBlueprint *readObjBlueprintPtr(GSFileParser &gsf);
+	const GameObjBlueprint* readObjBlueprintPtr(GSFileParser& gsf) const;
 
 	GameSet() {}
 	GameSet(const char* fn, int ver) { version = ver; load(fn); }
