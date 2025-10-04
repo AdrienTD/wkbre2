@@ -12,9 +12,9 @@ void ArmyCreationSchedule::parse(GSFileParser& gsf, const GameSet& gs)
 	while (!gsf.eof) {
 		auto tag = gsf.nextTag();
 		if (tag == "ARMY_TYPE")
-			armyType = const_cast<GameObjBlueprint*>(gs.objBlueprints[Tags::GAMEOBJCLASS_ARMY].readPtr(gsf));
+			armyType = gs.objBlueprints[Tags::GAMEOBJCLASS_ARMY].readPtr(gsf);
 		else if (tag == "SPAWN_CHARACTER") {
-			GameObjBlueprint* bp = const_cast<GameObjBlueprint*>(gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].readPtr(gsf));
+			const GameObjBlueprint* bp = gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].readPtr(gsf);
 			ValueDeterminer* val = ReadValueDeterminer(gsf, gs);
 			SpawnChar spawnChar = { bp, std::unique_ptr<ValueDeterminer>(val) };
 			spawnCharacters.push_back(std::move(spawnChar));

@@ -14,10 +14,10 @@ struct ValueDeterminer;
 
 struct ArmyCreationSchedule {
 	struct SpawnChar {
-		GameObjBlueprint* type = nullptr;
+		const GameObjBlueprint* type = nullptr;
 		std::unique_ptr<ValueDeterminer> count = 0;
 	};
-	GameObjBlueprint* armyType = nullptr;
+	const GameObjBlueprint* armyType = nullptr;
 	std::vector<SpawnChar> spawnCharacters;
 	ActionSequence armyReadySequence;
 

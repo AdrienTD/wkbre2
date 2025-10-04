@@ -293,10 +293,10 @@ struct PFNEmbeddedPlan : PlanNodeBlueprint {
 	struct State : PlanNodeState {
 		PlanNodeSequence::State seqState;
 	};
-	PlanNodeSequence* embeddedPlan;
+	const PlanNodeSequence* embeddedPlan;
 
 	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
-		embeddedPlan = const_cast<PlanNodeSequence*>(gs.plans.readPtr(gsf));
+		embeddedPlan = gs.plans.readPtr(gsf);
 	}
 	virtual PlanNodeState* createState() override {
 		State* s = new State;
