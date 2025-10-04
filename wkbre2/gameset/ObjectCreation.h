@@ -21,6 +21,6 @@ struct ObjectCreation {
 	ActionSequence postCreationSequence;
 	ObjectFinder* subordinates = nullptr;
 
-	void parse(GSFileParser &gsf, GameSet &gs);
-	void run(ServerGameObject* creator, SrvScriptContext* ctx);
+	void parse(GSFileParser &gsf, const GameSet &gs);
+	void run(ServerGameObject* creator, SrvScriptContext* ctx) const;
 };

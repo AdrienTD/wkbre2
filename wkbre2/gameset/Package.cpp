@@ -9,7 +9,7 @@
 #include "../server.h"
 #include "ScriptContext.h"
 
-void GSPackage::parse(GSFileParser& gsf, GameSet& gs)
+void GSPackage::parse(GSFileParser& gsf, const GameSet& gs)
 {
 	gsf.advanceLine();
 	while (!gsf.eof) {
@@ -36,7 +36,7 @@ void GSPackage::parse(GSFileParser& gsf, GameSet& gs)
 	}
 }
 
-void GSPackage::send(ServerGameObject* obj, SrvScriptContext* ctx)
+void GSPackage::send(ServerGameObject* obj, SrvScriptContext* ctx) const
 {
 	for (auto& mod : itemModifications) {
 		float val = mod.value->eval(ctx);

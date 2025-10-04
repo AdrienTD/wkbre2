@@ -24,6 +24,6 @@ struct GSPackage {
 	std::vector<int> gameEvents;
 	ObjectFinder* relatedParty = nullptr;
 
-	void parse(GSFileParser& gsf, GameSet& gs);
-	void send(ServerGameObject* obj, SrvScriptContext* ctx);
+	void parse(GSFileParser& gsf, const GameSet& gs);
+	void send(ServerGameObject* obj, SrvScriptContext* ctx) const;
 };

@@ -19,7 +19,7 @@ struct ValueDeterminer {
 	using EvalRetCli = float;
 	virtual ~ValueDeterminer() {}
 	virtual float eval(ScriptContext* ctx) = 0;
-	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) = 0;
 	bool booleval(ScriptContext* ctx) { return eval(ctx) > 0.0f; }
 	float fail(ScriptContext* ctx);
 };

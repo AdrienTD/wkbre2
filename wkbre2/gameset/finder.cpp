@@ -25,7 +25,7 @@ struct FinderUnknown : ObjectFinder {
 		ferr("Unknown object finder %s called from the %s!", name.c_str(), ctx->gameState->getProgramName());
 		return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 	}
 	FinderUnknown(const std::string& name) : name(name) {}
 };
@@ -36,7 +36,7 @@ struct FinderSelf : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 	}
 };
 
@@ -47,7 +47,7 @@ struct FinderSpecificId : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		objid = gsf.nextInt();
 	}
 	FinderSpecificId() {}
@@ -60,7 +60,7 @@ struct FinderPlayer : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 	}
 };
 
@@ -74,7 +74,7 @@ struct FinderAlias : ObjectFinder {
 				res.push_back(obj);
 		return res;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		aliasIndex = gs.aliases.readIndex(gsf);
 	}
 	FinderAlias() {}
@@ -85,7 +85,7 @@ struct FinderController : ObjectFinder {
 	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		return { ctx->getSelf()->getParent() };
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 	}
 };
 
@@ -108,7 +108,7 @@ struct FinderTarget : ObjectFinder {
 		}
 		return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 	}
 };
 
@@ -118,7 +118,7 @@ struct FinderResults : ObjectFinder {
 		if (ofd == -1) return {}; // TODO: Remove this after implementing exception handling
 		return ctx->gameState->gameSet->objectFinderDefinitions[ofd]->eval(ctx);
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		ofd = gs.objectFinderDefinitions.readIndex(gsf);
 	}
 };
@@ -135,7 +135,7 @@ struct FinderAssociates : ObjectFinder {
 				vec.push_back(ref);
 		return vec;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		category = gs.associations.readIndex(gsf);
 	}
 };
@@ -152,7 +152,7 @@ struct FinderAssociators : ObjectFinder {
 				vec.push_back(ref);
 		return vec;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		category = gs.associations.readIndex(gsf);
 	}
 };
@@ -171,7 +171,7 @@ struct FinderPlayers : ObjectFinder {
 		}
 		return res;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		equation = gs.equations.readIndex(gsf);
 	}
 };
@@ -182,7 +182,7 @@ struct FinderCandidate : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {}
 };
 
 struct FinderCreator : ObjectFinder {
@@ -191,7 +191,7 @@ struct FinderCreator : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {}
 };
 
 struct FinderPackageSender : ObjectFinder {
@@ -200,7 +200,7 @@ struct FinderPackageSender : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {}
 };
 
 struct FinderSequenceExecutor : ObjectFinder {
@@ -209,7 +209,7 @@ struct FinderSequenceExecutor : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {}
 };
 
 struct FinderNearestToSatisfy : ObjectFinder {
@@ -228,7 +228,7 @@ struct FinderNearestToSatisfy : ObjectFinder {
 		}
 		return res;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		vdcond.reset(ReadValueDeterminer(gsf, gs));
 		vdradius.reset(ReadValueDeterminer(gsf, gs));
 	}
@@ -238,7 +238,7 @@ struct FinderLevel : ObjectFinder {
 	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		return { ctx->gameState->getLevel() };
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {}
 };
 
 struct FinderDisabledAssociates : ObjectFinder {
@@ -253,7 +253,7 @@ struct FinderDisabledAssociates : ObjectFinder {
 				vec.push_back(ref);
 		return vec;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		category = gs.associations.readIndex(gsf);
 	}
 };
@@ -278,7 +278,7 @@ struct FinderReferencers : ObjectFinder {
 		}
 		return { vec.begin(), vec.end() };
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		category = gs.taskCategories.readIndex(gsf);
 	}
 };
@@ -289,7 +289,7 @@ struct FinderOrderGiver : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {}
 };
 
 struct FinderBeingTransferredToMe : ObjectFinder {
@@ -297,7 +297,7 @@ struct FinderBeingTransferredToMe : ObjectFinder {
 	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		return {};
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -308,14 +308,14 @@ struct FinderCollisionSubject : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {}
 };
 
 struct FinderUser : ObjectFinder {
 	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
 		return {};
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {}
 };
 
 struct FinderSelectedObject : ObjectFinder {
@@ -324,7 +324,7 @@ struct FinderSelectedObject : ObjectFinder {
 		if (obj) return { obj };
 		else return {};
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {}
 };
 
 struct FinderAgAllOfType : ObjectFinder {
@@ -349,7 +349,7 @@ struct FinderAgAllOfType : ObjectFinder {
 		walk(Server::instance->getLevel(), walk);
 		return vec;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		blueprint = gs.readObjBlueprintPtr(gsf);
 	}
 };
@@ -364,7 +364,7 @@ struct FinderAgAsObj : ObjectFinder {
 		auto _ = ctx->changeSelf(obj);
 		return finder->eval(ctx);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		objId = gsf.nextInt();
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -410,7 +410,7 @@ ObjectFinder *ReadFinder(GSFileParser &gsf, const GameSet &gs)
 		printf("WARNING: Unknown finder %s at %s\n", strtag.c_str(), gsf.locate().c_str());
 		break;
 	}
-	finder->parse(gsf, const_cast<GameSet&>(gs));
+	finder->parse(gsf, gs);
 	return finder;
 }
 
@@ -456,7 +456,7 @@ struct FinderSubordinates : ObjectFinder {
 		}
 		return std::move(results);
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		std::string bpname;
 		while (!gsf.eol) {
 			auto arg = gsf.nextString();
@@ -479,7 +479,7 @@ thread_local decltype(FinderSubordinates::results) FinderSubordinates::results; 
 
 struct FinderNSubs : ObjectFinder {
 	DynArray<std::unique_ptr<ObjectFinder>> finders;
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		finders.resize(gsf.nextInt());
 		for (auto &finder : finders)
 			finder.reset(ReadFinderNode(gsf, gs));
@@ -557,7 +557,7 @@ struct FinderFilterFirst : ObjectFinder {
 		}
 		return res;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		equation = gs.equations.readIndex(gsf);
 		count.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinderNode(gsf, gs));
@@ -578,7 +578,7 @@ struct FinderFilter : ObjectFinder {
 		}
 		return res;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		equation = gs.equations.readIndex(gsf);
 		finder.reset(ReadFinderNode(gsf, gs));
 	}
@@ -620,7 +620,7 @@ struct FinderMetreRadius : ObjectFinder {
 				res.push_back(obj);
 		return res;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		vdradius.reset(ReadValueDeterminer(gsf, gs));
 		// ...
 		std::string word = gsf.nextString();
@@ -666,7 +666,7 @@ struct FinderGradeSelect : ObjectFinder {
 			res.push_back(values[i].second);
 		return res;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		auto arg = gsf.nextString();
 		if (arg == "BY_HIGHEST")
 			byHighest = true;
@@ -699,7 +699,7 @@ struct FinderNearestCandidate : ObjectFinder {
 		else
 			return {};
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		finder.reset(ReadFinderNode(gsf, gs));
 	}
 };
@@ -717,7 +717,7 @@ struct FinderTileRadius : ObjectFinder {
 				res.push_back(obj);
 		return res;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		vdradius.reset(ReadValueDeterminer(gsf, gs));
 	}
 };
@@ -727,7 +727,7 @@ struct FinderDiscoveredUnits : ObjectFinder {
 		// TODO
 		return {};
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {}
 };
 
 struct FinderRandomSelection : ObjectFinder {
@@ -743,7 +743,7 @@ struct FinderRandomSelection : ObjectFinder {
 		vec.resize(cnt);
 		return vec;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		vCount.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinderNode(gsf, gs));
 	}
@@ -763,7 +763,7 @@ struct FinderFilterCandidates : ObjectFinder {
 		}
 		return res;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		condition.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinderNode(gsf, gs));
 	}
@@ -800,7 +800,7 @@ ObjectFinder *ReadFinderNode(::GSFileParser &gsf, const ::GameSet &gs)
 				gsf.cursor = oldcur;
 				return ReadFinder(gsf, gs);
 			}
-			finder->parse(gsf, const_cast<GameSet&>(gs));
+			finder->parse(gsf, gs);
 			return finder;
 		}
 		gsf.advanceLine();

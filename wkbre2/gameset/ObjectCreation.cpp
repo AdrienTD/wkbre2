@@ -11,7 +11,7 @@
 #include "ScriptContext.h"
 #include "../util/util.h"
 
-void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
+void ObjectCreation::parse(GSFileParser & gsf, const GameSet & gs)
 {
 	gsf.advanceLine();
 	while (!gsf.eof) {
@@ -41,7 +41,7 @@ void ObjectCreation::parse(GSFileParser & gsf, GameSet & gs)
 	}
 }
 
-void ObjectCreation::run(ServerGameObject * creator, SrvScriptContext* ctx)
+void ObjectCreation::run(ServerGameObject * creator, SrvScriptContext* ctx) const
 {
 	auto _0 = ctx->changeSelf(creator);
 	auto _1 = ctx->change(ctx->creator, creator);

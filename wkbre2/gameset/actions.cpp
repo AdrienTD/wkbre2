@@ -16,7 +16,7 @@ struct ActionUnknown : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		ferr("Unknown action %s at %s!", name.c_str(), location.c_str());
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {}
 	ActionUnknown(const std::string& name, const std::string& location) : name(name), location(location) {}
 };
 
@@ -25,7 +25,7 @@ struct ActionTrace : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		printf("Trace: %s\n", message.c_str());
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		message = gsf.nextString(true);
 	}
 	ActionTrace() {}
@@ -38,7 +38,7 @@ struct ActionTraceValue : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		printf("Trace Value: %s %f\n", message.c_str(), value->eval(ctx));
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		message = gsf.nextString(true);
 		value.reset(ReadValueDeterminer(gsf, gs));
 	}
@@ -55,7 +55,7 @@ struct ActionTraceFinderResults : Action {
 		for (ServerGameObject *obj : vec)
 			printf(" - %i %s\n", obj->id, obj->blueprint->getFullName().c_str());
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		message = gsf.nextString(true);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -70,7 +70,7 @@ struct ActionTracePosition : Action {
 			result.position.x, result.position.y, result.position.z,
 			result.rotation.x, result.rotation.y, result.rotation.z);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		message = gsf.nextString(true);
 		position.reset(PositionDeterminer::createFrom(gsf, gs));
 	}
@@ -87,7 +87,7 @@ struct ActionTracePositionsOf : Action {
 				obj->position.x, obj->position.y, obj->position.z);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		message = gsf.nextString(true);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -102,7 +102,7 @@ struct ActionUponCondition : Action {
 		else
 			falseList.run(ctx);
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		value.reset(ReadValueDeterminer(gsf, gs));
 		gsf.advanceLine();
 		ActionSequence *curlist = &trueList;
@@ -131,7 +131,7 @@ struct ActionSetItem : Action {
 			obj->setItem(item, val);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		item = gs.items.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 		value.reset(ReadValueDeterminer(gsf, gs));
@@ -150,7 +150,7 @@ struct ActionIncreaseItem : Action {
 			obj->setItem(item, obj->getItem(item) + val);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		item = gs.items.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 		value.reset(ReadValueDeterminer(gsf, gs));
@@ -169,7 +169,7 @@ struct ActionDecreaseItem : Action {
 			obj->setItem(item, obj->getItem(item) - val);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		item = gs.items.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 		value.reset(ReadValueDeterminer(gsf, gs));
@@ -179,7 +179,7 @@ struct ActionDecreaseItem : Action {
 };
 
 struct ActionExecuteSequence : Action {
-	ActionSequence *sequence;
+	const ActionSequence *sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject* obj : finder->eval(ctx)) {
@@ -188,7 +188,7 @@ struct ActionExecuteSequence : Action {
 			sequence->run(ctx);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		sequence = gs.actionSequences.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -197,7 +197,7 @@ struct ActionExecuteSequence : Action {
 };
 
 struct ActionExecuteSequenceAfterDelay : Action {
-	ActionSequence *sequence;
+	const ActionSequence *sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> delay;
 	virtual void run(SrvScriptContext* ctx) override {
@@ -210,7 +210,7 @@ struct ActionExecuteSequenceAfterDelay : Action {
 		game_time_t atTime = Server::instance->timeManager.currentTime + delay->eval(ctx);
 		Server::instance->delayedSequences.insert(std::make_pair(atTime, ds));
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		sequence = gs.actionSequences.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 		delay.reset(ReadValueDeterminer(gsf, gs));
@@ -229,7 +229,7 @@ struct ActionPlayAnimationIfIdle : Action {
 				obj->setAnimation(animationIndex);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		animationIndex = gs.animations.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -245,7 +245,7 @@ struct ActionExecuteOneAtRandom : Action {
 			actionseq.actionList[x]->run(ctx);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		actionseq.init(gsf, gs, "END_EXECUTE_ONE_AT_RANDOM");
 	}
 };
@@ -255,7 +255,7 @@ struct ActionTerminateThisTask : Action {
 		if (Order *order = ctx->getSelf()->orderConfig.getCurrentOrder())
 			order->getCurrentTask()->terminate();
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {}
 };
 
 struct ActionTerminateThisOrder : Action {
@@ -263,7 +263,7 @@ struct ActionTerminateThisOrder : Action {
 		if (Order *order = ctx->getSelf()->orderConfig.getCurrentOrder())
 			order->terminate();
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {}
 };
 
 struct ActionTerminateTask : Action {
@@ -273,7 +273,7 @@ struct ActionTerminateTask : Action {
 			if (Order* order = obj->orderConfig.getCurrentOrder())
 				order->getCurrentTask()->terminate();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -285,7 +285,7 @@ struct ActionTerminateOrder : Action {
 			if (Order* order = obj->orderConfig.getCurrentOrder())
 				order->terminate();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -297,7 +297,7 @@ struct ActionCancelOrder : Action {
 			if (Order* order = obj->orderConfig.getCurrentOrder())
 				order->cancel();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -321,7 +321,7 @@ struct ActionTransferControl : Action {
 			recipient->sendEvent(Tags::PDEVENT_ON_SUBORDINATE_RECEIVED, obj);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		togiveFinder.reset(ReadFinder(gsf, gs));
 		recipientFinder.reset(ReadFinder(gsf, gs));
 	}
@@ -337,7 +337,7 @@ struct ActionAssignOrderVia : Action {
 			oabp->assignTo(obj, ctx, ctx->getSelf());
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		oabp = gs.orderAssignments.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -354,7 +354,7 @@ struct ActionRemove : Action {
 			obj->destroy();
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 	ActionRemove() {}
@@ -369,7 +369,7 @@ struct ActionAssignAlias : Action {
 			ctx->server->assignAlias(aliasIndex, obj);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		aliasIndex = gs.aliases.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -385,7 +385,7 @@ struct ActionUnassignAlias : Action {
 			ctx->server->unassignAlias(aliasIndex, obj);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		aliasIndex = gs.aliases.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -398,7 +398,7 @@ struct ActionClearAlias : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		ctx->server->clearAlias(aliasIndex);
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		aliasIndex = gs.aliases.readIndex(gsf);
 	}
 	ActionClearAlias() {}
@@ -406,26 +406,26 @@ struct ActionClearAlias : Action {
 };
 
 struct ActionAddReaction : Action {
-	Reaction *reaction;
+	const Reaction *reaction;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for(ServerGameObject *obj : finder->eval(ctx))
 			obj->individualReactions.insert(reaction);
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		reaction = gs.reactions.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
 
 struct ActionRemoveReaction : Action {
-	Reaction *reaction;
+	const Reaction *reaction;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject *obj : finder->eval(ctx))
 			obj->individualReactions.erase(reaction);
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		reaction = gs.reactions.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -439,20 +439,20 @@ struct ActionSendEvent : Action {
 		for (ServerGameObject *obj : finder->eval(ctx))
 			obj->sendEvent(event, ctx->getSelf());
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		event = gs.events.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
 
 struct ActionCreateObjectVia : Action {
-	ObjectCreation *info;
+	const ObjectCreation *info;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject *obj : finder->eval(ctx))
 			info->run(obj, ctx);
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		info = gs.objectCreations.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -469,7 +469,7 @@ struct ActionRegisterAssociates : Action {
 				aor->associateObject(category, obj);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		f_aors.reset(ReadFinder(gsf, gs));
 		category = gs.associations.readIndex(gsf);
 		f_ated.reset(ReadFinder(gsf, gs));
@@ -487,7 +487,7 @@ struct ActionDeregisterAssociates : Action {
 				aor->dissociateObject(category, obj);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		f_aors.reset(ReadFinder(gsf, gs));
 		category = gs.associations.readIndex(gsf);
 		f_ated.reset(ReadFinder(gsf, gs));
@@ -501,7 +501,7 @@ struct ActionClearAssociates : Action {
 		for (ServerGameObject *obj : finder->eval(ctx))
 			obj->clearAssociates(category);
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		category = gs.associations.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -516,7 +516,7 @@ struct ActionConvertTo : Action {
 			obj->sendEvent(Tags::PDEVENT_ON_CONVERSION_END);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		postbp = gs.readObjBlueprintPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -524,7 +524,7 @@ struct ActionConvertTo : Action {
 
 struct ActionNop : Action {
 	virtual void run(SrvScriptContext* ctx) override {}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {}
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {}
 };
 
 struct ActionSwitchAppearance : Action {
@@ -534,7 +534,7 @@ struct ActionSwitchAppearance : Action {
 		for (ServerGameObject *obj : finder->eval(ctx))
 			obj->setSubtypeAndAppearance(obj->subtype, appear);
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		appear = gs.appearances.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -552,14 +552,14 @@ struct ActionConvertAccordingToTag : Action {
 			}
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		typeTag = gs.typeTags.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
 
 struct ActionRepeatSequence : Action {
-	ActionSequence *sequence;
+	const ActionSequence *sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> vdcount;
 	virtual void run(SrvScriptContext* ctx) override {
@@ -571,7 +571,7 @@ struct ActionRepeatSequence : Action {
 				sequence->run(ctx);
 		}
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		sequence = gs.actionSequences.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 		vdcount.reset(ReadValueDeterminer(gsf, gs));
@@ -620,7 +620,7 @@ struct ActionIdentifyAndMarkClusters : Action {
 			}
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		objtype = gs.objBlueprints[Tags::GAMEOBJCLASS_MARKER].readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 		vcr.reset(ReadValueDeterminer(gsf, gs));
@@ -630,7 +630,7 @@ struct ActionIdentifyAndMarkClusters : Action {
 };
 
 struct ActionExecuteSequenceOverPeriod : Action {
-	ActionSequence* sequence;
+	const ActionSequence* sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> vdperiod;
 	virtual void run(SrvScriptContext* ctx) override {
@@ -645,7 +645,7 @@ struct ActionExecuteSequenceOverPeriod : Action {
 		ops.numTotalExecutions = ops.remainingObjects.size();
 		Server::instance->overPeriodSequences.push_back(std::move(ops));
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sequence = gs.actionSequences.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 		vdperiod.reset(ReadValueDeterminer(gsf, gs));
@@ -653,7 +653,7 @@ struct ActionExecuteSequenceOverPeriod : Action {
 };
 
 struct ActionRepeatSequenceOverPeriod : Action {
-	ActionSequence* sequence;
+	const ActionSequence* sequence;
 	std::unique_ptr<ObjectFinder> finder;
 	std::unique_ptr<ValueDeterminer> vdcount;
 	std::unique_ptr<ValueDeterminer> vdperiod;
@@ -669,7 +669,7 @@ struct ActionRepeatSequenceOverPeriod : Action {
 		ops.numTotalExecutions = (int)vdcount->eval(ctx);
 		Server::instance->repeatOverPeriodSequences.push_back(std::move(ops));
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sequence = gs.actionSequences.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 		vdcount.reset(ReadValueDeterminer(gsf, gs));
@@ -684,7 +684,7 @@ struct ActionDisplayGameTextWindow : Action {
 		for (ServerGameObject* player : finder->eval(ctx))
 			Server::instance->showGameTextWindow(player, gtwIndex);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		gtwIndex = gs.gameTextWindows.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -700,7 +700,7 @@ struct ActionSetScale : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->setScale(scale);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 		vdx.reset(ReadValueDeterminer(gsf, gs));
 		vdy.reset(ReadValueDeterminer(gsf, gs));
@@ -714,7 +714,7 @@ struct ActionTerminate : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->terminate();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -726,7 +726,7 @@ struct ActionHideGameTextWindow : Action {
 		for (ServerGameObject* player : finder->eval(ctx))
 			Server::instance->hideGameTextWindow(player, gtwIndex);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		gtwIndex = gs.gameTextWindows.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -738,7 +738,7 @@ struct ActionHideCurrentGameTextWindow : Action {
 		for (ServerGameObject* player : finder->eval(ctx))
 			Server::instance->hideCurrentGameTextWindow(player);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -749,7 +749,7 @@ struct ActionDisable : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->disable();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -760,7 +760,7 @@ struct ActionEnable : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->enable();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -772,7 +772,7 @@ struct ActionSetSelectable : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->updateFlags((obj->flags & ~ServerGameObject::fSelectable) | (value ? ServerGameObject::fSelectable : 0));
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		value = gsf.nextInt();
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -785,7 +785,7 @@ struct ActionSetTargetable : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->updateFlags((obj->flags & ~ServerGameObject::fTargetable) | (value ? ServerGameObject::fTargetable : 0));
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		value = gsf.nextInt();
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -798,20 +798,20 @@ struct ActionSetRenderable : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->updateFlags((obj->flags & ~ServerGameObject::fRenderable) | (value ? ServerGameObject::fRenderable : 0));
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		value = gsf.nextInt();
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
 
 struct ActionSendPackage : Action {
-	GSPackage* package;
+	const GSPackage* package;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			package->send(obj, ctx);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		package = gs.packages.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -819,7 +819,7 @@ struct ActionSendPackage : Action {
 
 struct ActionChangeReactionProfile : Action {
 	int mode;
-	Reaction* reaction;
+	const Reaction* reaction;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
 		if (mode == 0)
@@ -829,7 +829,7 @@ struct ActionChangeReactionProfile : Action {
 			for (ServerGameObject* obj : finder->eval(ctx))
 				obj->individualReactions.erase(reaction);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		auto smode = gsf.nextString();
 		mode = 0;
 		if (smode == "ADD") mode = 0;
@@ -845,7 +845,7 @@ struct ActionSwitchCommon : Action {
 		ActionSequence actions;
 	};
 	std::vector<SwitchCase> cases;
-	void parseCases(GSFileParser& gsf, GameSet& gs, const std::string& endtag) {
+	void parseCases(GSFileParser& gsf, const GameSet& gs, const std::string& endtag) {
 		gsf.advanceLine();
 		while (!gsf.eol) {
 			auto tag = gsf.nextTag();
@@ -870,7 +870,7 @@ struct ActionSwitchCondition : ActionSwitchCommon {
 			if (scase.value->eval(ctx) == value)
 				scase.actions.run(ctx);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		valuedet.reset(ReadValueDeterminer(gsf, gs));
 		parseCases(gsf, gs, "END_SWITCH_CONDITION");
 	}
@@ -889,7 +889,7 @@ struct ActionSwitchHighest : ActionSwitchCommon {
 		}
 		maxcase->actions.run(ctx);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		parseCases(gsf, gs, "END_SWITCH_HIGHEST");
 	}
 };
@@ -901,7 +901,7 @@ struct ActionPlayClip : Action {
 		auto _ = ctx->changeSelf(ctx->getSelf()->getPlayer());
 		Server::instance->gameSet->clips[clip].postClipSequence.run(ctx);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		clip = gs.clips.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -913,7 +913,7 @@ struct ActionStoreCameraPosition : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			ctx->server->storeCameraPosition(obj);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -924,7 +924,7 @@ struct ActionSnapCameraToStoredPosition : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			ctx->server->restoreCameraPosition(obj);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -936,7 +936,7 @@ struct ActionPlayCameraPath : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			ctx->server->playCameraPath(obj, camPathIndex);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		camPathIndex = gs.cameraPaths.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -949,7 +949,7 @@ struct ActionStopCameraPathPlayback : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			ctx->server->stopCameraPath(obj, skipActions);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 		skipActions = gsf.nextString() == "SKIP_ACTIONS";
 	}
@@ -1023,7 +1023,7 @@ struct ActionCreateFormation : Action {
 		center /= numUnits;
 		formation->setPosition(center);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		formationType = gs.objBlueprints[Tags::GAMEOBJCLASS_FORMATION].readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -1041,7 +1041,7 @@ struct ActionSetIndexedItem : Action {
 			obj->setIndexedItem(item, x, val);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		item = gs.items.readIndex(gsf);
 		index.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinder(gsf, gs));
@@ -1061,7 +1061,7 @@ struct ActionIncreaseIndexedItem : Action {
 			obj->setIndexedItem(item, x, obj->getIndexedItem(item, x) + val);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		item = gs.items.readIndex(gsf);
 		index.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinder(gsf, gs));
@@ -1081,7 +1081,7 @@ struct ActionDecreaseIndexedItem : Action {
 			obj->setIndexedItem(item, x, obj->getIndexedItem(item, x) - val);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		item = gs.items.readIndex(gsf);
 		index.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinder(gsf, gs));
@@ -1097,7 +1097,7 @@ struct ActionCopyFacingOf : Action {
 				to->setOrientation(from->orientation);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		objTo.reset(ReadFinder(gsf, gs));
 		objFrom.reset(ReadFinder(gsf, gs));
 	}
@@ -1114,7 +1114,7 @@ struct ActionPlaySound : Action {
 			}
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		soundTag = gs.soundTags.readIndex(gsf);
 		objFrom.reset(ReadFinder(gsf, gs));
 		objTo.reset(ReadFinder(gsf, gs));
@@ -1129,7 +1129,7 @@ struct ActionPlayMusic : Action {
 			ctx->server->playMusic(player, musicTag);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		musicTag = gs.musicTags.readIndex(gsf);
 		fPlayer.reset(ReadFinder(gsf, gs));
 	}
@@ -1146,7 +1146,7 @@ struct ActionTeleport : Action {
 			obj->setOrientation(op.rotation);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 		pos.reset(PositionDeterminer::createFrom(gsf, gs));
 	}
@@ -1163,7 +1163,7 @@ struct ActionChangeDiplomaticStatus : Action {
 			Server::instance->setDiplomaticStatus(player1, player2, nextStatus);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		fPlayer1.reset(ReadFinder(gsf, gs));
 		fPlayer2.reset(ReadFinder(gsf, gs));
 		nextStatus = gs.diplomaticStatuses.readIndex(gsf);
@@ -1177,7 +1177,7 @@ struct ActionSinkAndRemove : Action {
 			Server::instance->deleteObject(obj);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -1189,7 +1189,7 @@ struct ActionPlaySoundAtPosition_WKO : Action {
 		auto* from = ctx->getSelf();
 		from->playSoundAtPosition(soundTag, from->position);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		soundTag = gs.soundTags.readIndex(gsf);
 		objPlayers.reset(ReadFinder(gsf, gs));
 	}
@@ -1202,7 +1202,7 @@ struct ActionPlaySoundAtPosition_Battles : Action {
 		auto* from = ctx->getSelf();
 		from->playSoundAtPosition(soundTag, pPosition->eval(ctx).position);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		soundTag = gs.soundTags.readIndex(gsf);
 		pPosition.reset(PositionDeterminer::createFrom(gsf, gs));
 	}
@@ -1221,7 +1221,7 @@ struct ActionFaceTowards : Action {
 			}
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		fObjects.reset(ReadFinder(gsf, gs));
 		fTarget.reset(ReadFinder(gsf, gs));
 	}
@@ -1235,7 +1235,7 @@ struct ActionSnapCameraToPosition : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			ctx->server->snapCameraPosition(obj, posori.position, posori.rotation);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		posdet.reset(PositionDeterminer::createFrom(gsf, gs));
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -1252,7 +1252,7 @@ struct ActionReevaluateTaskTarget :Action {
 			}
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -1267,7 +1267,7 @@ struct ActionPlaySpecialEffect :Action {
 			obj->playSpecialEffectAt(sfxTag, posori.position);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sfxTag = gs.specialEffectTags.readIndex(gsf);
 		fObject.reset(ReadFinder(gsf, gs));
 		pPosition.reset(PositionDeterminer::createFrom(gsf, gs));
@@ -1285,7 +1285,7 @@ struct ActionPlaySpecialEffectBetween :Action {
 			obj->playSpecialEffectBetween(sfxTag, pos1, pos2);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sfxTag = gs.specialEffectTags.readIndex(gsf);
 		fObject.reset(ReadFinder(gsf, gs));
 		pPosition1.reset(PositionDeterminer::createFrom(gsf, gs));
@@ -1304,7 +1304,7 @@ struct ActionAttachSpecialEffect :Action {
 			}
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sfxTag = gs.specialEffectTags.readIndex(gsf);
 		fObject.reset(ReadFinder(gsf, gs));
 		fTarget.reset(ReadFinder(gsf, gs));
@@ -1318,7 +1318,7 @@ struct ActionCreateObject : Action {
 		auto posori = pPosition->eval(ctx);
 		ServerGameObject* obj = ctx->server->spawnObject(objbp, ctx->getSelf()->getPlayer(), posori.position, posori.rotation);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		objbp = gs.readObjBlueprintPtr(gsf);
 		pPosition.reset(PositionDeterminer::createFrom(gsf, gs));
 	}
@@ -1335,7 +1335,7 @@ struct ActionAttachLoopingSpecialEffect : Action {
 			obj->attachLoopingSpecialEffect(sfxTag, pPosition->eval(ctx).position);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sfxTag = gs.specialEffectTags.readIndex(gsf);
 		fObject.reset(ReadFinder(gsf, gs));
 		pPosition.reset(PositionDeterminer::createFrom(gsf, gs));
@@ -1350,7 +1350,7 @@ struct ActionDetachLoopingSpecialEffect : Action {
 			obj->detachLoopingSpecialEffect(sfxTag);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sfxTag = gs.specialEffectTags.readIndex(gsf);
 		fObject.reset(ReadFinder(gsf, gs));
 	}
@@ -1362,7 +1362,7 @@ struct ActionSkipCameraPathPlayback : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			ctx->server->skipCameraPath(obj);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -1374,7 +1374,7 @@ struct ActionActivatePlan : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->aiController.activatePlan(planBlueprint);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		planBlueprint = gs.plans.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -1389,7 +1389,7 @@ struct ActionRegisterWorkOrder : Action {
 			city->getPlayer()->aiController.registerWorkOrder(city, Server::instance->gameSet->objectFinderDefinitions[gsUnitFinder], workOrder);
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		auto str = gsf.nextString();
 		if (str != "FINDER_RESULTS")
 			ferr("REGISTER_WORK_ORDER must be followed by a FINDER_RESULTS!");
@@ -1405,7 +1405,7 @@ struct ActionAbandonPlan : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->aiController.abandonPlan();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -1417,7 +1417,7 @@ struct ActionActivateCommission : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->getPlayer()->aiController.activateCommission(commission, obj);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		commission = gs.commissions.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -1430,7 +1430,7 @@ struct ActionDeactivateCommission : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			obj->getPlayer()->aiController.deactivateCommission(commission, obj);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		commission = gs.commissions.readPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -1446,7 +1446,7 @@ struct ActionInterpolateCameraToPosition : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			ctx->server->interpolateCameraToPosition(obj, posori.position, posori.rotation, durationValue);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		posdet.reset(PositionDeterminer::createFrom(gsf, gs));
 		duration.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinder(gsf, gs));
@@ -1461,7 +1461,7 @@ struct ActionInterpolateCameraToStoredPosition : Action {
 		for (ServerGameObject* obj : finder->eval(ctx))
 			ctx->server->interpolateCameraToStoredPosition(obj, durationValue);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		duration.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -1483,7 +1483,7 @@ struct ActionDisbandFormation : Action {
 			}
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -1498,7 +1498,7 @@ struct ActionLeaveFormation : Action {
 			}
 		}
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -1642,7 +1642,7 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 		//
 	default: action = new ActionUnknown(name, gsf.locate()); printf("WARNING: Unknown ACTION %s at %s\n", name.c_str(), gsf.locate().c_str()); break;
 	}
-	action->parse(gsf, const_cast<GameSet&>(gs));  // FIXME
+	action->parse(gsf, gs);
 	return action;
 }
 

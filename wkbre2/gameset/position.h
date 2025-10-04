@@ -32,7 +32,7 @@ struct PositionDeterminer {
 	//using EvalRetCli = OrientedPosition;
 	virtual ~PositionDeterminer() {}
 	virtual OrientedPosition eval(ScriptContext* ctx) = 0;
-	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) = 0;
 
-	static PositionDeterminer *createFrom(GSFileParser &gsf, GameSet &gs);
+	static PositionDeterminer *createFrom(GSFileParser &gsf, const GameSet &gs);
 };

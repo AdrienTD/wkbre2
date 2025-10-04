@@ -36,7 +36,7 @@ struct PDUnknown : PositionDeterminer {
 		ferr("Unknown position determiner %s called from %s!", name.c_str(), ctx->gameState->getProgramName());
 		return OrientedPosition();
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override
 	{
 	}
 	PDUnknown(const std::string& name) : name(name) {}
@@ -48,7 +48,7 @@ struct PDLocationOf : PositionDeterminer {
 	{
 		return PosFromObjVec(finder->eval(ctx));
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override
 	{
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -60,7 +60,7 @@ struct PDAbsolutePosition : PositionDeterminer {
 	{
 		return opos;
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override
 	{
 		float x = gsf.nextFloat();
 		float y = gsf.nextFloat();
@@ -78,7 +78,7 @@ struct PDCentreOfMap : PositionDeterminer {
 		pos.y = Server::instance->terrain->getHeight(pos.x, pos.z);
 		return { pos };
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 	}
 };
 
@@ -90,7 +90,7 @@ struct PDThisSideOf : PositionDeterminer {
 		Vector3 d = (o.position - p.position).normal();
 		return { p.position + d * v->eval(ctx), atan2f(d.x, -d.z) };
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		a.reset(ReadFinder(gsf, gs));
 		b.reset(ReadFinder(gsf, gs));
 		v.reset(ReadValueDeterminer(gsf, gs));
@@ -105,7 +105,7 @@ struct PDThisOtherSideOf : PositionDeterminer {
 		Vector3 d = (p.position - o.position).normal();
 		return { p.position + d * v->eval(ctx), atan2f(d.x, -d.z) };
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		a.reset(ReadFinder(gsf, gs));
 		b.reset(ReadFinder(gsf, gs));
 		v.reset(ReadValueDeterminer(gsf, gs));
@@ -119,7 +119,7 @@ struct PDNearestValidPositionFor : PositionDeterminer {
 		// TODO
 		return p->eval(ctx);
 	}
-	virtual void parse(GSFileParser & gsf, GameSet & gs) override {
+	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		a.reset(ReadFinder(gsf, gs));
 		p.reset(PositionDeterminer::createFrom(gsf, gs));
 	}
@@ -138,7 +138,7 @@ struct PDOutAtAngle : public PositionDeterminer
 		po.rotation.y += (float)M_PI;
 		return po;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		f.reset(ReadFinder(gsf, gs));
 		u.reset(ReadValueDeterminer(gsf, gs));
 		v.reset(ReadValueDeterminer(gsf, gs));
@@ -155,7 +155,7 @@ struct PDTowards : public PositionDeterminer {
 		float m = v->eval(ctx);
 		return { o.position + d * m, atan2f(d.x, -d.z) };
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		a.reset(ReadFinder(gsf, gs));
 		b.reset(ReadFinder(gsf, gs));
 		v.reset(ReadValueDeterminer(gsf, gs));
@@ -172,7 +172,7 @@ struct PDAwayFrom : public PositionDeterminer {
 		float m = v->eval(ctx);
 		return { o.position + d * m, atan2f(d.x, -d.z) };
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		a.reset(ReadFinder(gsf, gs));
 		b.reset(ReadFinder(gsf, gs));
 		v.reset(ReadValueDeterminer(gsf, gs));
@@ -188,7 +188,7 @@ struct PDInFrontOf : public PositionDeterminer {
 		op.position += d * v->eval(ctx);
 		return op;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		f.reset(ReadFinder(gsf, gs));
 		v.reset(ReadValueDeterminer(gsf, gs));
 	}
@@ -200,7 +200,7 @@ struct PDOffsetFrom : public PositionDeterminer {
 	virtual OrientedPosition eval(ScriptContext* ctx) override {
 		return PosFromObjVec(f->eval(ctx)) + OrientedPosition(Vector3(x->eval(ctx), y->eval(ctx), z->eval(ctx)));
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		f.reset(ReadFinder(gsf, gs));
 		x.reset(ReadValueDeterminer(gsf, gs));
 		y.reset(ReadValueDeterminer(gsf, gs));
@@ -239,7 +239,7 @@ struct PDNearestAttachmentPoint : public PositionDeterminer {
 		}
 		return obj->position + Vector3(0.0f, 1.0f, 0.0f);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sAttachTag = gsf.nextString(true);
 		finder.reset(ReadFinder(gsf, gs));
 		pos.reset(PositionDeterminer::createFrom(gsf, gs));
@@ -259,7 +259,7 @@ struct PDSpawnTilePosition : PositionDeterminer {
 		// TODO
 		return PosFromObjVec(finder->eval(ctx));
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -283,7 +283,7 @@ struct PDMatchingOffset : PositionDeterminer {
 		Vector3 nv = Vector3(sinf(ro) * rl, 0.0f, cosf(ro) * rl);
 		return { pp.position + nv };
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		cp.reset(PositionDeterminer::createFrom(gsf, gs));
 		cr.reset(PositionDeterminer::createFrom(gsf, gs));
 		co.reset(PositionDeterminer::createFrom(gsf, gs));
@@ -305,7 +305,7 @@ struct PDFiringAttachmentPoint : PositionDeterminer {
 		}
 		return obj->position + Vector3(0, 1, 0);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 	}
 };
 
@@ -372,7 +372,7 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 		float fz = oz * 5 + objbp->footprint->originZ + 2.5f;
 		return { Vector3(fx, ctx->gameState->terrain->getHeight(fx, fz), fz) };
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		auto cursor = gsf.cursor;
 		objbp = gs.readObjBlueprintPtr(gsf);
 		if (!objbp) {
@@ -415,7 +415,7 @@ struct PDRandomAttachmentPoint : public PositionDeterminer {
 		}
 		return obj->position + Vector3(0.0f, 1.0f, 0.0f);
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		sAttachTag = gsf.nextString(true);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -435,7 +435,7 @@ struct PDNearestConstructionSite : public PDNearestValidStampdownPos {
 		float fz = oz * 5 + objbp->footprint->originZ + 2.5f;
 		return { Vector3(fx, ctx->gameState->terrain->getHeight(fx, fz), fz) };
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		p.reset(PositionDeterminer::createFrom(gsf, gs));
 		objbp = gs.objBlueprints[Tags::GAMEOBJCLASS_BUILDING].readPtr(gsf);
 		val1.reset(ReadValueDeterminer(gsf, gs));
@@ -451,7 +451,7 @@ struct PDNearestConstructionSite : public PDNearestValidStampdownPos {
 	}
 };
 
-PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, GameSet & gs)
+PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, const GameSet & gs)
 {
 	PositionDeterminer *pos;
 	std::string tag = gsf.nextString();

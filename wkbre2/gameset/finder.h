@@ -111,7 +111,7 @@ struct ObjectFinder {
 	using EvalRetCli = CliFinderResult;
 	virtual ~ObjectFinder() {}
 	virtual ObjectFinderResult eval(ScriptContext* ctx) = 0;
-	virtual void parse(GSFileParser &gsf, GameSet &gs) = 0;
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) = 0;
 
 	CommonGameObject* getFirst(ScriptContext* ctx) {
 		auto objlist = eval(ctx);

@@ -32,14 +32,14 @@ float ValueDeterminer::fail(ScriptContext* ctx) {
 struct ValueUnknown : ValueDeterminer {
 	std::string name;
 	virtual float eval(ScriptContext* ctx) override { ferr("Unknown value determiner %s called from the %s!", name.c_str(), ctx->gameState->getProgramName()); return 0.0f; }
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {}
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {}
 	ValueUnknown(const std::string& name) : name(name) {}
 };
 
 struct ValueConstant : ValueDeterminer {
 	float value;
 	virtual float eval(ScriptContext* ctx) override { return value; }
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override { value = gsf.nextFloat(); }
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override { value = gsf.nextFloat(); }
 	ValueConstant() {}
 	ValueConstant(float value) : value(value) {}
 };
@@ -52,7 +52,7 @@ struct ValueItemValue : ValueDeterminer {
 			return obj->getItem(item);
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		item = gs.items.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -69,7 +69,7 @@ struct ValueObjectId_WKO : ValueDeterminer {
 			return (obj1 == obj2) ? 1.0f : 0.0f;
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder1.reset(ReadFinder(gsf, gs));
 		finder2.reset(ReadFinder(gsf, gs));
 	}
@@ -82,7 +82,7 @@ struct ValueObjectId_Battles : ValueDeterminer {
 			return (float)obj->id;
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 	ValueObjectId_Battles() {}
@@ -96,7 +96,7 @@ struct ValueObjectClass : ValueDeterminer {
 		auto vec = finder->eval(ctx);
 		return !vec.empty() && std::all_of(vec.begin(), vec.end(), [this](CommonGameObject *obj) {return obj->blueprint->bpClass == objclass; });
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		objclass = Tags::GAMEOBJCLASS_tagDict.getTagID(gsf.nextString().c_str());
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -113,7 +113,7 @@ struct ValueEquationResult : ValueDeterminer {
 		auto _ = ctx->changeSelf(obj);
 		return ctx->gameState->gameSet->equations[equation]->eval(ctx);
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		equation = gs.equations.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -133,7 +133,7 @@ struct ValueIsSubsetOf : ValueDeterminer {
 				return 0.0f;
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		fnd_sub.reset(ReadFinder(gsf, gs));
 		fnd_super.reset(ReadFinder(gsf, gs));
 	}
@@ -144,7 +144,7 @@ struct ValueNumObjects : ValueDeterminer {
 	virtual float eval(ScriptContext* ctx) override {
 		return (float)finder->eval(ctx).size();
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -156,7 +156,7 @@ struct ValueCanReach : ValueDeterminer {
 		// everything is reachable from anywhere for now
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 		source.reset(PositionDeterminer::createFrom(gsf, gs));
 	}
@@ -168,7 +168,7 @@ struct ValueIsAccessible : ValueDeterminer {
 		// everything is reachable from anywhere for now
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder1.reset(ReadFinder(gsf, gs));
 		finder2.reset(ReadFinder(gsf, gs));
 	}
@@ -183,7 +183,7 @@ struct ValueHasAppearance : ValueDeterminer {
 				return 0.0f;
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 		appear = gs.appearances.readIndex(gsf);
 	}
@@ -202,7 +202,7 @@ struct ValueSamePlayer : ValueDeterminer {
 		}
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		fnd1.reset(ReadFinder(gsf, gs));
 		fnd2.reset(ReadFinder(gsf, gs));
 	}
@@ -219,7 +219,7 @@ struct ValueObjectType : ValueDeterminer {
 				return 0.0f;
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		type = gs.readObjBlueprintPtr(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -242,7 +242,7 @@ struct ValueDistanceBetween : ValueDeterminer {
 		if (takeVertical) dist += v.y * v.y;
 		return std::sqrt(dist);
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		auto tag = gsf.nextString();
 		if (tag == "HORIZONTAL")	{ takeHorizontal = true;  takeVertical = false; }
 		else if (tag == "3D")		{ takeHorizontal = true;  takeVertical = true; }
@@ -269,7 +269,7 @@ struct ValueValueTagInterpretation : ValueDeterminer {
 		auto _ = ctx->changeSelf(obj);
 		return vd->eval(ctx);
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		valueTag = gs.valueTags.readIndex(gsf);
 		fnd.reset(ReadFinder(gsf, gs));
 	}
@@ -291,7 +291,7 @@ struct ValueDiplomaticStatusAtLeast : ValueDeterminer {
 		}
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		status = gs.diplomaticStatuses.readIndex(gsf);
 		a.reset(ReadFinder(gsf, gs));
 		b.reset(ReadFinder(gsf, gs));
@@ -307,7 +307,7 @@ struct ValueAreAssociated : ValueDeterminer {
 		if (!(x && y)) return 0.0f;
 		return x->associates[category].count(y) ? 1.0f : 0.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		a.reset(ReadFinder(gsf, gs));
 		category = gs.associations.readIndex(gsf);
 		b.reset(ReadFinder(gsf, gs));
@@ -323,7 +323,7 @@ struct ValueBlueprintItemValue : ValueDeterminer {
 			return it->second;
 		else return 0.0f;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		item = gs.items.readIndex(gsf);
 		type = gs.readObjBlueprintPtr(gsf);
 	}
@@ -338,7 +338,7 @@ struct ValueTotalItemValue : ValueDeterminer {
 			sum += obj->getItem(item);
 		return sum;
 	}
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		item = gs.items.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -351,7 +351,7 @@ struct ValueIsIdle : ValueDeterminer {
 		auto vec = finder->eval(ctx);
 		return std::all_of(vec.begin(), vec.end(), [](CommonGameObject* obj) {return ((ServerGameObject*)obj)->orderConfig.orders.empty(); });
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -365,7 +365,7 @@ struct ValueFinderResultsCount : ValueDeterminer {
 		auto _ = ctx->changeSelf(obj);
 		return (float)Server::instance->gameSet->objectFinderDefinitions[ofd]->eval(ctx).size();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		ofd = gs.objectFinderDefinitions.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -379,7 +379,7 @@ struct ValueHasDirectLineOfSightTo : ValueDeterminer {
 		// TODO
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder1.reset(ReadFinder(gsf, gs));
 		pos.reset(PositionDeterminer::createFrom(gsf, gs));
 		finder2.reset(ReadFinder(gsf, gs));
@@ -397,7 +397,7 @@ struct ValueWaterBeneath : ValueDeterminer {
 		}
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -409,7 +409,7 @@ struct ValueAngleBetween : ValueDeterminer {
 		// TODO (apparently it always returns 0?)
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		gsf.nextString();
 		a.reset(ReadFinder(gsf, gs));
 		b.reset(ReadFinder(gsf, gs));
@@ -425,7 +425,7 @@ struct ValueIsMusicPlaying : ValueDeterminer {
 		ServerGameObject* player = (ServerGameObject*)obj->getPlayer();
 		return player->isMusicPlaying ? 1.0f : 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -453,7 +453,7 @@ struct ValueCurrentlyDoingOrder : ValueDeterminer {
 		}
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		category = gs.orderCategories.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -472,7 +472,7 @@ struct ValueCurrentlyDoingTask : ValueDeterminer {
 			return order && (order->getCurrentTask()->blueprint->category == category);
 			});
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		category = gs.taskCategories.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -497,7 +497,7 @@ struct ValueTileItem : ValueDeterminer {
 		}
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		item = gs.items.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -515,7 +515,7 @@ struct ValueNumAssociates : ValueDeterminer {
 			return 0.0f;
 		return (float)it->second.size();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		category = gs.associations.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -533,7 +533,7 @@ struct ValueNumAssociators : ValueDeterminer {
 			return 0.0f;
 		return (float)it->second.size();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		category = gs.associations.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -546,7 +546,7 @@ struct ValueBuildingType : ValueDeterminer {
 		// TODO
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		type = Tags::BUILDINGTYPE_tagDict.getTagID(gsf.nextString().c_str());
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -573,7 +573,7 @@ struct ValueNumReferencers : ValueDeterminer {
 		}
 		return (float)count;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		taskCategory = gs.taskCategories.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -588,7 +588,7 @@ struct ValueIndexedItemValue : ValueDeterminer {
 			return obj->getIndexedItem(item, (int)index->eval(ctx));
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		item = gs.items.readIndex(gsf);
 		index.reset(ReadValueDeterminer(gsf, gs));
 		finder.reset(ReadFinder(gsf, gs));
@@ -615,7 +615,7 @@ struct ValueWithinForwardArc : ValueDeterminer {
 		float alpha = std::acos(centerDir.dot(centerToTarget/dist));
 		return std::abs(alpha) < arcAngle;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		fCenter.reset(ReadFinder(gsf, gs));
 		fTarget.reset(ReadFinder(gsf, gs));
 		vArcAngle.reset(ReadValueDeterminer(gsf, gs));
@@ -627,14 +627,14 @@ struct ValueMapWidth : ValueDeterminer {
 	virtual float eval(ScriptContext* ctx) override {
 		return ctx->gameState->terrain->getPlayableArea().first;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {}
 };
 
 struct ValueMapDepth : ValueDeterminer {
 	virtual float eval(ScriptContext* ctx) override {
 		return ctx->gameState->terrain->getPlayableArea().second;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {}
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {}
 };
 
 struct ValueIsDisabled : ValueDeterminer {
@@ -644,7 +644,7 @@ struct ValueIsDisabled : ValueDeterminer {
 		if (!obj) return 0.0f;
 		return (obj->disableCount > 0) ? 1.0f : 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		finder.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -655,7 +655,7 @@ struct ValueIsDiscovered : ValueDeterminer {
 		// TODO
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		fObjects.reset(ReadFinder(gsf, gs));
 		fPlayer.reset(ReadFinder(gsf, gs));
 	}
@@ -666,7 +666,7 @@ struct ValueIsVisible : ValueDeterminer {
 		// TODO
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		fObjects.reset(ReadFinder(gsf, gs));
 		fPlayer.reset(ReadFinder(gsf, gs));
 	}
@@ -678,7 +678,7 @@ struct ValueCouldReach : ValueDeterminer {
 		// TODO
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		objtype = gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].readPtr(gsf);
 		pStart.reset(PositionDeterminer::createFrom(gsf, gs));
 		pEnd.reset(PositionDeterminer::createFrom(gsf, gs));
@@ -691,7 +691,7 @@ struct ValueAiControlled : ValueDeterminer {
 		// TODO
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		fPlayer.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -702,7 +702,7 @@ struct ValueGradientInFront : ValueDeterminer {
 		// TODO
 		return 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		fObject.reset(ReadFinder(gsf, gs));
 	}
 };
@@ -721,7 +721,7 @@ struct ValueAverageEquationResult : ValueDeterminer {
 		}
 		return sum / (float)vec.size();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		equation = gs.equations.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -733,7 +733,7 @@ struct ValueCanAffordCommission : ValueDeterminer {
 		// TODO
 		return 1.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		gsf.nextString(true);
 		fPlayer.reset(ReadFinder(gsf, gs));
 	}
@@ -753,7 +753,7 @@ struct ValueAverageItemValue : ValueDeterminer {
 		}
 		return sum / (float)objList.size();
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		item = gs.items.readIndex(gsf);
 		finder.reset(ReadFinder(gsf, gs));
 	}
@@ -773,7 +773,7 @@ struct ValueIsInFrontOf : ValueDeterminer {
 		const bool inFront = objectDirection.dot(objectToSubject) > 0.0f;
 		return inFront ? 1.0f : 0.0f;
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		subjectFinder.reset(ReadFinder(gsf, gs));
 		objectFinder.reset(ReadFinder(gsf, gs));
 	}
@@ -837,7 +837,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 		printf("WARNING: Unknown value determiner %s at %s\n", strtag.c_str(), gsf.locate().c_str());
 		break;
 	}
-	vd->parse(gsf, const_cast<GameSet&>(gs));
+	vd->parse(gsf, gs);
 	return vd;
 }
 
@@ -845,7 +845,7 @@ ValueDeterminer *ReadValueDeterminer(::GSFileParser &gsf, const ::GameSet &gs)
 
 struct UnaryEnode : ValueDeterminer {
 	std::unique_ptr<ValueDeterminer> a;
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		a.reset(ReadEquationNode(gsf, gs));
 	}
 };
@@ -886,7 +886,7 @@ struct EnodeRound : UnaryEnode {
 
 struct BinaryEnode : ValueDeterminer {
 	std::unique_ptr<ValueDeterminer> a, b;
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		a.reset(ReadEquationNode(gsf, gs));
 		b.reset(ReadEquationNode(gsf, gs));
 	}
@@ -962,7 +962,7 @@ struct EnodeRandomRange : BinaryEnode {
 
 struct TernaryEnode : ValueDeterminer {
 	std::unique_ptr<ValueDeterminer> a, b, c;
-	virtual void parse(GSFileParser &gsf, GameSet &gs) override {
+	virtual void parse(GSFileParser &gsf, const GameSet &gs) override {
 		a.reset(ReadEquationNode(gsf, gs));
 		b.reset(ReadEquationNode(gsf, gs));
 		c.reset(ReadEquationNode(gsf, gs));
@@ -989,7 +989,7 @@ struct EnodeIsBetween : TernaryEnode {
 
 struct QuaternaryEnode : ValueDeterminer {
 	std::unique_ptr<ValueDeterminer> a, b, c, d;
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		a.reset(ReadEquationNode(gsf, gs));
 		b.reset(ReadEquationNode(gsf, gs));
 		c.reset(ReadEquationNode(gsf, gs));
@@ -1017,7 +1017,7 @@ struct EnodeFrontBackLeftRight : QuaternaryEnode {
 		}
 
 	}
-	virtual void parse(GSFileParser& gsf, GameSet& gs) override {
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
 		f_unit.reset(ReadFinder(gsf, gs));
 		f_target.reset(ReadFinder(gsf, gs));
 		QuaternaryEnode::parse(gsf, gs);
@@ -1066,7 +1066,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 				gsf.cursor = oldcur;
 				return ReadValueDeterminer(gsf, gs);
 			}
-			vd->parse(gsf, const_cast<GameSet&>(gs));
+			vd->parse(gsf, gs);
 			return vd;
 		}
 		gsf.advanceLine();

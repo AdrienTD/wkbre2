@@ -111,12 +111,12 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 	//std::map<uint32_t, ServerGameObject*> idmap;
 
 	struct DelayedSequence {
-		ActionSequence* actionSequence;
+		const ActionSequence* actionSequence;
 		SrvGORef executor;
 		std::vector<SrvGORef> selfs;
 	};
 	struct OverPeriodSequence {
-		ActionSequence* actionSequence;
+		const ActionSequence* actionSequence;
 		SrvGORef executor;
 		float startTime, period;
 		int numTotalExecutions, numExecutionsDone;
