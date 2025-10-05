@@ -255,9 +255,10 @@ TagDict<41> Tags::FINDER_tagDict({
     "USER",
 });
 
-TagDict<19> Tags::POSITION_tagDict({
+TagDict<20> Tags::POSITION_tagDict({
     "ABSOLUTE_POSITION",
     "AWAY_FROM",
+    "BEHIND",
     "CENTRE_OF_MAP",
     "DESTINATION_OF",
     "FIRING_ATTACHMENT_POINT",

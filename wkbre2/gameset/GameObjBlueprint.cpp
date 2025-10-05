@@ -63,6 +63,7 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 		if (strtag == endtag)
 			break;
 		switch (tag) {
+		case Tags::CBLUEPRINT_ITEM:
 		case Tags::CBLUEPRINT_STARTS_WITH_ITEM: {
 			int x = gameSet->items.readIndex(gsf);
 			this->startItemValues[x] = gsf.nextFloat();

@@ -194,6 +194,21 @@ struct PDInFrontOf : public PositionDeterminer {
 	}
 };
 
+struct PDBehind : PositionDeterminer {
+	std::unique_ptr<ObjectFinder> f;
+	std::unique_ptr<ValueDeterminer> v;
+	virtual OrientedPosition eval(ScriptContext* ctx) override {
+		OrientedPosition op = PosFromObjVec(f->eval(ctx));
+		Vector3 d{ sinf(op.rotation.y), 0.0f, -cosf(op.rotation.y) };
+		op.position -= d * v->eval(ctx);
+		return op;
+	}
+	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
+		f.reset(ReadFinder(gsf, gs));
+		v.reset(ReadValueDeterminer(gsf, gs));
+	}
+};
+
 struct PDOffsetFrom : public PositionDeterminer {
 	std::unique_ptr<ObjectFinder> f;
 	std::unique_ptr<ValueDeterminer> x, y, z;
@@ -466,6 +481,7 @@ PositionDeterminer * PositionDeterminer::createFrom(GSFileParser & gsf, const Ga
 	case Tags::POSITION_TOWARDS: pos = new PDTowards; break;
 	case Tags::POSITION_AWAY_FROM: pos = new PDAwayFrom; break;
 	case Tags::POSITION_IN_FRONT_OF: pos = new PDInFrontOf; break;
+	case Tags::POSITION_BEHIND: pos = new PDBehind; break;
 	case Tags::POSITION_OFFSET_FROM: pos = new PDOffsetFrom; break;
 	case Tags::POSITION_NEAREST_ATTACHMENT_POINT: pos = new PDNearestAttachmentPoint; break;
 	case Tags::POSITION_SPAWN_TILE_POSITION: pos = new PDSpawnTilePosition; break;
