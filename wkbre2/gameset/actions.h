@@ -20,11 +20,15 @@ struct Action {
 
 struct ActionSequence {
 	std::vector<std::unique_ptr<Action>> actionList;
+
+	struct DebugInfo {
+		int fileIndex = -1;
+		std::vector<int> actionLineIndices;
+	};
+	std::unique_ptr<DebugInfo> debugInfo;
+
 	void init(GSFileParser& gsf, const GameSet& gs, const char* endtag);
-	void run(SrvScriptContext* ctx) const {
-		for (auto &action : actionList)
-			action->run(ctx);
-	}
+	void run(SrvScriptContext* ctx) const;
 	void run(ServerGameObject* self) const;
 };
 

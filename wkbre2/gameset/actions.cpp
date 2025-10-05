@@ -10,6 +10,7 @@
 #include "../server.h"
 #include "ScriptContext.h"
 #include <cassert>
+#include "../BreakpointManager.h"
 
 struct ActionUnknown : Action {
 	std::string name, location;
@@ -105,12 +106,22 @@ struct ActionUponCondition : Action {
 	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
 		value.reset(ReadValueDeterminer(gsf, gs));
 		gsf.advanceLine();
+
+		trueList.debugInfo = std::make_unique<ActionSequence::DebugInfo>();
+		trueList.debugInfo->fileIndex = gsf.fileIndex;
+		falseList.debugInfo = std::make_unique<ActionSequence::DebugInfo>();
+		falseList.debugInfo->fileIndex = gsf.fileIndex;
+
 		ActionSequence *curlist = &trueList;
 		while (!gsf.eof) {
 			std::string strtag = gsf.nextTag();
 
-			if (strtag == "ACTION")
+			if (strtag == "ACTION") {
+				if (curlist->debugInfo) {
+					curlist->debugInfo->actionLineIndices.push_back(gsf.linenum);
+				}
 				curlist->actionList.push_back(std::unique_ptr<Action>(ReadAction(gsf, gs)));
+			}
 			else if (strtag == "ELSE")
 				curlist = &falseList;
 			else if (strtag == "END_UPON_CONDITION")
@@ -242,6 +253,9 @@ struct ActionExecuteOneAtRandom : Action {
 	virtual void run(SrvScriptContext* ctx) override {
 		if (!actionseq.actionList.empty()) {
 			int x = rand() % actionseq.actionList.size();
+			if (actionseq.debugInfo) {
+				BreakpointManager::instance().checkAndBreak(actionseq.debugInfo->fileIndex, actionseq.debugInfo->actionLineIndices[x]);
+			}
 			actionseq.actionList[x]->run(ctx);
 		}
 	}
@@ -1648,17 +1662,34 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 
 void ActionSequence::init(GSFileParser &gsf, const GameSet &gs, const char *endtag)
 {
+	debugInfo = std::make_unique<DebugInfo>();
+	debugInfo->fileIndex = gsf.fileIndex;
+
 	gsf.advanceLine();
 	while (!gsf.eof) {
 		std::string strtag = gsf.nextTag();
 
-		if (strtag == "ACTION")
+		if (strtag == "ACTION") {
+			if (debugInfo) {
+				debugInfo->actionLineIndices.push_back(gsf.linenum);
+			}
 			actionList.push_back(std::unique_ptr<Action>(ReadAction(gsf, gs)));
+		}
 		else if (strtag == endtag)
 			return;
 		gsf.advanceLine();
 	}
 	ferr("Action sequence reached end of file without END_ACTION_SEQUENCE!");
+}
+
+void ActionSequence::run(SrvScriptContext* ctx) const {
+	const bool hasDebugInfo = debugInfo.get();
+	for (size_t i = 0; i < actionList.size(); ++i) {
+		if (hasDebugInfo) {
+			BreakpointManager::instance().checkAndBreak(debugInfo->fileIndex, debugInfo->actionLineIndices[i]);
+		}
+		actionList[i]->run(ctx);
+	}
 }
 
 void ActionSequence::run(ServerGameObject* self) const {

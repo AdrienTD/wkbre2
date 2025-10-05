@@ -124,6 +124,8 @@ struct GameSet
 	};
 	int version = 0;
 
+	IndexedStringList gsfFileList;
+
 	void parseFile(const char *fn, int pass);
 	void load(const char *fn);
 
