@@ -147,10 +147,21 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 	using namespace Tags;
 	//if ((obj->blueprint->bpClass == GAMEOBJCLASS_BUILDING) || (obj->blueprint->bpClass == GAMEOBJCLASS_CHARACTER)) {
 	if(true) {
-		//Vector3 side = client->camera.direction.cross(Vector3(0, 1, 0));
-		//float dist = client->camera.direction.dot(obj->position - client->camera.position);
-		//if (dist < client->camera.nearDist || dist > client->camera.farDist)
-		//	goto drawsub;
+		static const float tolerance = 25.0f;
+		const float dirDist = client->camera.direction.dot(obj->position - client->camera.position);
+		const float nearBound = client->camera.nearDist - tolerance;
+		const float farBound = client->camera.farDist + tolerance;
+		if (dirDist < nearBound || dirDist > farBound)
+			goto drawsub;
+
+		const Vector3 side = client->camera.direction.cross(Vector3(0, 1, 0));
+		const float fovX = 0.9f * client->camera.aspect;
+		const float tanFov = std::tan(fovX / 2.0f);
+		const float cosFov = std::cos(fovX / 2.0f);
+		const float sideDist = std::abs(side.dot(obj->position - client->camera.position));
+		const float sideBound = std::max(0.0f, dirDist) * tanFov + tolerance / cosFov;
+		if (sideDist > sideBound)
+			goto drawsub;
 
 		Model* model = nullptr;
 		if (const auto* appear = obj->blueprint->getAppearance(obj->subtype, obj->appearance)) {
@@ -169,7 +180,9 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 		if (!model)
 			goto drawsub;
 
-		Vector3 sphereCenter = model->getSphereCenter().transform(obj->getWorldMatrix());
+		const Matrix transformMatrix = obj->getWorldMatrix();
+
+		Vector3 sphereCenter = model->getSphereCenter().transform(transformMatrix);
 		float sphereRadius = model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z });
 		Vector3 ttpp = sphereCenter.transformScreenCoords(client->camera.sceneMatrix);
 		bool onCam = (client->camera.position - sphereCenter).len3() < sphereRadius;
@@ -185,7 +198,7 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 		if (onCam) {
 			if (model) {
 				obj->sceneEntity.model = model;
-				obj->sceneEntity.transform = obj->getWorldMatrix();
+				obj->sceneEntity.transform = transformMatrix;
 				obj->sceneEntity.color = obj->getPlayer()->color;
 				if (obj->animSynchronizedTask != -1) {
 					CliScriptContext ctx{ client, obj };
