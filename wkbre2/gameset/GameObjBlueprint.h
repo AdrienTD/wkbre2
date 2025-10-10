@@ -110,6 +110,8 @@ struct GameObjBlueprint {
 
 	bool canWalkOnWater() const;
 
+	float getStartingItemValue(int itemIndex) const;
+
 	//GameObjBlueprint() {}
 	//GameObjBlueprint(GameSet *gameSet) : gameSet(gameSet) {}
 	//GameObjBlueprint(int cls, const std::string &name, GameSet &gameSet) : bpClass(cls), name(name), gameSet(gameSet) {}

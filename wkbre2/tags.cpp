@@ -729,10 +729,12 @@ TagDict<12> Tags::BUILDINGTYPE_tagDict({
     "WALL_CROSSROADS",
 });
 
-TagDict<10> Tags::PDITEM_tagDict({
+TagDict<13> Tags::PDITEM_tagDict({
     "ACTUAL_SIGHT_RANGE",
     "FOOD",
+    "FOOD_COST",
     "GOLD",
+    "GOLD_COST",
     "HIT_POINTS",
     "HIT_POINTS_OF_OBJECT_BEING_SPAWNED",
     "HIT_POINT_CAPACITY",
@@ -740,6 +742,7 @@ TagDict<10> Tags::PDITEM_tagDict({
     "NUMBER_OF_FARMERS",
     "STONE",
     "WOOD",
+    "WOOD_COST",
 });
 
 TagDict<4> Tags::MAPTEXDIR_tagDict({

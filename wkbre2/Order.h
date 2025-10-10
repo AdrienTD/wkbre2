@@ -123,7 +123,10 @@ struct FaceTowardsTask : Task {
 struct SpawnTask : Task {
 	const GameObjBlueprint* toSpawn = nullptr;
 	SrvGORef aiCommissioner; // temp
+	bool isSpawned = false;
 	using Task::Task;
+	~SpawnTask();
+	void setSpawnBlueprint(const GameObjBlueprint* blueprint);
 	virtual void onStart() override;
 	virtual void onUpdate() override;
 };

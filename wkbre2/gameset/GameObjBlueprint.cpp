@@ -396,3 +396,12 @@ Model* GameObjBlueprint::getSpecialEffect(int sfxTag) const
 }
 
 bool GameObjBlueprint::canWalkOnWater() const { return floatsOnWater || bpClass != Tags::GAMEOBJCLASS_CHARACTER; }
+
+float GameObjBlueprint::getStartingItemValue(int itemIndex) const
+{
+	auto it = startItemValues.find(itemIndex);
+	if (it == startItemValues.end()) {
+		return 0.0f;
+	}
+	return it->second;
+}

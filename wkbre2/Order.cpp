@@ -671,6 +671,27 @@ void FaceTowardsTask::onUpdate()
 	terminate();
 }
 
+SpawnTask::~SpawnTask()
+{
+	if (!this->isSpawned) {
+		ServerGameObject* obj = this->order->gameObject;
+		ServerGameObject* player = obj->getPlayer();
+		player->setItem(Tags::PDITEM_FOOD, player->getItem(Tags::PDITEM_FOOD) + toSpawn->getStartingItemValue(Tags::PDITEM_FOOD_COST));
+		player->setItem(Tags::PDITEM_WOOD, player->getItem(Tags::PDITEM_WOOD) + toSpawn->getStartingItemValue(Tags::PDITEM_WOOD_COST));
+		player->setItem(Tags::PDITEM_GOLD, player->getItem(Tags::PDITEM_GOLD) + toSpawn->getStartingItemValue(Tags::PDITEM_GOLD_COST));
+	}
+}
+
+void SpawnTask::setSpawnBlueprint(const GameObjBlueprint* blueprint)
+{
+	toSpawn = blueprint;
+	ServerGameObject* obj = order->gameObject;
+	ServerGameObject* player = obj->getPlayer();
+	player->setItem(Tags::PDITEM_FOOD, player->getItem(Tags::PDITEM_FOOD) - toSpawn->getStartingItemValue(Tags::PDITEM_FOOD_COST));
+	player->setItem(Tags::PDITEM_WOOD, player->getItem(Tags::PDITEM_WOOD) - toSpawn->getStartingItemValue(Tags::PDITEM_WOOD_COST));
+	player->setItem(Tags::PDITEM_GOLD, player->getItem(Tags::PDITEM_GOLD) - toSpawn->getStartingItemValue(Tags::PDITEM_GOLD_COST));
+}
+
 void SpawnTask::onStart()
 {
 	ServerGameObject* obj = order->gameObject;
@@ -689,6 +710,7 @@ void SpawnTask::onUpdate()
 		ServerGameObject* obj = order->gameObject;
 		if (obj->getItem(Tags::PDITEM_HIT_POINTS_OF_OBJECT_BEING_SPAWNED) >= obj->getItem(Tags::PDITEM_HIT_POINT_CAPACITY_OF_OBJECT_BEING_SPAWNED)) {
 			ServerGameObject* spawned = Server::instance->spawnObject(toSpawn, obj->getPlayer(), obj->position, Vector3(0,0,0));
+			this->isSpawned = true;
 			if (obj->spawnedUnitCommand >= 0) {
 				const Command* command = &Server::instance->gameSet->commands[obj->spawnedUnitCommand];
 				const auto& spawnedOfferedCommands = spawned->blueprint->offeredCommands;

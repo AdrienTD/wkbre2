@@ -87,7 +87,7 @@ void Command::execute(ServerGameObject *self, ServerGameObject *target, int assi
 				int x = gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER].names.getIndex(name.substr(6));
 				if (x != -1) {
 					const GameObjBlueprint* bp = &gs.objBlueprints[Tags::GAMEOBJCLASS_CHARACTER][x];
-					((SpawnTask*)neworder->tasks[0].get())->toSpawn = bp;
+					((SpawnTask*)neworder->tasks[0].get())->setSpawnBlueprint(bp);
 				}
 			}
 		}
