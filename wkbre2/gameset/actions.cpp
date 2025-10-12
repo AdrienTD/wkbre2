@@ -107,21 +107,12 @@ struct ActionUponCondition : Action {
 		value.reset(ReadValueDeterminer(gsf, gs));
 		gsf.advanceLine();
 
-		trueList.debugInfo = std::make_unique<ActionSequence::DebugInfo>();
-		trueList.debugInfo->fileIndex = gsf.fileIndex;
-		falseList.debugInfo = std::make_unique<ActionSequence::DebugInfo>();
-		falseList.debugInfo->fileIndex = gsf.fileIndex;
-
 		ActionSequence *curlist = &trueList;
 		while (!gsf.eof) {
 			std::string strtag = gsf.nextTag();
 
-			if (strtag == "ACTION") {
-				if (curlist->debugInfo) {
-					curlist->debugInfo->actionLineIndices.push_back(gsf.linenum);
-				}
-				curlist->actionList.push_back(std::unique_ptr<Action>(ReadAction(gsf, gs)));
-			}
+			if (strtag == "ACTION")
+				curlist->addActionFromGsf(gsf, gs);
 			else if (strtag == "ELSE")
 				curlist = &falseList;
 			else if (strtag == "END_UPON_CONDITION")
@@ -1662,24 +1653,29 @@ Action *ReadAction(GSFileParser &gsf, const GameSet &gs)
 
 void ActionSequence::init(GSFileParser &gsf, const GameSet &gs, const char *endtag)
 {
-	debugInfo = std::make_unique<DebugInfo>();
-	debugInfo->fileIndex = gsf.fileIndex;
-
 	gsf.advanceLine();
 	while (!gsf.eof) {
 		std::string strtag = gsf.nextTag();
 
-		if (strtag == "ACTION") {
-			if (debugInfo) {
-				debugInfo->actionLineIndices.push_back(gsf.linenum);
-			}
-			actionList.push_back(std::unique_ptr<Action>(ReadAction(gsf, gs)));
-		}
+		if (strtag == "ACTION")
+			addActionFromGsf(gsf, gs);
 		else if (strtag == endtag)
 			return;
 		gsf.advanceLine();
 	}
 	ferr("Action sequence reached end of file without END_ACTION_SEQUENCE!");
+}
+
+void ActionSequence::addActionFromGsf(GSFileParser& gsf, const GameSet& gs)
+{
+	if (actionList.empty()) {
+		debugInfo = std::make_unique<ActionSequence::DebugInfo>();
+		debugInfo->fileIndex = gsf.fileIndex;
+	}
+	if (debugInfo) {
+		debugInfo->actionLineIndices.push_back(gsf.linenum);
+	}
+	actionList.push_back(std::unique_ptr<Action>(ReadAction(gsf, gs)));
 }
 
 void ActionSequence::run(SrvScriptContext* ctx) const {

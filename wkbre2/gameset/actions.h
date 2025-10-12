@@ -28,6 +28,7 @@ struct ActionSequence {
 	std::unique_ptr<DebugInfo> debugInfo;
 
 	void init(GSFileParser& gsf, const GameSet& gs, const char* endtag);
+	void addActionFromGsf(GSFileParser& gsf, const GameSet& gs);
 	void run(SrvScriptContext* ctx) const;
 	void run(ServerGameObject* self) const;
 };

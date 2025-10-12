@@ -15,7 +15,7 @@ void Reaction::parse(GSFileParser & gsf, GameSet & gs)
 	while (!gsf.eof) {
 		auto tag = gsf.nextTag();
 		if (tag == "ACTION") {
-			actions.actionList.emplace_back(ReadAction(gsf, gs));
+			actions.addActionFromGsf(gsf, gs);
 		}
 		else if (tag == "TRIGGERED_BY") {
 			const char *oldcur = gsf.cursor;
