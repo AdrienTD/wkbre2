@@ -41,8 +41,8 @@ struct TerrainTile {
 	TerrainTexture *texture;
 	unsigned int rot : 2, xflip : 1, zflip : 1;
 	unsigned int x, z;
-	float waterLevel; bool fullOfWater;
-	unsigned int lakeId; // when removing lake, do a full autofill again.
+	float waterLevel = -1.0f; bool fullOfWater = false;
+	//unsigned int lakeId; // when removing lake, do a full autofill again.
 };
 
 struct Terrain
