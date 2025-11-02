@@ -26,6 +26,7 @@ namespace {
 
 	bool IGPlayerChooser(const char *popupid, CliGORef &ref, Client *client)
 	{
+		static const ImVec4 colorWhite{ 1.0f, 1.0f, 1.0f, 1.0f };
 		bool r = false;
 		ImGui::PushID(popupid);
 		ImGui::PushItemWidth(-1);
@@ -43,7 +44,7 @@ namespace {
 							r = true;
 						}
 						ImGui::SameLine();
-						ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ivcolortable[player->color]);
+						ImGui::ImageWithBg(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), colorWhite, ivcolortable[player->color]);
 						ImGui::SameLine();
 						ImGui::Text("%s (%u)", player->name.c_str(), player->id);
 						ImGui::PopID();
@@ -57,12 +58,12 @@ namespace {
 		tlh = ImGui::GetTextLineHeightWithSpacing();
 		ClientGameObject *player = ref.get();
 		if (player) {
-			ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ivcolortable[player->color]);
+			ImGui::ImageWithBg(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), colorWhite, ivcolortable[player->color]);
 			ImGui::SameLine();
 			ImGui::Text("%s (%u)", player->name.c_str(), player->id);
 		}
 		else {
-			ImGui::Image(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), ImVec4(1, 1, 1, 1));
+			ImGui::ImageWithBg(nullptr, ImVec2(tlh, tlh), ImVec2(0, 0), ImVec2(1, 1), colorWhite);
 			ImGui::SameLine();
 			ImGui::Text("Click me to select a player.");
 		}
@@ -216,7 +217,7 @@ void ClientDebugger::draw()
 						if (!texpath->empty()) {
 							texture tex = cliUi->uiTexCache.getTexture(texpath->c_str(), false);
 							ImGui::BeginDisabled(!enabled);
-							if (ImGui::ImageButton(tex, ImVec2(48.0f, 48.0f))) {
+							if (ImGui::ImageButton(cmdname.c_str(), tex, ImVec2(48.0f, 48.0f))) {
 								if (cmd->stampdownObject) {
 									cliUi->stampdownBlueprint = cmd->stampdownObject;
 									cliUi->stampdownPlayer = sel->getPlayer();

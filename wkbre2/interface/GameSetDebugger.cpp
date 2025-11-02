@@ -113,7 +113,8 @@ void GameSetDebugger::draw()
 			ImGui::Separator();
 			const bool contentVisible = ImGui::BeginChild("ScriptContent");
 			if (contentVisible) {
-				ImGuiListClipper clipper((int)gsfFileContent.size());
+				ImGuiListClipper clipper;
+				clipper.Begin((int)gsfFileContent.size());
 				while (clipper.Step()) {
 					for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
 						ImGui::PushID(i);

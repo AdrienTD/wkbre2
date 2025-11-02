@@ -459,11 +459,11 @@ void Test_Network()
 	while (!savchosen) {
 		ImGuiImpl_NewFrame();
 		ImGui::Begin("Select sav");
-		ImGui::ListBoxHeader("##SaveBox");
+		ImGui::BeginListBox("##SaveBox");
 		for (int i = 0; i < (int)gsl->size(); i++)
 			if (ImGui::Selectable(gsl->at(i).c_str(), savselected == i))
 				savselected = i;
-		ImGui::ListBoxFooter();
+		ImGui::EndListBox();
 		if (ImGui::Button("Let me in"))
 			savchosen = true;
 		ImGui::End();

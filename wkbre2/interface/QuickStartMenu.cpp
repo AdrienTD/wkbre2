@@ -115,13 +115,13 @@ void QuickStartMenu::draw()
 {	
 	ImGui::Begin("Select sav");
 	ImGui::PushItemWidth(-1.0f);
-	ImGui::ListBoxHeader("##SaveBox");
+	ImGui::BeginListBox("##SaveBox");
 	for (size_t i = 0; i < savegames.size(); i++) {
 		if (ImGui::Selectable(savegames[i].c_str(), savselected == i)) {
 			savselected = i;
 		}
 	}
-	ImGui::ListBoxFooter();
+	ImGui::EndListBox();
 	ImGui::PopItemWidth();
 	if (ImGui::Button("Load"))
 		modeChosen = MODE_SINGLEPLAYER;

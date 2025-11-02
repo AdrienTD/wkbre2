@@ -56,7 +56,7 @@ void ImGuiImpl_RenderDrawLists(ImDrawData *dr, IRenderer *renderer)
 		{
 			ImDrawCmd *cmd = &cl->CmdBuffer[j];
 			//if(cmd->TextureId)
-				renderer->SetTexture(0, (texture)cmd->TextureId);
+				renderer->SetTexture(0, (texture)cmd->GetTexID());
 			//else
 			//	renderer->NoTexture(0);
 			renderer->SetScissorRect((int)cmd->ClipRect.x, (int)cmd->ClipRect.y,
@@ -93,31 +93,11 @@ void ImGuiImpl_Init()
 	//imguienabled = true;
 	ImGuiIO &io = ImGui::GetIO();
 
-	io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
-	io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
-	io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
-	io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
-	io.KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
-	io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
-	io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
-	io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
-	io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
-	io.KeyMap[ImGuiKey_Delete] = SDL_SCANCODE_DELETE;
-	io.KeyMap[ImGuiKey_Backspace] = SDL_SCANCODE_BACKSPACE;
-	io.KeyMap[ImGuiKey_Enter] = SDL_SCANCODE_RETURN;
-	io.KeyMap[ImGuiKey_Escape] = SDL_SCANCODE_ESCAPE;
-	io.KeyMap[ImGuiKey_A] = SDL_GetScancodeFromKey(SDLK_a);
-	io.KeyMap[ImGuiKey_C] = SDL_GetScancodeFromKey(SDLK_c);
-	io.KeyMap[ImGuiKey_V] = SDL_GetScancodeFromKey(SDLK_v);
-	io.KeyMap[ImGuiKey_X] = SDL_GetScancodeFromKey(SDLK_x);
-	io.KeyMap[ImGuiKey_Y] = SDL_GetScancodeFromKey(SDLK_y);
-	io.KeyMap[ImGuiKey_Z] = SDL_GetScancodeFromKey(SDLK_z);
-
 #ifdef _WIN32
 	SDL_SysWMinfo syswm;
 	SDL_GetWindowWMInfo(g_sdlWindow, &syswm);
 	HWND hWindow = syswm.info.win.window;
-	io.ImeWindowHandle = hWindow;
+	//io.ImeWindowHandle = hWindow; // FIXME (as in XXL Editor)
 #endif
 
 	iglasttime = SDL_GetTicks();
