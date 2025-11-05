@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include "QuickSkirmishMenu.h"
 
 struct IRenderer;
 struct NetEnetLink;
@@ -41,8 +42,10 @@ private:
 	NetLocalLink* srv2cli = nullptr, * cli2srv = nullptr;
 	bool enetOn = false;
 
-	bool showHostWnd = false, showJoinWnd = false;
+	bool showSkirmishWnd = false, showHostWnd = false, showJoinWnd = false;
 	char joinAddress[64] = "localhost"; uint16_t joinPort = 1234;
+
+	QuickSkirmishMenu skirmishMenu;
 
 	void netInit();
 	void netHandle();

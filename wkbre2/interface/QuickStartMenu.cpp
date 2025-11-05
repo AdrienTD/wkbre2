@@ -126,6 +126,9 @@ void QuickStartMenu::draw()
 	if (ImGui::Button("Load"))
 		modeChosen = MODE_SINGLEPLAYER;
 	ImGui::SameLine();
+	if (ImGui::Button("Skirmish settings"))
+		showSkirmishWnd = true;
+	ImGui::SameLine();
 	if (ImGui::Button("Host")) {
 		netInit();
 		showHostWnd = true;
@@ -134,6 +137,12 @@ void QuickStartMenu::draw()
 	if (ImGui::Button("Join"))
 		showJoinWnd = true;
 	ImGui::End();
+
+	if (showSkirmishWnd) {
+		ImGui::Begin("Skirmish settings", &showSkirmishWnd);
+		skirmishMenu.imguiWindow();
+		ImGui::End();
+	}
 
 	if (showHostWnd) {
 		ImGui::Begin("Host game", &showHostWnd);
@@ -245,6 +254,7 @@ void QuickStartMenu::launchGame()
 		std::thread srvThread([this, savfile, &srvMutex]() {
 			srvMutex.lock();
 			server->loadSaveGame(savfile.c_str());
+			skirmishMenu.applySettings(*server);
 			srvMutex.unlock();
 			while (!g_windowQuit) {
 				srvMutex.lock();
