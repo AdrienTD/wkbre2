@@ -3,9 +3,12 @@
 #include "../imgui/imgui.h"
 #include "../gameset/gameset.h"
 
+#include "../settings.h"
+#include <nlohmann/json.hpp>
+
 void QuickSkirmishMenu::imguiWindow()
 {
-	const bool isWKBattles = false;
+	const bool isWKBattles = g_settings.value<int>("gameVersion", 1) == 2;
 
 	ImGui::SeparatorText("Gameplay mode");
 	int modeSelection = (int)mode;
