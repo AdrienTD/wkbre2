@@ -437,6 +437,19 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			obj->addCityRectangle(rect);
 			break;
 		}
+		case Tags::GAMEOBJ_START_CAMERA_POS: {
+			float x = gsf.nextFloat();
+			float y = gsf.nextFloat();
+			float z = gsf.nextFloat();
+			obj->playerStartCameraPosition = Vector3{ x,y,z };
+			break;
+		}
+		case Tags::GAMEOBJ_START_CAMERA_ORIENTATION: {
+			float x = gsf.nextFloat();
+			float y = gsf.nextFloat();
+			obj->playerStartCameraOrientation = Vector3{ x,y, 0.0f };
+			break;
+		}
 		case Tags::GAMEOBJ_PLAYER:
 		case Tags::GAMEOBJ_CHARACTER:
 		case Tags::GAMEOBJ_BUILDING:
@@ -1460,8 +1473,11 @@ void Server::tick()
 				break;
 			}
 			case NETSRVMSG_START_LEVEL: {
-				auto walk = [](ServerGameObject* obj, auto rec) -> void {
+				auto walk = [this](ServerGameObject* obj, auto rec) -> void {
 					obj->sendEvent(Tags::PDEVENT_ON_LEVEL_START);
+					if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER) {
+						this->snapCameraPosition(obj, obj->playerStartCameraPosition, obj->playerStartCameraOrientation);
+					}
 					for (auto& t : obj->children) {
 						for (CommonGameObject* child : t.second)
 							rec((ServerGameObject*)child, rec);

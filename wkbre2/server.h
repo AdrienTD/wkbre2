@@ -46,6 +46,7 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	MovementController movementController{ this };
 	AIController aiController{ this };
 	FormationController formationController{ this };
+	Vector3 playerStartCameraPosition, playerStartCameraOrientation;
 
 	ServerGameObject(uint32_t id, const GameObjBlueprint *blueprint) : SpecificGameObject<Server, ServerGameObject>(id, blueprint), orderConfig(this) {}
 
