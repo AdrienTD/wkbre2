@@ -151,13 +151,6 @@ void QuickSkirmishMenu::applySettings(Server& server)
 	}
 
 	if (mode != DevMode) {
-		auto walk = [](ServerGameObject* obj, auto rec) -> void {
-			obj->sendEvent(Tags::PDEVENT_ON_LEVEL_START);
-			for (auto& t : obj->children) {
-				for (CommonGameObject* child : t.second)
-					rec((ServerGameObject*)child, rec);
-			}
-			};
-		walk(server.getLevel(), walk);
+		server.startLevel();
 	}
 }

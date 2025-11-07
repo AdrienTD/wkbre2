@@ -178,6 +178,8 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 	void unassignAlias(int aliasIndex, ServerGameObject* object);
 	void clearAlias(int aliasIndex);
 
+	void startLevel();
+
 	void tick();
 
 private:

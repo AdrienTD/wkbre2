@@ -1227,6 +1227,21 @@ void Server::clearAlias(int aliasIndex)
 	sendToAll(msg);
 }
 
+void Server::startLevel()
+{
+	auto walk = [this](ServerGameObject* obj, auto rec) -> void {
+		obj->sendEvent(Tags::PDEVENT_ON_LEVEL_START);
+		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER) {
+			this->snapCameraPosition(obj, obj->playerStartCameraPosition, obj->playerStartCameraOrientation);
+		}
+		for (auto& t : obj->children) {
+			for (CommonGameObject* child : t.second)
+				rec((ServerGameObject*)child, rec);
+		}
+		};
+	walk(getLevel(), walk);
+}
+
 void Server::addClient(NetLink* link)
 {
 	clientLinks.push_back(link);
@@ -1473,17 +1488,7 @@ void Server::tick()
 				break;
 			}
 			case NETSRVMSG_START_LEVEL: {
-				auto walk = [this](ServerGameObject* obj, auto rec) -> void {
-					obj->sendEvent(Tags::PDEVENT_ON_LEVEL_START);
-					if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER) {
-						this->snapCameraPosition(obj, obj->playerStartCameraPosition, obj->playerStartCameraOrientation);
-					}
-					for (auto& t : obj->children) {
-						for (CommonGameObject* child : t.second)
-							rec((ServerGameObject*)child, rec);
-					}
-				};
-				walk(getLevel(), walk);
+				startLevel();
 				break;
 			}
 			case NETSRVMSG_GAME_TEXT_WINDOW_BUTTON_CLICKED: {
