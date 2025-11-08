@@ -1229,11 +1229,14 @@ void Server::clearAlias(int aliasIndex)
 
 void Server::startLevel()
 {
+	for (const auto& player : this->clientPlayerObjects) {
+		if (player) {
+			this->snapCameraPosition(player, player->playerStartCameraPosition, player->playerStartCameraOrientation);
+		}
+	}
+
 	auto walk = [this](ServerGameObject* obj, auto rec) -> void {
 		obj->sendEvent(Tags::PDEVENT_ON_LEVEL_START);
-		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER) {
-			this->snapCameraPosition(obj, obj->playerStartCameraPosition, obj->playerStartCameraOrientation);
-		}
 		for (auto& t : obj->children) {
 			for (CommonGameObject* child : t.second)
 				rec((ServerGameObject*)child, rec);
