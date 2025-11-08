@@ -46,7 +46,7 @@ add_executable (wkbre2 "wkbre2.cpp" "wkbre2.h" "file.cpp" "file.h" "lzrw3.c" "lz
 "gfx/D3D11EnhancedTerrainRenderer.h" "gfx/renderer_d3d11.h" "gfx/D3D11EnhancedSceneRenderer.h" "gfx/D3D11EnhancedSceneRenderer.cpp" "gameset/Plan.cpp" "gameset/Plan.h"  "AIController.h" "AIController.cpp"
 "gameset/ArmyCreationSchedule.h" "gameset/ArmyCreationSchedule.cpp" "gameset/WorkOrder.h" "gameset/WorkOrder.cpp" "common.cpp" "gameset/Commission.h" "gameset/Commission.cpp"
 "FormationController.h" "FormationController.cpp" "StampdownPlan.h" "StampdownPlan.cpp" "BreakpointManager.h" "BreakpointManager.cpp" "interface/QuickSkirmishMenu.h" "interface/QuickSkirmishMenu.cpp")
-target_link_libraries (wkbre2 imgui SDL2::SDL2 d3d9 ${ENET_LIBRARY} ws2_32 BZip2::BZip2 nlohmann_json::nlohmann_json OpenAL::OpenAL winmm MPG123::libmpg123 d3d11 d3dcompiler ${DISCORDRPC_LIBRARY} opengl32 GLEW::GLEW dxgi sol2 ${LUA_LIBRARIES})
+target_link_libraries (wkbre2 imgui SDL2::SDL2 d3d9 ${ENET_LIBRARY} ws2_32 BZip2::BZip2 nlohmann_json::nlohmann_json OpenAL::OpenAL winmm MPG123::libmpg123 d3d11 d3dcompiler ${DISCORDRPC_LIBRARY} opengl32 GLEW::GLEW dxgi sol2::sol2 ${LUA_LIBRARIES})
 target_include_directories(wkbre2 PRIVATE ${ENET_INCLUDE_DIR} ${DISCORDRPC_INCLUDE_DIR} ${LUA_INCLUDE_DIR})
 
 # TODO: Ajoutez des tests et installez des cibles si nécessaire.
