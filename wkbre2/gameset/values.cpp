@@ -882,6 +882,10 @@ struct EnodeRound : UnaryEnode {
 	virtual float eval(ScriptContext* ctx) override { return std::round(a->eval(ctx)); }
 };
 
+struct EnodeTrunc : UnaryEnode {
+	virtual float eval(ScriptContext* ctx) override { return std::trunc(a->eval(ctx)); }
+};
+
 // Binary equation nodes
 
 struct BinaryEnode : ValueDeterminer {
@@ -1048,6 +1052,7 @@ ValueDeterminer *ReadEquationNode(::GSFileParser &gsf, const ::GameSet &gs)
 			case Tags::ENODE_ABSOLUTE_VALUE: vd = new EnodeAbsoluteValue; break;
 			case Tags::ENODE_RANDOM_UP_TO: vd = new EnodeRandomUpTo; break;
 			case Tags::ENODE_ROUND: vd = new EnodeRound; break;
+			case Tags::ENODE_TRUNC: vd = new EnodeTrunc; break;
 			case Tags::ENODE_AND: vd = new EnodeAnd; break;
 			case Tags::ENODE_OR: vd = new EnodeOr; break;
 			case Tags::ENODE_LESS_THAN: vd = new EnodeLessThan; break;
