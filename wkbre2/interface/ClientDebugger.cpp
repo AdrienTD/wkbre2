@@ -35,7 +35,7 @@ namespace {
 		if (ImGui::BeginCombo("##Combo", "", 0))
 		{
 			for (auto &type : client->getLevel()->children) {
-				if ((type.first & 63) == Tags::GAMEOBJCLASS_PLAYER) {
+				if (type.first.bpClass() == Tags::GAMEOBJCLASS_PLAYER) {
 					for (CommonGameObject* _player : type.second) {
 						ClientGameObject* player = (ClientGameObject*)_player;
 						ImGui::PushID(player->id);

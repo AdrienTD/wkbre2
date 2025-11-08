@@ -100,7 +100,7 @@ struct GameObjBlueprint {
 		bpClass = i_bpClass; bpId = i_bpId; name = i_name; gameSet = i_gameSet;
 	}
 
-	uint32_t getFullId() const { return bpClass | (bpId << 6); }
+	uint32_t getFullId() const;
 	std::string getFullName() const;
 
 	std::tuple<std::string, float, float> getSound(int sndTag, int subtype) const;
@@ -119,3 +119,23 @@ struct GameObjBlueprint {
 private:
 	void loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir, bool overrideAnims = false);
 };
+
+class GameObjBlueprintIndex
+{
+public:
+	GameObjBlueprintIndex(int classTag, int id) : m_data(id | (classTag << 24)) {}
+	GameObjBlueprintIndex(const GameObjBlueprint* blueprint) : GameObjBlueprintIndex(blueprint->bpClass, blueprint->bpId) {}
+	int bpId() const { return m_data & 0xFFFFFF; }
+	int bpClass() const { return (m_data >> 24) & 0xFF; }
+
+	uint32_t fullId() const { return m_data; }
+	static GameObjBlueprintIndex fromFullId(uint32_t data) { return GameObjBlueprintIndex(data); }
+
+	bool operator<(const GameObjBlueprintIndex& other) const { return m_data < other.m_data; }
+	bool operator==(const GameObjBlueprintIndex& other) const { return m_data == other.m_data; }
+private:
+	GameObjBlueprintIndex(uint32_t data) : m_data(data) {}
+	uint32_t m_data;
+};
+
+inline uint32_t GameObjBlueprint::getFullId() const { return GameObjBlueprintIndex(this).fullId(); }

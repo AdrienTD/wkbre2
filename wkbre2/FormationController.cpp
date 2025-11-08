@@ -57,14 +57,14 @@ void FormationController::update()
 
 	int numMembers = 0;
 	for (auto& [childType, childList] : formation->children) {
-		if ((childType & 63) == Tags::GAMEOBJCLASS_CHARACTER) {
+		if (childType.bpClass() == Tags::GAMEOBJCLASS_CHARACTER) {
 			numMembers += childList.size();
 		}
 	}
 
 	int memberIndex = 0;
 	for (auto& [childType, childList] : formation->children) {
-		if ((childType & 63) == Tags::GAMEOBJCLASS_CHARACTER) {
+		if (childType.bpClass() == Tags::GAMEOBJCLASS_CHARACTER) {
 			for (CommonGameObject* character : childList) {
 				ServerGameObject* srvCharacter = character->dyncast<ServerGameObject>();
 				if (srvCharacter->orderConfig.getCurrentOrder() == nullptr) {

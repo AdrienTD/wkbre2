@@ -177,7 +177,7 @@ void Server::destroyObject(ServerGameObject* obj)
 		}
 
 	// remove from parent's children
-	auto& vec = obj->parent->children.at(obj->blueprint->getFullId());
+	auto& vec = obj->parent->children.at(obj->blueprint);
 	vec.erase(std::find(vec.begin(), vec.end(), obj));
 	//std::swap(*std::find(vec.begin(), vec.end(), obj), vec.back());
 	//vec.pop_back();
@@ -523,13 +523,13 @@ void ServerGameObject::setParent(ServerGameObject * newParent)
 		return;
 
 	if (this->parent) {
-		auto &vec = this->parent->children[this->blueprint->getFullId()];
+		auto &vec = this->parent->children[this->blueprint];
 		vec.erase(std::remove(vec.begin(), vec.end(), this), vec.end()); // is order important?
 	}
 	auto* oldParent = this->parent;
 	this->parent = newParent;
 	if(newParent)
-		newParent->children[this->blueprint->getFullId()].push_back(this);
+		newParent->children[this->blueprint].push_back(this);
 
 	NetPacketWriter msg(NETCLIMSG_OBJECT_PARENT_SET);
 	msg.writeUint32(this->id);
@@ -710,10 +710,10 @@ void ServerGameObject::clearAssociates(int category)
 void ServerGameObject::convertTo(const GameObjBlueprint * postbp)
 {
 	// remove from parent's children
-	auto &vec = parent->children.at(blueprint->getFullId());
+	auto &vec = parent->children.at(blueprint);
 	vec.erase(std::find(vec.begin(), vec.end(), this));
 	// add it back at the correct blueprint key
-	parent->children[postbp->getFullId()].push_back(this);
+	parent->children[postbp].push_back(this);
 	// backup of previous blueprint
 	const GameObjBlueprint* prevbp = blueprint;
 	// now converted!

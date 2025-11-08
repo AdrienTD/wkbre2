@@ -16,6 +16,7 @@
 #include "GameObjectRef.h"
 #include "Trajectory.h"
 #include "tags.h"
+#include "gameset/GameObjBlueprint.h"
 
 struct GameObjBlueprint;
 struct Model;
@@ -32,7 +33,7 @@ struct CommonGameObject {
 	const GameObjBlueprint* blueprint;
 
 	CommonGameObject* parent;
-	std::map<int, std::vector<CommonGameObject*>> children;
+	std::map<GameObjBlueprintIndex, std::vector<CommonGameObject*>> children;
 
 	std::map<int, float> items;
 	std::map<std::pair<int, int>, float> indexedItems;

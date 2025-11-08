@@ -137,8 +137,8 @@ struct GameSet
 	}
 
 	const GameObjBlueprint* getBlueprint(uint32_t fullId) const {
-		uint32_t clid = fullId & 63, tyid = fullId >> 6;
-		return &objBlueprints[clid][tyid];
+		const auto bpIndex = GameObjBlueprintIndex::fromFullId(fullId);
+		return &objBlueprints[bpIndex.bpClass()][bpIndex.bpId()];
 	}
 
 	const GameObjBlueprint* readObjBlueprintPtr(GSFileParser& gsf) const;

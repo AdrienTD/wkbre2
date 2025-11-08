@@ -1000,7 +1000,7 @@ struct ActionCreateFormation : Action {
 			if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
 				printf("from formation %s %i\n", obj->blueprint->getFullName().c_str(), obj->id);
 				for (auto& [unitType, units] : obj->children) {
-					if ((unitType & 63) == Tags::GAMEOBJCLASS_CHARACTER) {
+					if (unitType.bpClass() == Tags::GAMEOBJCLASS_CHARACTER) {
 						auto unitsCopy = units;
 						for (CommonGameObject* unit : unitsCopy) {
 							assert(unit->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER);

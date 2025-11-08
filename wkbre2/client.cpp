@@ -186,12 +186,12 @@ void Client::tick()
 				info("Object %u is parented to object %u.\n", objid, parentid);
 				ClientGameObject *obj = findObject(objid), *newParent = findObject(parentid);
 				if (obj->parent) {
-					auto &vec = obj->parent->children[obj->blueprint->getFullId()];
+					auto &vec = obj->parent->children[obj->blueprint];
 					vec.erase(std::remove(vec.begin(), vec.end(), obj), vec.end()); // is order important?
 				}
 				obj->parent = newParent;
 				if (newParent)
-					newParent->children[obj->blueprint->getFullId()].push_back(obj);
+					newParent->children[obj->blueprint].push_back(obj);
 				break;
 			}
 			case NETCLIMSG_TERRAIN_SET: {
@@ -280,7 +280,7 @@ void Client::tick()
 				uint32_t objid = br.readUint32();
 				if (ClientGameObject *obj = findObject(objid)) {
 					// remove from parent's children
-					auto &vec = obj->parent->children.at(obj->blueprint->getFullId());
+					auto &vec = obj->parent->children.at(obj->blueprint);
 					vec.erase(std::find(vec.begin(), vec.end(), obj));
 					// remove from ID map
 					idmap.erase(obj->id);
@@ -295,10 +295,10 @@ void Client::tick()
 				if (ClientGameObject *obj = findObject(objid)) {
 					const GameObjBlueprint *postbp = gameSet->getBlueprint(postbpid);
 					// remove from parent's children
-					auto &vec = obj->parent->children.at(obj->blueprint->getFullId());
+					auto &vec = obj->parent->children.at(obj->blueprint);
 					vec.erase(std::find(vec.begin(), vec.end(), obj));
 					// add it back at the correct blueprint key
-					obj->parent->children[postbp->getFullId()].push_back(obj);
+					obj->parent->children[postbp].push_back(obj);
 					// now converted!
 					obj->blueprint = postbp;
 				}

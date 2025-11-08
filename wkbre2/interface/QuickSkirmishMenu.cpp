@@ -131,7 +131,7 @@ void QuickSkirmishMenu::applySettings(Server& server)
 			"Ichthyus Granitas Kingmaker",
 		};
 		int remainingAiTypes = std::size(aiPlayerNames);
-		auto playerList = server.getLevel()->children.at(humanPlayer->getFullId());
+		auto playerList = server.getLevel()->children.at(humanPlayer);
 		for (auto& obj : playerList) {
 			if (obj->id == 1027)
 				continue;

@@ -163,7 +163,7 @@ struct FinderPlayers : ObjectFinder {
 		Server *server = Server::instance;
 		ObjectFinderResult res;
 		for (auto &it : server->getLevel()->children) {
-			if ((it.first & 63) == Tags::GAMEOBJCLASS_PLAYER)
+			if (it.first.bpClass() == Tags::GAMEOBJCLASS_PLAYER)
 				for (CommonGameObject *player : it.second)
 					if (auto _ = ctx->change(ctx->candidate, player->dyncast<CommonGameObject>()))
 						if (server->gameSet->equations[equation]->eval(ctx))
@@ -330,11 +330,11 @@ struct FinderSelectedObject : ObjectFinder {
 struct FinderAgAllOfType : ObjectFinder {
 	const GameObjBlueprint* blueprint;
 	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
-		uint32_t bpid = blueprint->getFullId();
+		const auto bpIndex = GameObjBlueprintIndex(blueprint);
 		ObjectFinderResult vec;
-		auto walk = [bpid, &vec](CommonGameObject* obj, auto& rec) -> void {
+		auto walk = [bpIndex, &vec](CommonGameObject* obj, auto& rec) -> void {
 			for (const auto& subords : obj->children) {
-				if (subords.first == bpid) {
+				if (subords.first == bpIndex) {
 					for (CommonGameObject* sub : subords.second) {
 						vec.push_back((CommonGameObject*)sub);
 					}

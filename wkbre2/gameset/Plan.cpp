@@ -143,7 +143,7 @@ struct PFNDeployArmyFrom : PlanNodeBlueprint {
 			// TODO: spawn unit from the correct building
 			std::vector<ServerGameObject*> buildingCandidates;
 			for (auto& ct : settlement->children) {
-				if ((ct.first & 63) == Tags::GAMEOBJCLASS_BUILDING)
+				if (ct.first.bpClass() == Tags::GAMEOBJCLASS_BUILDING)
 					for(CommonGameObject* obj : ct.second)
 						buildingCandidates.push_back((ServerGameObject*)obj);
 			}
