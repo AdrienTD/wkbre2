@@ -114,15 +114,22 @@ QuickStartMenu::~QuickStartMenu()
 void QuickStartMenu::draw()
 {	
 	ImGui::Begin("Select sav");
+	
 	ImGui::PushItemWidth(-1.0f);
-	ImGui::BeginListBox("##SaveBox");
-	for (size_t i = 0; i < savegames.size(); i++) {
-		if (ImGui::Selectable(savegames[i].c_str(), savselected == i)) {
-			savselected = i;
+	ImVec2 boxSize = ImGui::GetContentRegionAvail();
+	boxSize.y -= ImGui::GetFrameHeightWithSpacing();
+	if (ImGui::BeginListBox("##SaveBox", boxSize)) {
+		for (size_t i = 0; i < savegames.size(); i++) {
+			if (ImGui::Selectable(savegames[i].c_str(), savselected == i, ImGuiSelectableFlags_AllowDoubleClick)) {
+				savselected = i;
+				if (!showHostWnd && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+					modeChosen = MODE_SINGLEPLAYER;
+			}
 		}
+		ImGui::EndListBox();
 	}
-	ImGui::EndListBox();
 	ImGui::PopItemWidth();
+
 	if (ImGui::Button("Load"))
 		modeChosen = MODE_SINGLEPLAYER;
 	ImGui::SameLine();
