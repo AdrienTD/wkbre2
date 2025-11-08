@@ -10,7 +10,7 @@
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #define STBIR_DEFAULT_FILTER_DOWNSAMPLE  STBIR_FILTER_BOX
-#include <stb_image_resize.h>
+#include <stb_image_resize2.h>
 
 Bitmap Bitmap::loadBitmap(const char *fn)
 {
@@ -329,6 +329,7 @@ Bitmap Bitmap::resize(int nwidth, int nheight) const {
 	int npitch = nwidth * 4;
 	int totalSize = npitch * nheight;
 	res.pixels.resize(totalSize);
-	stbir_resize_uint8(original.pixels.data(), original.width, original.height, original.width * 4, res.pixels.data(), res.width, res.height, npitch, 4);
+	stbir_resize_uint8_linear(original.pixels.data(), original.width, original.height, original.width * 4,
+		res.pixels.data(), res.width, res.height, npitch, STBIR_RGBA);
 	return res;
 }
