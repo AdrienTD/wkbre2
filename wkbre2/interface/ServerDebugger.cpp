@@ -63,42 +63,67 @@ void ServerDebugger::draw() {
 			sel->setOrientation(newori);
 
 		ImGui::Text("Subtype=%i, Appearance=%i", sel->subtype, sel->appearance);
-		ImGui::Text("Items:");
-		for (auto &item : sel->items)
-			if (item.first != -1)
-				ImGui::BulletText("\"%s\": %f", server->gameSet->items.names.getString(item.first).c_str(), item.second);
-
-		ImGui::Text("Orders:");
-		if (ImGui::Button("Add")) {
-			ImGui::OpenPopup("AddNewOrder");
+		
+		if (ImGui::CollapsingHeader("Items")) {
+			for (auto& item : sel->items)
+				if (item.first != -1)
+					ImGui::BulletText("\"%s\": %f", server->gameSet->items.names.getString(item.first).c_str(), item.second);
 		}
-		if (ImGui::BeginPopup("AddNewOrder")) {
-			for (auto &it : server->gameSet->orders.names.str2idMap) {
-				if (ImGui::Selectable(it.first.c_str())) {
-					sel->orderConfig.addOrder(&server->gameSet->orders[it.second]);
+
+		auto listAssociations = [&](const decltype(ServerGameObject::associates)& ascMap) {
+			for (auto& [tag, objList] : ascMap) {
+				if (!objList.empty()) {
+					std::string str = server->gameSet->associations.names.getString(tag);
+					str += ':';
+					for (const auto& ref : objList) {
+						if (auto* obj = ref.get()) {
+							str += ' ';
+							str += std::to_string(obj->id);
+						}
+					}
+					ImGui::TextUnformatted(str.c_str());
 				}
 			}
-			ImGui::EndPopup();
+			};
+		if (ImGui::CollapsingHeader("Associates")) {
+			listAssociations(sel->associates);
 		}
-		for (auto &order : sel->orderConfig.orders) {
-			if (ImGui::TreeNode(&order, "Order %i s%i: %s", order.id, order.state, server->gameSet->orders.names.getString(order.blueprint->bpid).c_str())) {
-				if (ImGui::Button("Break there")) {
-					__debugbreak();
-				}
-				for (auto& task : order.tasks) {
-					if (ImGui::TreeNode(task.get(), "Task %i s%i: %s", task->id, task->state, server->gameSet->tasks.names.getString(task->blueprint->bpid).c_str())) {
-						ImGui::TreePop();
+		if (ImGui::CollapsingHeader("Associators")) {
+			listAssociations(sel->associators);
+		}
+
+		if (ImGui::CollapsingHeader("Orders")) {
+			if (ImGui::Button("Add")) {
+				ImGui::OpenPopup("AddNewOrder");
+			}
+			if (ImGui::BeginPopup("AddNewOrder")) {
+				for (auto& it : server->gameSet->orders.names.str2idMap) {
+					if (ImGui::Selectable(it.first.c_str())) {
+						sel->orderConfig.addOrder(&server->gameSet->orders[it.second]);
 					}
 				}
-				ImGui::TreePop();
+				ImGui::EndPopup();
 			}
-		}
-		if (ImGui::Button("Move to center")) {
-			sel->startMovement(Vector3((float)(server->terrain->width - 2 * server->terrain->edge), 0.0f, (float)(server->terrain->height - 2 * server->terrain->edge)) * 5.0f);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Stop movement")) {
-			sel->stopMovement();
+			for (auto& order : sel->orderConfig.orders) {
+				if (ImGui::TreeNode(&order, "Order %i s%i: %s", order.id, order.state, server->gameSet->orders.names.getString(order.blueprint->bpid).c_str())) {
+					if (ImGui::Button("Break there")) {
+						__debugbreak();
+					}
+					for (auto& task : order.tasks) {
+						if (ImGui::TreeNode(task.get(), "Task %i s%i: %s", task->id, task->state, server->gameSet->tasks.names.getString(task->blueprint->bpid).c_str())) {
+							ImGui::TreePop();
+						}
+					}
+					ImGui::TreePop();
+				}
+			}
+			if (ImGui::Button("Move to center")) {
+				sel->startMovement(Vector3((float)(server->terrain->width - 2 * server->terrain->edge), 0.0f, (float)(server->terrain->height - 2 * server->terrain->edge)) * 5.0f);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Stop movement")) {
+				sel->stopMovement();
+			}
 		}
 	}
 	else
