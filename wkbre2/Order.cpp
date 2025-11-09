@@ -275,8 +275,10 @@ Order* OrderConfiguration::addOrder(const OrderBlueprint* orderBlueprint, int as
 		break;
 	case Tags::ORDERASSIGNMODE_FORGET_EVERYTHING_ELSE:
 		this->cancelAllOrders();
+		this->orders.emplace_front(this->nextOrderId++, orderBlueprint, gameobj);
+		neworder = &this->orders.front();
 		orderInFront = true;
-		[[fallthrough]];
+		break;
 	default:
 	case Tags::ORDERASSIGNMODE_DO_LAST:
 		// should orderInFront be set to true if no other orders present?
@@ -318,6 +320,8 @@ void OrderConfiguration::process()
 	while (!orders.empty() && orders.front().isDone()) {
 		orders.pop_front();
 	}
+	const auto itEnd = std::remove_if(orders.begin(), orders.end(), [](const Order& order) {return order.isDone(); });
+	orders.erase(itEnd, orders.end());
 	if (!orders.empty()) {
 		orders.front().process();
 	}
