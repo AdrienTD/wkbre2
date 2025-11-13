@@ -259,7 +259,7 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_ARMY:
 			case Tags::GAMESET_MISSILE:
 			case Tags::GAMESET_TERRAIN_ZONE:
-			//case Tags::GAMESET_USER:
+			case Tags::GAMESET_USER:
 			{
 				int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
 				objBlueprints[cls].names.insertString(gsf.nextString(true));
@@ -305,7 +305,7 @@ void GameSet::parseFile(const char * fn, int pass)
 			case Tags::GAMESET_ARMY:
 			case Tags::GAMESET_MISSILE:
 			case Tags::GAMESET_TERRAIN_ZONE:
-			//case Tags::GAMESET_USER:
+			case Tags::GAMESET_USER:
 			{
 				int cls = Tags::GAMEOBJCLASS_tagDict.getTagID(strtag.c_str());
 				std::string name = gsf.nextString(true);

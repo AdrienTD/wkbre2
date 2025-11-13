@@ -14,7 +14,8 @@ private:
 	enum GameMode {
 		DevMode,
 		StandardMode,
-		ValhallaMode
+		ValhallaMode,
+		CampaignMode
 	};
 	GameMode mode = DevMode;
 
@@ -29,11 +30,15 @@ private:
 	bool allowDiplomacy = false;
 	bool teamReconnaissance = false;
 	bool barbarianTribes = false;
-	bool campaignMode = false;
 
 	int resourcePoints = 2500;
 	int victoryPointLimit = 10000;
 	int valhallaModeFood = 20000;
 	int unitLives = 0;
 	int capturableFlags = 4;
+
+	int originalCampaignCelestialPath = 0;
+	int battlesCampaignImperialTechLevel = 0;
+	int battlesCampaignPaganTechLevel = 0;
+	int battlesCampaignRenaissanceTechLevel = 0;
 };

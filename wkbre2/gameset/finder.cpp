@@ -313,6 +313,16 @@ struct FinderCollisionSubject : ObjectFinder {
 
 struct FinderUser : ObjectFinder {
 	virtual ObjectFinderResult eval(ScriptContext* ctx) override {
+		auto* firstPlayerObj = ctx->gameState->findObject(1027);
+		if (firstPlayerObj) {
+			for (auto& [typeIndex, childList] : firstPlayerObj->children) {
+				if (typeIndex.bpClass() == Tags::GAMEOBJCLASS_USER) {
+					if (!childList.empty()) {
+						return { childList[0] };
+					}
+				}
+			}
+		}
 		return {};
 	}
 	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {}

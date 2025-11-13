@@ -17,6 +17,7 @@ void QuickSkirmishMenu::imguiWindow()
 	if (isWKBattles) {
 		ImGui::RadioButton("Valhalla mode", &modeSelection, (int)ValhallaMode);
 	}
+	ImGui::RadioButton("Campaign mode", &modeSelection, (int)CampaignMode);
 	mode = (GameMode)modeSelection;
 
 	ImGui::PushItemWidth(200.0f);
@@ -39,7 +40,6 @@ void QuickSkirmishMenu::imguiWindow()
 			ImGui::Checkbox("Allow Diplomacy", &allowDiplomacy);
 			ImGui::Checkbox("Team Reconnaissance", &teamReconnaissance);
 			ImGui::Checkbox("Barbarian Tribes", &barbarianTribes);
-			ImGui::Checkbox("Campaign Mode", &campaignMode);
 		}
 		else {
 			ImGui::SeparatorText("Victory Condition");
@@ -55,6 +55,24 @@ void QuickSkirmishMenu::imguiWindow()
 		ImGui::InputInt("Unit Lives", &unitLives);
 		ImGui::InputInt("Capturable Flags", &capturableFlags);
 		ImGui::Checkbox("Clear Fog of War", &clearFogOfWar);
+	}
+	else if (mode == CampaignMode) {
+		if (isWKBattles) {
+			ImGui::SeparatorText("User progress");
+			ImGui::InputInt("Start Food", &startFood, 50, 100);
+			ImGui::InputInt("Start Wood", &startWood, 50, 100);
+			ImGui::InputInt("Start Gold", &startGold, 50, 100);
+			ImGui::InputInt("Population Limit", &populationLimit, 10, 50);
+			ImGui::InputInt("Pagan Tech Level", &battlesCampaignPaganTechLevel);
+			ImGui::InputInt("Imperial Tech Level", &battlesCampaignImperialTechLevel);
+			ImGui::InputInt("Renaissance Tech Level", &battlesCampaignRenaissanceTechLevel);
+		}
+		else {
+			ImGui::SeparatorText("Campaign Path");
+			ImGui::Text("Side alignment for Renaissance missions:");
+			ImGui::RadioButton("Pagan", &originalCampaignCelestialPath, 0);
+			ImGui::RadioButton("Imperial", &originalCampaignCelestialPath, 1);
+		}
 	}
 
 	ImGui::PopItemWidth();
@@ -96,7 +114,6 @@ void QuickSkirmishMenu::applySettings(Server& server)
 		if (isWKBattles) {
 			setItemByName(level, "Amount of Resources", randomiseResources);
 			setItemByName(level, "Random Barbarians Chosen", barbarianTribes);
-			setItemByName(level, "Skirmish Campaign Level", campaignMode);
 		}
 	}
 
@@ -114,6 +131,30 @@ void QuickSkirmishMenu::applySettings(Server& server)
 					setItemByName(obj, "No. Of Lives Left", unitLives);
 
 				}
+			}
+		}
+	}
+
+	if (mode == CampaignMode) {
+		const GameObjBlueprint* userBlueprint = server.gameSet->findBlueprint(Tags::GAMEOBJCLASS_USER, "Default");
+		ServerGameObject* firstPlayerObject = server.findObject(1027);
+
+		if (userBlueprint && firstPlayerObject) {
+			ServerGameObject* userObject = server.createObject(userBlueprint);
+			userObject->setParent(firstPlayerObject);
+
+			if (isWKBattles) {
+				setItemByName(level, "Skirmish Campaign Level", 1.0f);
+				setItemByName(userObject, "Food", startFood);
+				setItemByName(userObject, "Wood", startWood);
+				setItemByName(userObject, "Gold", startGold);
+				setItemByName(userObject, "Total Population Count", populationLimit);
+				setItemByName(userObject, "Pagan Tech Level", battlesCampaignPaganTechLevel);
+				setItemByName(userObject, "Imperial Tech Level", battlesCampaignImperialTechLevel);
+				setItemByName(userObject, "Renaissance Tech Level", battlesCampaignRenaissanceTechLevel);
+			}
+			else {
+				setItemByName(userObject, "Chosen Celestial", originalCampaignCelestialPath);
 			}
 		}
 	}
