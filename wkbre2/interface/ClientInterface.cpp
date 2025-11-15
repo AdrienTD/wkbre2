@@ -298,6 +298,7 @@ void ClientInterface::drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t ob
 void ClientInterface::iter()
 {
 	static Vector3 peapos(0, 0, 0);
+	static bool showTerrain = true;
 
 	static bool firstTime = true;
 	static WndCursor *arrowCursor;
@@ -549,7 +550,7 @@ void ClientInterface::iter()
 				client->sendTerminateObject(sel);
 	}
 
-	static bool debuggerOn = true;
+	static bool debuggerOn = false;
 	static bool uiScriptOn = true;
 	if (g_keyPressed[SDL_SCANCODE_F2]) {
 		debuggerOn = !debuggerOn;
@@ -582,28 +583,29 @@ void ClientInterface::iter()
 	//----- ImGui -----//
 
 	ImGuiImpl_NewFrame();
-	if (debuggerOn)
+	if (debuggerOn) {
 		debugger.draw();
-	ImGui::Begin("Client Interface Debug");
-	ImGui::Text("ODPF: %i", numObjectsDrawn);
-	ImGui::Text("FPS: %i", framesPerSecond);
-	ImGui::DragFloat3("peapos", &peapos.x);
-	if (ImGui::Button("Start level"))
-		client->sendStartLevelRequest();
-	static bool showTerrain = true;
-	ImGui::Checkbox("Terrain", &showTerrain);
+
+		ImGui::Begin("Client Interface Debug");
+		ImGui::Text("ODPF: %i", numObjectsDrawn);
+		ImGui::Text("FPS: %i", framesPerSecond);
+		ImGui::DragFloat3("peapos", &peapos.x);
+		if (ImGui::Button("Start level"))
+			client->sendStartLevelRequest();
+		ImGui::Checkbox("Terrain", &showTerrain);
 #ifdef _WIN32
-	if (g_settings.value<bool>("enhancedGraphics", false)) {
-		if (D3D11EnhancedTerrainRenderer* etr = static_cast<D3D11EnhancedTerrainRenderer*>(terrainRenderer)) {
-			if (client->terrain)
-				ImGui::DragFloat3("Sun", &client->terrain->sunVector.x, 0.1f);
-			etr->m_lampPos = peapos + Vector3(0, 4, 0);
-			ImGui::DragFloat3("Lamp", &etr->m_lampPos.x, 0.1f);
-			ImGui::Checkbox("Bump", &etr->m_bumpOn);
+		if (g_settings.value<bool>("enhancedGraphics", false)) {
+			if (D3D11EnhancedTerrainRenderer* etr = static_cast<D3D11EnhancedTerrainRenderer*>(terrainRenderer)) {
+				if (client->terrain)
+					ImGui::DragFloat3("Sun", &client->terrain->sunVector.x, 0.1f);
+				etr->m_lampPos = peapos + Vector3(0, 4, 0);
+				ImGui::DragFloat3("Lamp", &etr->m_lampPos.x, 0.1f);
+				ImGui::Checkbox("Bump", &etr->m_bumpOn);
+			}
 		}
-	}
 #endif
-	ImGui::End();
+		ImGui::End();
+	}
 
 	for (auto& activeGtw : client->gtwStates) {
 		if (activeGtw.second == -1) continue;
