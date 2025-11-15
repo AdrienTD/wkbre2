@@ -91,6 +91,9 @@ QuickStartMenu::QuickStartMenu(IRenderer* gfx) : gfx(gfx)
 	auto* gsl = ListFiles("Save_Games");
 	savegames = std::move(*gsl);
 	delete gsl;
+	if (!savegames.empty()) {
+		skirmishMenu.changeSettingsForLevel(savegames[0]);
+	}
 	//SoundPlayer::getSoundPlayer()->playMusic("Warrior Kings Game Set\\Sounds\\Music\\title_version_2.mp2");
 	
 	server = new Server;
@@ -122,6 +125,7 @@ void QuickStartMenu::draw()
 		for (size_t i = 0; i < savegames.size(); i++) {
 			if (ImGui::Selectable(savegames[i].c_str(), savselected == i, ImGuiSelectableFlags_AllowDoubleClick)) {
 				savselected = i;
+				skirmishMenu.changeSettingsForLevel(savegames[i]);
 				if (!showHostWnd && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 					modeChosen = MODE_SINGLEPLAYER;
 			}

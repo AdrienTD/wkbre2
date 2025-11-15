@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 class Server;
 
 class QuickSkirmishMenu
@@ -8,6 +10,7 @@ public:
 	QuickSkirmishMenu() = default;
 
 	void imguiWindow();
+	void changeSettingsForLevel(std::string_view levelName);
 	void applySettings(Server& server);
 
 private:

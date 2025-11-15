@@ -2,9 +2,12 @@
 #include "../server.h"
 #include "../imgui/imgui.h"
 #include "../gameset/gameset.h"
+#include "../util/StriCompare.h"
 
 #include "../settings.h"
 #include <nlohmann/json.hpp>
+
+#include <regex>
 
 void QuickSkirmishMenu::imguiWindow()
 {
@@ -76,6 +79,57 @@ void QuickSkirmishMenu::imguiWindow()
 	}
 
 	ImGui::PopItemWidth();
+}
+
+void QuickSkirmishMenu::changeSettingsForLevel(std::string_view levelName)
+{
+	// If it is not a LVL (such as SAV), then always use DevMode (to not restart the level).
+	const auto dotPosition = levelName.rfind('.');
+	if (dotPosition == levelName.npos || StrCICompare(levelName.substr(dotPosition + 1), "lvl") != 0) {
+		mode = DevMode;
+		return;
+	}
+
+	// Tutorial
+	const char* tutorialNames[] = {
+		"Advanced Economy.lvl",
+		"Advanced Military.lvl",
+		"Basic Economy.lvl",
+		"Basic Military.lvl",
+		"Interactive Tutorial.lvl"
+	};
+	for (const auto& tutoName : tutorialNames) {
+		if (StrCICompare(levelName, tutoName) == 0) {
+			mode = CampaignMode;
+			return;
+		}
+	}
+
+	// Original Campaign level
+	if (StrCICompare(levelName, "Prologue.lvl") == 0) {
+		mode = CampaignMode;
+		return;
+	}
+	if (std::regex_search(levelName.begin(), levelName.end(), std::regex("Level \\d+ - ", std::regex_constants::icase))) {
+		mode = CampaignMode;
+		return;
+	}
+
+	// Battles Campaign level
+	// They can generally be used in Standard, Valhalla and Campaign mode.
+	// But prefer Campaign mode for now.
+	if (StrCICompare(levelName.substr(0, 4), "CH2_") == 0) {
+		const bool isMulti = StrCICompare(levelName.substr(std::max(0, (int)dotPosition - 6), 6), "_Multi") == 0;
+		if (!isMulti) {
+			mode = CampaignMode;
+			return;
+		}
+	}
+
+	// Otherwise it is a regular skirmish map level
+	if (mode != ValhallaMode) {
+		mode = StandardMode;
+	}
 }
 
 void QuickSkirmishMenu::applySettings(Server& server)
