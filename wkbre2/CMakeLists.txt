@@ -23,8 +23,12 @@ message(${ENET_LIBRARY})
 message(${ENET_INCLUDE_DIR})
 
 # Find Discord-RPC
-find_path(DISCORDRPC_INCLUDE_DIR discord_rpc.h)
-find_library(DISCORDRPC_LIBRARY discord-rpc)
+option(USE_DISCORD "Enables the most useless feature of all time. Setting it up and using it will waste tons of time. Not recommended if you want to keep your precious time." OFF)
+if(${USE_DISCORD})
+  find_path(DISCORDRPC_INCLUDE_DIR discord_rpc.h)
+  find_library(DISCORDRPC_LIBRARY discord-rpc)
+  add_compile_definitions(HAS_DISCORD)
+endif()
 
 # Ajoutez une source à l'exécutable de ce projet.
 add_executable (wkbre2 "wkbre2.cpp" "wkbre2.h" "file.cpp" "file.h" "lzrw3.c" "lzrw_headers.h" "util/util.cpp" "util/util.h" "util/GSFileParser.cpp" "util/GSFileParser.h"
@@ -35,7 +39,7 @@ add_executable (wkbre2 "wkbre2.cpp" "wkbre2.h" "file.cpp" "file.h" "lzrw3.c" "lz
 "util/DynArray.h" "netenetlink.cpp" "netenetlink.h" "gfx/SceneRenderer.h" "gfx/DefaultSceneRenderer.cpp" "gfx/DefaultSceneRenderer.h" "gameset/command.cpp" "gameset/command.h"
 "interface/ServerDebugger.cpp" "interface/ServerDebugger.h" "interface/ClientDebugger.cpp" "interface/ClientDebugger.h" "anim.cpp" "anim.h" "gfx/TerrainRenderer.h"
 "gfx/DefaultTerrainRenderer.cpp" "gfx/DefaultTerrainRenderer.h" "Camera.cpp" "Camera.h" "interface/ClientInterface.cpp" "interface/ClientInterface.h" "Model.cpp" "Model.h"
-"scene.cpp" "scene.h" "TimeManager.cpp" "TimeManager.h" "gameset/OrderBlueprint.cpp" "gameset/OrderBlueprint.h" "order.cpp" "order.h" "Movement.cpp" "Movement.h" "GameObjectRef.h"
+"scene.cpp" "scene.h" "TimeManager.cpp" "TimeManager.h" "gameset/OrderBlueprint.cpp" "gameset/OrderBlueprint.h" "Order.cpp" "Order.h" "Movement.cpp" "Movement.h" "GameObjectRef.h"
 "gameset/CommonEval.h" "gameset/position.cpp" "gameset/position.h" "gameset/reaction.cpp" "gameset/reaction.h" "gameset/ObjectCreation.cpp" "gameset/ObjectCreation.h"
 "NNSearch.cpp" "NNSearch.h" "gameset/ScriptContext.cpp" "gameset/ScriptContext.h" "gameset/condition.cpp" "gameset/condition.h" "gameset/GameTextWindow.h" "gameset/GameTextWindow.cpp"
 "gameset/Package.h" "gameset/Package.cpp" "gameset/3DClip.h" "gameset/3DClip.cpp" "settings.cpp" "settings.h" "gameset/cameraPath.h" "gameset/cameraPath.cpp" "Language.h" "Language.cpp"
@@ -45,8 +49,35 @@ add_executable (wkbre2 "wkbre2.cpp" "wkbre2.h" "file.cpp" "file.h" "lzrw3.c" "lz
 "ParticleContainer.cpp" "gfx/ParticleRenderer.h" "gfx/DefaultParticleRenderer.h" "gfx/DefaultParticleRenderer.cpp" "gfx/renderer_ogl3.cpp" "gfx/D3D11EnhancedTerrainRenderer.cpp"
 "gfx/D3D11EnhancedTerrainRenderer.h" "gfx/renderer_d3d11.h" "gfx/D3D11EnhancedSceneRenderer.h" "gfx/D3D11EnhancedSceneRenderer.cpp" "gameset/Plan.cpp" "gameset/Plan.h"  "AIController.h" "AIController.cpp"
 "gameset/ArmyCreationSchedule.h" "gameset/ArmyCreationSchedule.cpp" "gameset/WorkOrder.h" "gameset/WorkOrder.cpp" "common.cpp" "gameset/Commission.h" "gameset/Commission.cpp"
-"FormationController.h" "FormationController.cpp" "StampdownPlan.h" "StampdownPlan.cpp" "BreakpointManager.h" "BreakpointManager.cpp" "interface/QuickSkirmishMenu.h" "interface/QuickSkirmishMenu.cpp")
-target_link_libraries (wkbre2 imgui SDL2::SDL2 d3d9 ${ENET_LIBRARY} ws2_32 BZip2::BZip2 nlohmann_json::nlohmann_json OpenAL::OpenAL winmm MPG123::libmpg123 d3d11 d3dcompiler ${DISCORDRPC_LIBRARY} opengl32 GLEW::GLEW dxgi sol2::sol2 ${LUA_LIBRARIES})
-target_include_directories(wkbre2 PRIVATE ${ENET_INCLUDE_DIR} ${DISCORDRPC_INCLUDE_DIR} ${LUA_INCLUDE_DIR})
+"FormationController.h" "FormationController.cpp" "StampdownPlan.h" "StampdownPlan.cpp" "BreakpointManager.h" "BreakpointManager.cpp" "interface/QuickSkirmishMenu.h" "interface/QuickSkirmishMenu.cpp"
+"platform.cpp")
+target_link_libraries (wkbre2
+  imgui
+  SDL2::SDL2
+  ${ENET_LIBRARY}
+  BZip2::BZip2
+  nlohmann_json::nlohmann_json
+  OpenAL::OpenAL
+  MPG123::libmpg123
+  $<$<BOOL:${USE_DISCORD}>:${DISCORDRPC_LIBRARY}>
+  GLEW::GLEW
+  sol2::sol2
+  ${LUA_LIBRARIES}
+  $<$<PLATFORM_ID:Windows>:
+    d3d9
+    ws2_32
+    winmm
+    d3d11
+    d3dcompiler
+    opengl32
+    dxgi
+  >
+)
+target_include_directories(wkbre2
+  PRIVATE
+  ${ENET_INCLUDE_DIR}
+  $<$<BOOL:${USE_DISCORD}>:${DISCORDRPC_INCLUDE_DIR}>
+  ${LUA_INCLUDE_DIR}
+)
 
 # TODO: Ajoutez des tests et installez des cibles si nécessaire.

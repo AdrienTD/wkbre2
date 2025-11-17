@@ -19,9 +19,6 @@
 #include "../netenetlink.h"
 #include <enet/enet.h>
 
-#ifdef _WIN32
-#define HAS_DISCORD
-#endif
 #ifdef HAS_DISCORD
 #include <discord_rpc.h>
 #endif
