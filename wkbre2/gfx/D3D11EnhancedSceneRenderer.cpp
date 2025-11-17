@@ -2,6 +2,8 @@
 // (C) 2021 AdrienTD
 // Licensed under the GNU General Public License 3
 
+#ifdef _WIN32
+
 #include "D3D11EnhancedSceneRenderer.h"
 #include "../Model.h"
 #include "../scene.h"
@@ -471,3 +473,5 @@ void D3D11EnhancedSceneRenderer::render()
 
 	dimm->IASetInputLayout(((D3D11Renderer*)gfx)->ddInputLayout);
 }
+
+#endif // _WIN32

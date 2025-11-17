@@ -109,7 +109,7 @@ void ImGuiImpl_NewFrame()
 	io.DisplaySize = ImVec2((float)g_windowWidth, (float)g_windowHeight);
 
 	uint32_t newtime = SDL_GetTicks();
-	io.DeltaTime = (newtime - iglasttime) / 1000.f;
+	io.DeltaTime = std::max((newtime - iglasttime) / 1000.f, 0.001f);
 	iglasttime = newtime;
 
 	SDL_Keymod kmod = SDL_GetModState();
