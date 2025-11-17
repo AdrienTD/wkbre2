@@ -7,6 +7,7 @@
 #include "gfx/renderer.h"
 #include "gfx/bitmap.h"
 #include "window.h"
+#include <algorithm>
 #include <cstdint>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
