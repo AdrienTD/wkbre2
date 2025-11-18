@@ -117,35 +117,32 @@ and image quality.
 
 ## Compiling
 
-### Windows
+You need a C++ compiler that complies to the C++17 standard.
+On Windows, it will work with Visual Studio 2019 and later versions (though VS 2022 is recommended).
 
-For compiling you need:
- - Visual Studio 2019 (2017 might still work, older versions weren't tested)
- - vcpkg with the following packages installed:
-   - bzip2
-   - discord-rpc
-   - enet
-   - glew
-   - mpg123
-   - nlohmann-json
-   - openal-soft
-   - sdl2
-   - stb
- - Ensure that [vcpkg integration](https://docs.microsoft.com/en-us/cpp/build/integrate-vcpkg) is applied
+This project uses [CMake](https://cmake.org/) to generate the projects/makefiles that can build wkbre2.
 
-Then you just need to open the root folder of this repo in Visual Studio as a CMake project,
-then compile the project.
+The dependencies needed to build the project can be easily installed via [vcpkg](https://vcpkg.io), which works on both Windows and Linux.
 
-### Ubuntu
+The following packages need to be installed via `vcpkg install`:
+ - bzip2
+ - enet
+ - glew
+ - lua
+ - mpg123
+ - nlohmann-json
+ - openal-soft
+ - sdl2
+ - sol2
+ - stb
 
-**NOTE**: Right now the building process is bad. I tried using CMake and vcpkg on Ubuntu but
-had some trouble, and I'm not used to Linux. Thus for now there is a regular Makefile instead. I hope I can manage
-to make the CMake files run on Ubuntu too in the future.
+On Windows, if you use Visual Studio, then you can open the root folder of this repository as a CMake project, and compile the project.
 
-- Open a terminal.
-- `cd <repo root>`
-- `sudo apt-get install libbz2-dev libenet-dev libglew-dev libmpg123-dev nlohmann-json3-dev libopenal-dev libsdl2-dev`
-- `mkdir inc`
-- Download the [stb headers](https://github.com/nothings/stb) and copy them to the inc folder
-- `cd wkbre2`
-- `make -f ../Makefile`
+Otherwise it is possible to generate from the command line as follows:
+```
+cd <wkbre2 repository path>
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=<vcpkg root folder>/scripts/buildsystems/vcpkg.cmake
+```
+On Linux, by default it will generate a Makefile, with which you can build wkbre2 with the `make` command.
