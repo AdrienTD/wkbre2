@@ -7,6 +7,7 @@
 #include "../util/GSFileParser.h"
 //#include "gameset.h"
 #include <map>
+#include <cstdint>
 #include <string>
 #include <vector>
 #include "../util/IndexedStringList.h"
