@@ -1,0 +1,20 @@
+﻿name: Main
+
+on: push
+
+jobs:
+  ubuntu:
+    name: Ubuntu
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: ["gcc",]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Install dependencies
+        run: ./continuous-integration/ubuntu-24.04/setup.sh
+      - name: "Build with ${{ matrix.compiler }}"
+        run:
+          uv run python continuous-integration/build.py
+            --compiler "${{ matrix.compiler }}"
