@@ -100,20 +100,23 @@ namespace {
 		//else	stdownvalid = 0;
 	}
 
-	bool RayIntersectsSphere(const Vector3 &raystart, const Vector3 &raydir, const Vector3 &center, float radius)
+	std::optional<Vector3> RayIntersectsSphere(const Vector3 &raystart, const Vector3 &raydir, const Vector3 &center, float radius)
 	{
-		Vector3 rdnorm = raydir.normal();
-		Vector3 smc = raystart - center;
-		float ddt = rdnorm.dot(smc);
-		//float delta = ddt * ddt - rdnorm.sqlen3()*(smc.sqlen3() - radius * radius);
-		float delta = ddt * ddt - (smc.sqlen3() - radius * radius);
+		const Vector3 rdnorm = raydir.normal();
+		const Vector3 smc = raystart - center;
+		const float ddt = rdnorm.dot(smc);
+		
+		const float delta = ddt * ddt - (smc.sqlen3() - radius * radius);
 		if (delta < 0.0f)
-			return false;
-		float k1 = -ddt + sqrtf(delta),
-			k2 = -ddt - sqrtf(delta);
+			return std::nullopt;
+
+		const float k1 = -ddt + std::sqrt(delta);
+		const float k2 = -ddt - std::sqrt(delta);
 		if (k1 < 0.0f && k2 < 0.0f)
-			return false;
-		return true;
+			return std::nullopt;
+		if (k1 >= 0.0f && k2 >= 0.0f)
+			return raystart + raydir * std::min(k1, k2);
+		return raystart + raydir * std::max(k1, k2);
 	}
 
 	std::pair<bool, Vector3> getRayTriangleIntersection(const Vector3& rayStart, const Vector3& _rayDir, const Vector3& p1, const Vector3& p2, const Vector3& p3) {
@@ -215,7 +218,15 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				// Attachment points
 				drawAttachmentPoints(&obj->sceneEntity, obj->id);
 				// Ray collision check
-				if (RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
+				if (auto spherePoint = RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
+					if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+						const float sphereDist = (client->camera.position - *spherePoint).sqlen3();
+						if (sphereDist < nextSelObjDistanceBySphere) {
+							nextSelectedObjectBySphere = obj;
+							nextSelObjDistanceBySphere = sphereDist;
+						}
+					}
+
 					const float *verts = model->interpolate(obj->sceneEntity.animTime);
 					Mesh& mesh = model->getStaticModel()->getMesh();
 					PolygonList& polylist = mesh.polyLists[0];
@@ -233,9 +244,9 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 							auto col = getRayTriangleIntersection(client->camera.position, rayDirection, vec[0], vec[2], vec[1]);
 							if (col.first) {
 								float dist = (client->camera.position - col.second).sqlen3();
-								if (dist < nextSelObjDistance) {
-									nextSelectedObject = obj;
-									nextSelObjDistance = dist;
+								if (dist < nextSelObjDistanceByMesh) {
+									nextSelectedObjectByMesh = obj;
+									nextSelObjDistanceByMesh = dist;
 								}
 							}
 						}
@@ -967,7 +978,10 @@ void ClientInterface::iter()
 	// Get ray
 	rayDirection = getRay(client->camera).normal();
 	nextSelectedObject = nullptr;
-	nextSelObjDistance = std::numeric_limits<float>::infinity();
+	nextSelectedObjectByMesh = nullptr;
+	nextSelectedObjectBySphere = nullptr;
+	nextSelObjDistanceByMesh = std::numeric_limits<float>::infinity();
+	nextSelObjDistanceBySphere = std::numeric_limits<float>::infinity();
 	nextSelFromBox.clear();
 
 	if (client->gameSet) {
@@ -984,6 +998,7 @@ void ClientInterface::iter()
 		attachSceneEntities.clear();
 		if (client->getLevel())
 			drawObject(client->getLevel());
+		nextSelectedObject = nextSelectedObjectByMesh ? nextSelectedObjectByMesh : nextSelectedObjectBySphere;
 		if (nextSelectedObject)
 			nextSelectedObject->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
 		// test
