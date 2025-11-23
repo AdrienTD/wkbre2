@@ -217,49 +217,52 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 				numObjectsDrawn++;
 				// Attachment points
 				drawAttachmentPoints(&obj->sceneEntity, obj->id);
-				// Ray collision check
-				if (auto spherePoint = RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
-					if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
-						const float sphereDist = (client->camera.position - *spherePoint).sqlen3();
-						if (sphereDist < nextSelObjDistanceBySphere) {
-							nextSelectedObjectBySphere = obj;
-							nextSelObjDistanceBySphere = sphereDist;
-						}
-					}
 
-					const float *verts = model->interpolate(obj->sceneEntity.animTime);
-					Mesh& mesh = model->getStaticModel()->getMesh();
-					PolygonList& polylist = mesh.polyLists[0];
-					for (size_t g = 0; g < polylist.groups.size(); g++) {
-						PolyListGroup& group = polylist.groups[g];
-						for (auto& tuple : group.tupleIndex) {
-							Vector3 vec[3];
-							for (int j = 0; j < 3; j++) {
-								uint16_t i = tuple[j];
-								IndexTuple& tind = mesh.groupIndices[g][i];
-								const float* fl = &verts[tind.vertex * 3];
-								Vector3 prever(fl[0], fl[1], fl[2]);
-								vec[j] = prever.transform(obj->sceneEntity.transform);
+				if (devMode || (obj->flags & (ClientGameObject::fSelectable | ClientGameObject::fTargetable))) {
+					// Ray collision check
+					if (auto spherePoint = RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
+						if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+							const float sphereDist = (client->camera.position - *spherePoint).sqlen3();
+							if (sphereDist < nextSelObjDistanceBySphere) {
+								nextSelectedObjectBySphere = obj;
+								nextSelObjDistanceBySphere = sphereDist;
 							}
-							const auto trianglePoint = getRayTriangleIntersection(client->camera.position, rayDirection, vec[0], vec[2], vec[1]);
-							if (trianglePoint) {
-								float dist = (client->camera.position - *trianglePoint).sqlen3();
-								if (dist < nextSelObjDistanceByMesh) {
-									nextSelectedObjectByMesh = obj;
-									nextSelObjDistanceByMesh = dist;
+						}
+
+						const float* verts = model->interpolate(obj->sceneEntity.animTime);
+						Mesh& mesh = model->getStaticModel()->getMesh();
+						PolygonList& polylist = mesh.polyLists[0];
+						for (size_t g = 0; g < polylist.groups.size(); g++) {
+							PolyListGroup& group = polylist.groups[g];
+							for (auto& tuple : group.tupleIndex) {
+								Vector3 vec[3];
+								for (int j = 0; j < 3; j++) {
+									uint16_t i = tuple[j];
+									IndexTuple& tind = mesh.groupIndices[g][i];
+									const float* fl = &verts[tind.vertex * 3];
+									Vector3 prever(fl[0], fl[1], fl[2]);
+									vec[j] = prever.transform(obj->sceneEntity.transform);
+								}
+								const auto trianglePoint = getRayTriangleIntersection(client->camera.position, rayDirection, vec[0], vec[2], vec[1]);
+								if (trianglePoint) {
+									float dist = (client->camera.position - *trianglePoint).sqlen3();
+									if (dist < nextSelObjDistanceByMesh) {
+										nextSelectedObjectByMesh = obj;
+										nextSelObjDistanceByMesh = dist;
+									}
 								}
 							}
 						}
 					}
-				}
-				// Box selection check
-				if (selBoxOn) {
-					int bx = static_cast<int>((ttpp.x + 1.0f) * g_windowWidth / 2.0f);
-					int by = static_cast<int>((-ttpp.y + 1.0f) * g_windowHeight / 2.0f);
-					bool inBox = ((selBoxStartX < bx) && (bx < selBoxEndX)) || ((selBoxEndX < bx) && (bx < selBoxStartX));
-					inBox = inBox && (((selBoxStartY < by) && (by < selBoxEndY)) || ((selBoxEndY < by) && (by < selBoxStartY)));
-					if (inBox) {
-						nextSelFromBox.push_back(obj);
+					// Box selection check
+					if (selBoxOn) {
+						int bx = static_cast<int>((ttpp.x + 1.0f) * g_windowWidth / 2.0f);
+						int by = static_cast<int>((-ttpp.y + 1.0f) * g_windowHeight / 2.0f);
+						bool inBox = ((selBoxStartX < bx) && (bx < selBoxEndX)) || ((selBoxEndX < bx) && (bx < selBoxStartX));
+						inBox = inBox && (((selBoxStartY < by) && (by < selBoxEndY)) || ((selBoxEndY < by) && (by < selBoxStartY)));
+						if (inBox) {
+							nextSelFromBox.push_back(obj);
+						}
 					}
 				}
 			}
@@ -591,6 +594,38 @@ void ClientInterface::iter()
 		}
 	}
 
+	//----- Clean selection of unauthorized object -----//
+	if (!devMode) {
+		std::unordered_set<CliGORef> formationsSelected;
+		bool hasCharacter = false;
+
+		for (auto itSelect = selection.begin(); itSelect != selection.end();) {
+			ClientGameObject* obj = itSelect->get();
+			const bool ok = obj && (obj->flags & ClientGameObject::fSelectable) && (obj->getPlayer() == client->clientPlayer);
+			if (!ok) {
+				itSelect = selection.erase(itSelect);
+				continue;
+			}
+			hasCharacter |= obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER;
+			if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER && obj->getParent()->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+				formationsSelected.insert(obj->getParent());
+				itSelect = selection.erase(itSelect);
+				continue;
+			}
+			++itSelect;
+		}
+		if (hasCharacter) {
+			for (auto itSelect = selection.begin(); itSelect != selection.end();) {
+				if (itSelect->get()->blueprint->bpClass != Tags::GAMEOBJCLASS_CHARACTER && itSelect->get()->blueprint->bpClass != Tags::GAMEOBJCLASS_FORMATION) {
+					itSelect = selection.erase(itSelect);
+					continue;
+				}
+				++itSelect;
+			}
+		}
+		selection.merge(formationsSelected);
+	}
+
 	//----- ImGui -----//
 
 	ImGuiImpl_NewFrame();
@@ -601,6 +636,7 @@ void ClientInterface::iter()
 		ImGui::Text("ODPF: %i", numObjectsDrawn);
 		ImGui::Text("FPS: %i", framesPerSecond);
 		ImGui::DragFloat3("peapos", &peapos.x);
+		ImGui::Checkbox("Dev mode", &devMode);
 		if (ImGui::Button("Start level"))
 			client->sendStartLevelRequest();
 		ImGui::Checkbox("Terrain", &showTerrain);

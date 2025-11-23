@@ -64,6 +64,7 @@ private:
 	bool selBoxOn = false;
 	int selBoxStartX, selBoxStartY, selBoxEndX, selBoxEndY;
 	std::vector<CliGORef> nextSelFromBox;
+	bool devMode = false;
 
 	void drawObject(ClientGameObject* obj);
 	void drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t objid = 0);
