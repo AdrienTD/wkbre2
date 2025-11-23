@@ -96,7 +96,7 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 	}
 
 	auto rtres = SegmentTraversal(m_object->position.x / 5.0f, m_object->position.z / 5.0f, realDestination.x / 5.0f, realDestination.z / 5.0f, pred);
-	if (!rtres.first) {
+	if (!rtres) {
 		m_pathNodes = { realDestination, m_object->position };
 		m_object->startMovement(m_pathNodes[0]);
 		m_started = true;

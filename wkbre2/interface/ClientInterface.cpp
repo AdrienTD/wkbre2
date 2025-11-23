@@ -119,30 +119,30 @@ namespace {
 		return raystart + raydir * std::max(k1, k2);
 	}
 
-	std::pair<bool, Vector3> getRayTriangleIntersection(const Vector3& rayStart, const Vector3& _rayDir, const Vector3& p1, const Vector3& p2, const Vector3& p3) {
+	std::optional<Vector3> getRayTriangleIntersection(const Vector3& rayStart, const Vector3& _rayDir, const Vector3& p1, const Vector3& p2, const Vector3& p3) {
 		Vector3 rayDir = _rayDir.normal();
 		Vector3 v2 = p2 - p1, v3 = p3 - p1;
 		Vector3 trinorm = v2.cross(v3).normal(); // order?
 		if (trinorm == Vector3(0, 0, 0))
-			return std::make_pair(false, trinorm);
+			return std::nullopt;
 		float rayDir_dot_trinorm = rayDir.dot(trinorm);
 		if (rayDir_dot_trinorm < 0.0f)
-			return std::make_pair(false, Vector3(0, 0, 0));
+			return std::nullopt;
 		float p = p1.dot(trinorm);
 		float alpha = (p - rayStart.dot(trinorm)) / rayDir_dot_trinorm;
 		if (alpha < 0.0f)
-			return std::make_pair(false, Vector3(0, 0, 0));
-		Vector3 sex = rayStart + rayDir * alpha;
+			return std::nullopt;
+		Vector3 intersectingPoint = rayStart + rayDir * alpha;
 
-		Vector3 c = sex - p1;
+		Vector3 c = intersectingPoint - p1;
 		float d = v2.sqlen3() * v3.sqlen3() - v2.dot(v3) * v2.dot(v3);
 		//assert(d != 0.0f);
 		float a = (c.dot(v2) * v3.sqlen3() - c.dot(v3) * v2.dot(v3)) / d;
 		float b = (c.dot(v3) * v2.sqlen3() - c.dot(v2) * v3.dot(v2)) / d;
 		if (a >= 0.0f && b >= 0.0f && (a + b) <= 1.0f)
-			return std::make_pair(true, sex);
+			return intersectingPoint;
 		else
-			return std::make_pair(false, Vector3(0, 0, 0));
+			return std::nullopt;
 	}
 }
 
@@ -241,9 +241,9 @@ void ClientInterface::drawObject(ClientGameObject *obj) {
 								Vector3 prever(fl[0], fl[1], fl[2]);
 								vec[j] = prever.transform(obj->sceneEntity.transform);
 							}
-							auto col = getRayTriangleIntersection(client->camera.position, rayDirection, vec[0], vec[2], vec[1]);
-							if (col.first) {
-								float dist = (client->camera.position - col.second).sqlen3();
+							const auto trianglePoint = getRayTriangleIntersection(client->camera.position, rayDirection, vec[0], vec[2], vec[1]);
+							if (trianglePoint) {
+								float dist = (client->camera.position - *trianglePoint).sqlen3();
 								if (dist < nextSelObjDistanceByMesh) {
 									nextSelectedObjectByMesh = obj;
 									nextSelObjDistanceByMesh = dist;

@@ -916,9 +916,9 @@ void Test_PFRayTraversal() {
 	};
 	float start[2] = { 2.0f, 2.0f }, end[2] = { 2.0f, 3.0f };
 	auto res = SegmentTraversal(start[0], start[1], end[0], end[1], pred);
-	printf("Result: %s, (%i, %i)\n", res.first ? "true" : "false", res.second.x, res.second.z);
+	printf("Result: %s, (%i, %i)\n", res ? "true" : "false", res ? res->x : 0, res ? res->z : 0);
 	res = SegmentTraversal(end[0], end[1], start[0], start[1], pred);
-	printf("Result: %s, (%i, %i)\n", res.first ? "true" : "false", res.second.x, res.second.z);
+	printf("Result: %s, (%i, %i)\n", res ? "true" : "false", res ? res->x : 0, res ? res->z : 0);
 	getchar();
 }
 

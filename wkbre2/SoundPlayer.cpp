@@ -14,6 +14,7 @@
 #include <array>
 #include <thread>
 #include <atomic>
+#include <optional>
 
 #include "WavDocument.h"
 #include "file.h"
@@ -45,7 +46,7 @@ struct OALSoundPlayer : SoundPlayer {
 	std::thread musicLoadingThread;
 	std::atomic<bool> isMusicLoading{ false };
 
-	std::pair<bool, ALuint> getSoundBuf(const std::string& filePath) {
+	std::optional<ALuint> getSoundBuf(const std::string& filePath) {
 		auto it = sndBufCache.find(filePath);
 		ALuint buf;
 		if (it != sndBufCache.end()) {
@@ -54,7 +55,7 @@ struct OALSoundPlayer : SoundPlayer {
 		else {
 			char* wavdata; int wavsize;
 			if (!FileExists(filePath.c_str()))
-				return { false, 0 };
+				return std::nullopt;
 			LoadFile(filePath.c_str(), &wavdata, &wavsize);
 
 			WavDocument wav;
@@ -71,7 +72,7 @@ struct OALSoundPlayer : SoundPlayer {
 			alBufferData(buf, AL_FORMAT_MONO16, samples.data(), samples.size() * 2, wav.samplesPerSec);
 			sndBufCache[filePath] = buf;
 		}
-		return { true, buf };
+		return buf;
 	}
 
 	~OALSoundPlayer() {
@@ -106,9 +107,8 @@ struct OALSoundPlayer : SoundPlayer {
 	}
 
 	void playSound(const std::string& filePath) override {
-		bool fnd;  ALuint buf;
-		std::tie(fnd, buf) = getSoundBuf(filePath);
-		if (!fnd) {
+		const auto optBuffer = getSoundBuf(filePath);
+		if (!optBuffer) {
 			printf("WARNING: Sound \"%s\" not found\n", filePath.c_str());
 			return;
 		}
@@ -119,7 +119,7 @@ struct OALSoundPlayer : SoundPlayer {
 			alGetSourcei(sources[i], AL_SOURCE_STATE, &val);
 			if (val != AL_PLAYING) {
 				auto src = sources[i];
-				alSourcei(src, AL_BUFFER, buf);
+				alSourcei(src, AL_BUFFER, *optBuffer);
 				alSourcef(src, AL_MIN_GAIN, 1.0f);
 				alSourcei(src, AL_SOURCE_RELATIVE, AL_TRUE);
 				alSource3f(src, AL_POSITION, 0.0f, 0.0f, 0.0f);
@@ -133,9 +133,8 @@ struct OALSoundPlayer : SoundPlayer {
 		if ((pos - listenerPosition).sqlen3() > maxDist * maxDist)
 			return;
 
-		bool fnd;  ALuint buf;
-		std::tie(fnd, buf) = getSoundBuf(filePath);
-		if (!fnd) {
+		const auto optBuffer = getSoundBuf(filePath);
+		if (!optBuffer) {
 			printf("WARNING: Sound \"%s\" not found\n", filePath.c_str());
 			return;
 		}
@@ -146,7 +145,7 @@ struct OALSoundPlayer : SoundPlayer {
 			alGetSourcei(sources[i], AL_SOURCE_STATE, &val);
 			if (val != AL_PLAYING) {
 				auto src = sources[i];
-				alSourcei(src, AL_BUFFER, buf);
+				alSourcei(src, AL_BUFFER, *optBuffer);
 				alSourcef(src, AL_MIN_GAIN, 0.0f);
 				alSourcei(src, AL_SOURCE_RELATIVE, AL_FALSE);
 				alSourcef(src, AL_REFERENCE_DISTANCE, refDist);

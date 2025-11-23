@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include <map>
-#include <set>
+#include <cmath>
 #include <limits>
+#include <map>
+#include <optional>
+#include <set>
 //#include <iostream>
 
 namespace Pathfinding {
@@ -157,7 +159,7 @@ namespace Pathfinding {
     }
 
     // Checks if the segment from "start" to "end" intersects with a blocked tile
-    template<typename Predicate> std::pair<bool, PFPos> SegmentTraversal(float start_x, float start_z, float end_x, float end_z, Predicate pred) {
+    template<typename Predicate> std::optional<PFPos> SegmentTraversal(float start_x, float start_z, float end_x, float end_z, Predicate pred) {
         // TODO: Fix BUG where end tile not found on short distances
         const int end_tile_x = (int)end_x, end_tile_z = (int)end_z;
         const float dx = end_x - start_x, dz = end_z - start_z;
@@ -166,7 +168,7 @@ namespace Pathfinding {
         float cur_x = start_x, cur_z = start_z;
         int tile_x = (int)cur_x, tile_z = (int)cur_z;
         if (pred({ tile_x, tile_z }))
-            return { true, {tile_x, tile_z} };
+            return PFPos{ tile_x, tile_z };
 
         while ((tile_x != end_tile_x) || (tile_z != end_tile_z)) {
             //printf("curpos = (%f, %f)\n", cur_x, cur_z);
@@ -192,9 +194,9 @@ namespace Pathfinding {
             }
             tile_x = (int)cur_x, tile_z = (int)cur_z;
             if (pred({ tile_x, tile_z }))
-                return { true, {tile_x, tile_z} };
+                return PFPos{ tile_x, tile_z };
         }
         //printf("FALSE! curpos = (%f, %f)\n", cur_x, cur_z);
-        return { false, {} };
+        return std::nullopt;
     }
 };
