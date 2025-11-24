@@ -675,7 +675,9 @@ void ClientInterface::iter()
 			else
 				ptext.push_back(loctext[i]);
 		}
+		ImGui::PushTextWrapPos(560.0f);
 		ImGui::TextUnformatted(ptext.c_str());
+		ImGui::PopTextWrapPos();
 		for (size_t i = 0; i < gtw.buttons.size(); i++) {
 			auto& button = gtw.buttons[i];
 			if (ImGui::Button(lang.getText(button.text).c_str())) {
