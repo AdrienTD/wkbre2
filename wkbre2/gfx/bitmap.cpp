@@ -4,8 +4,8 @@
 
 #include "bitmap.h"
 #include "../file.h"
-#include "../util/util.h"
-#include "../util/StriCompare.h"
+#include "util/util.h"
+#include "util/StriCompare.h"
 #include <cstdint>
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION

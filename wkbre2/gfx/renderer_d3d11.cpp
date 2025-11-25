@@ -6,7 +6,7 @@
 
 #include "renderer_d3d11.h"
 #include "../window.h"
-#include "../util/util.h"
+#include "util/util.h"
 #include "bitmap.h"
 #include "../settings.h"
 

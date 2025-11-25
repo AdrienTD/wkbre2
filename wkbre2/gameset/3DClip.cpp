@@ -4,7 +4,7 @@
 
 #include "3DClip.h"
 #include "gameset.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 
 void GS3DClip::parse(GSFileParser& gsf, GameSet& gs)
 {

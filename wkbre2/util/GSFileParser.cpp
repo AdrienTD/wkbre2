@@ -2,7 +2,7 @@
 // (C) 2021 AdrienTD
 // Licensed under the GNU General Public License 3
 
-#include "GSFileParser.h"
+#include "util/GSFileParser.h"
 
 // Move the cursor to the beginning of the next line.
 void GSFileParser::advanceLine() {

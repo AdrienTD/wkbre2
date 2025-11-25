@@ -4,7 +4,7 @@
 
 #include "Sound.h"
 #include "gameset.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 
 void GSSound::parse(GSFileParser& gsf, GameSet& gs)
 {

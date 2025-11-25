@@ -3,13 +3,13 @@
 // Licensed under the GNU General Public License 3
 
 #include "ObjectCreation.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "gameset.h"
 #include "finder.h"
 #include "position.h"
 #include "../server.h"
 #include "ScriptContext.h"
-#include "../util/util.h"
+#include "util/util.h"
 
 void ObjectCreation::parse(GSFileParser & gsf, const GameSet & gs)
 {

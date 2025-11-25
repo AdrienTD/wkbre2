@@ -4,9 +4,9 @@
 
 #include "actions.h"
 #include "finder.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "gameset.h"
-#include "../util/util.h"
+#include "util/util.h"
 #include "../server.h"
 #include "ScriptContext.h"
 #include <cassert>

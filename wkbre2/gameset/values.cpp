@@ -4,9 +4,9 @@
 
 #include "values.h"
 #include "gameset.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "../tags.h"
-#include "../util/util.h"
+#include "util/util.h"
 #include <string>
 #include "finder.h"
 #include <algorithm>

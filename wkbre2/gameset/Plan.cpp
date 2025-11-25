@@ -3,9 +3,9 @@
 // Licensed under the GNU General Public License 3
 
 #include "Plan.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "gameset.h"
-#include "../util/util.h"
+#include "util/util.h"
 #include "../server.h"
 #include "finder.h"
 #include "ScriptContext.h"

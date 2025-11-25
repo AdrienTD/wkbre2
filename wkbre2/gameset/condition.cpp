@@ -4,7 +4,7 @@
 
 #include "condition.h"
 #include "gameset.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "../Language.h"
 
 void GSCondition::parse(GSFileParser & gsf, GameSet & gs)

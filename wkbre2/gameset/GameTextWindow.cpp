@@ -3,7 +3,7 @@
 // Licensed under the GNU General Public License 3
 
 #include "GameTextWindow.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "gameset.h"
 
 void GameTextWindow::parse(GSFileParser& gsf, GameSet& gs)

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../util/vecmat.h"
+#include "util/vecmat.h"
 
 struct ServerGameObject;
 struct GSFileParser;

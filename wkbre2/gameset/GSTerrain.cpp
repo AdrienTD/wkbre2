@@ -4,7 +4,7 @@
 
 #include "GSTerrain.h"
 #include "gameset.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 
 void GSTerrain::parse(GSFileParser& gsf, GameSet& gs)
 {

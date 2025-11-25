@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 //#include "gameset.h"
 #include <map>
 #include <cstdint>
 #include <string>
 #include <vector>
-#include "../util/IndexedStringList.h"
-#include "../util/vecmat.h"
+#include "util/IndexedStringList.h"
+#include "util/vecmat.h"
 
 struct GameSet;
 struct Command;
