@@ -311,6 +311,12 @@ void ClientInterface::drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t ob
 
 void ClientInterface::iter()
 {
+	static uint32_t oldCliTime = SDL_GetTicks();
+	uint32_t cliTime = SDL_GetTicks();
+	uint32_t cliDeltaTime = cliTime - oldCliTime;
+	if (cliDeltaTime > 1000u) cliDeltaTime = 100u;
+	oldCliTime = cliTime;
+
 	static Vector3 peapos(0, 0, 0);
 	static bool showTerrain = true;
 
@@ -406,7 +412,9 @@ void ClientInterface::iter()
 
 	Vector3 forward = client->camera.direction.normal2xz();
 	Vector3 strafe = forward.cross(Vector3(0, 1, 0));
-	forward *= 2.f; strafe *= 2.f;
+	const float camSpeed = 2.0f * cliDeltaTime / (1000.0f / 60.0f);
+	forward *= camSpeed;
+	strafe *= camSpeed;
 
 	if (g_keyDown[SDL_SCANCODE_UP] || g_keyDown[SDL_SCANCODE_W])
 		client->camera.position += forward;
