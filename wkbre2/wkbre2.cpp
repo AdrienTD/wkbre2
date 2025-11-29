@@ -7,6 +7,7 @@
 
 #include "wkbre2.h"
 #include <cstdio>
+#include <filesystem>
 #include "settings.h"
 #include "file.h"
 #include <nlohmann/json.hpp>
@@ -60,10 +61,21 @@ void LaunchQSM() {
 int main()
 //int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR cmdArgs, int showMode)
 {
-	printf("Hello! :)\n");
+	printf("Welcome to wkbre2 ! :)\n\n");
 
 	LoadSettings();
 	g_gamePath = g_settings["game_path"].get<std::string>();
+
+	if (!std::filesystem::exists(std::filesystem::u8path(g_gamePath) / "data.bcp")) {
+		std::string message = "Could not find the file \"data.bcp\".\n\nYou need to copy \"data.bcp\" from Warrior Kings (Battles) game to the following path:\n\n";
+		message += std::filesystem::canonical(g_gamePath).string();
+		message += "\n\nYou can also change the entire path in the configuration file \"wkconfig.json\".";
+		printf("%s\n", message.c_str());
+#ifdef _WIN32
+		MessageBoxA(NULL, message.c_str(), "wkbre2", 16);
+#endif
+		return -5;
+	}
 
 	if (g_settings.value<bool>("test", false))
 		LaunchTest();
