@@ -13,10 +13,6 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-#include <io.h>
-#else
-#include <unistd.h>
-#define _access access
 #endif
 
 extern "C" {
@@ -63,7 +59,7 @@ struct BCPReader
 
 	std::string BCPReadString();
 	void LookAtDir(BCPDirectory *bd, int isroot, BCPDirectory *prev);
-	BCPReader(const char *fn);
+	BCPReader(const std::filesystem::path& bcpPath);
 	void ExtractFile(int id, char **out, int *outsize, int extraBytes);
 	BCPFile *getFile(const char *fn);
 	BCPDirectory *getDirectory(const char *dn);
@@ -73,9 +69,20 @@ struct BCPReader
 	void listDirectories(const char *dn, std::vector<std::string>* gsl);
 };
 
-std::string g_gamePath = ".";
+std::filesystem::path g_gamePath = ".";
 bool g_allowBCPPatches = false, g_allowDataDirectory = true, g_macFileNamesFallbackEnabled = true;
 std::vector<BCPReader*> bcpacks;
+
+static FILE* FsOpen(const std::filesystem::path& filePath, const char* mode)
+{
+#ifdef _WIN32
+	FILE* file = nullptr;
+	auto error = _wfopen_s(&file, filePath.c_str(), std::wstring(mode, mode + strlen(mode)).c_str());
+	return (error == 0) ? file : nullptr;
+#else
+	return fopen(filePath.c_str(), mode);
+#endif
+}
 
 std::string BCPReader::BCPReadString()
 {
@@ -115,12 +122,11 @@ void BCPReader::LookAtDir(BCPDirectory *bd, int isroot, BCPDirectory *prev)
 	}
 }
 
-BCPReader::BCPReader(const char *fn)
+BCPReader::BCPReader(const std::filesystem::path& bcpPath)
 {
 	nfiles = 0;
 
-	std::string abuf = g_gamePath + '/' + fn;
-	bcpfile = fopen(abuf.c_str(), "rb");
+	bcpfile = FsOpen(g_gamePath / bcpPath, "rb");
 	if(!bcpfile) ferr("Cannot load BCP file.");
 	fseek(bcpfile, 9, SEEK_SET);
 	bcpver = fgetc(bcpfile) - '0';
@@ -328,13 +334,13 @@ void LoadBCP(const char *fn)
 	if(!g_allowBCPPatches)
 		{bcpacks.push_back(new BCPReader(fn)); return;}
 #ifdef _WIN32
-	HANDLE hf; WIN32_FIND_DATA fnd;
-	std::string sn = g_gamePath + "\\*.bcp";
-	hf = FindFirstFile(sn.c_str(), &fnd);
+	HANDLE hf; WIN32_FIND_DATAW fnd;
+	auto filter = g_gamePath / "*.bcp";
+	hf = FindFirstFileW(filter.c_str(), &fnd);
 	if(hf == INVALID_HANDLE_VALUE) return;
 	do {
 		bcpacks.push_back(new BCPReader(fnd.cFileName));
-	} while(FindNextFile(hf, &fnd));
+	} while(FindNextFileW(hf, &fnd));
 #endif
 }
 
@@ -377,16 +383,15 @@ void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 	if(bp) if(bp->loadFile(fn, out, outsize, extraBytes)) return;
 
 	// File not found in the BCPs. Find it in the "data", "saved" and "redata" directories.
-	std::string sn; FILE *sf = 0;
+	const auto u8fn = std::filesystem::u8path(fn);
+	FILE *sf = 0;
 	if(g_allowDataDirectory)
 	{
-		sn = g_gamePath + "/data/" + fn;
-		sf = fopen(sn.c_str(), "rb");
+		sf = FsOpen(g_gamePath / "data" / u8fn, "rb");
 	}
 	if(!sf)
 	{
-		sn = g_gamePath + "/saved/" + fn;
-		sf = fopen(sn.c_str(), "rb");
+		sf = FsOpen(g_gamePath / "saved" / u8fn, "rb");
 	}
 #ifdef _WIN32
 	if (!sf)
@@ -404,8 +409,7 @@ void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 #endif
 	if (!sf)
 	{
-		sn = std::string("redata/") + fn;
-		sf = fopen(sn.c_str(), "rb");
+		sf = FsOpen("redata" / u8fn, "rb");
 	}
 	if (!sf && g_macFileNamesFallbackEnabled)
 		if (auto nfn = GetMacName(fn); !nfn.empty())
@@ -434,21 +438,23 @@ int FileExists(const char *fn)
 		if(bcp->fileExists(fn))
 			return 1;
 
+	const auto u8fn = std::filesystem::u8path(fn);
+
 	// File not found in the BCPs. Find it in the "saved" and "redata" folder.
-	std::string sn = g_gamePath + "/saved/" + fn;
-	if (_access(sn.c_str(), 0) != -1) return 1;
+	if (std::filesystem::exists(g_gamePath / "saved" / u8fn))
+		return 1;
 
 #ifdef _WIN32
 	if (FindResourceA(NULL, fn, "REDATA"))
 		return 1;
 #endif
 
-	sn = std::string("redata/") + fn;
-	if (_access(sn.c_str(), 0) != -1) return 1;
+	if (std::filesystem::exists("redata" / u8fn))
+		return 1;
 
 	if (g_allowDataDirectory) {
-		sn = g_gamePath + "/data/" + fn;
-		if (_access(sn.c_str(), 0) != -1) return 1;
+		if (std::filesystem::exists(g_gamePath / "data" / u8fn))
+			return 1;
 	}
 
 	if (g_macFileNamesFallbackEnabled)
@@ -459,17 +465,20 @@ int FileExists(const char *fn)
 	return 0;
 }
 
-void FindFiles(const char *sn, std::vector<std::string>* gsl)
+void FindFiles(const std::filesystem::path& filter, std::vector<std::string>* gsl)
 {
 #ifdef _WIN32
-	HANDLE hf; WIN32_FIND_DATA fnd;
-	hf = FindFirstFile(sn, &fnd);
+	HANDLE hf; WIN32_FIND_DATAW fnd;
+	hf = FindFirstFileW(filter.c_str(), &fnd);
 	if(hf == INVALID_HANDLE_VALUE) return;
 	do {
-		if(!(fnd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-			if (std::find_if(gsl->begin(), gsl->end(), [&](const std::string& s) { return !StrCICompare(s, fnd.cFileName); }) == gsl->end())
-				gsl->push_back(fnd.cFileName);
-	} while(FindNextFile(hf, &fnd));
+		if (!(fnd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+			auto upath = std::filesystem::path(fnd.cFileName).u8string();
+			if (std::find_if(gsl->begin(), gsl->end(), [&](const std::string& s) { return !StrCICompare(s, upath); }) == gsl->end()) {
+				gsl->push_back(std::move(upath));
+			}
+		}
+	} while(FindNextFileW(hf, &fnd));
 #endif
 }
 
@@ -481,16 +490,11 @@ std::vector<std::string>* ListFiles(const char *dn, std::vector<std::string>* gs
 	for (BCPReader* bcp : bcpacks)
 		bcp->listFileNames(dn, gsl);
 
-	std::string sn;
-
-	if(g_allowDataDirectory)
-	{
-		sn = g_gamePath + "/data/" + dn + "/*.*";
-		FindFiles(sn.c_str(), gsl);
+	if (g_allowDataDirectory) {
+		FindFiles(g_gamePath / "data" / dn / "*.*", gsl);
 	}
 
-	sn = g_gamePath + "/saved/" + dn + "/*.*";
-	FindFiles(sn.c_str(), gsl);
+	FindFiles(g_gamePath / "saved" / dn / "*.*", gsl);
 
 	return gsl;
 }

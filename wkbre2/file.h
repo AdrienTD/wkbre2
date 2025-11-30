@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -52,7 +53,7 @@ public:
 	void copyFile(const char *fn);
 };
 
-extern std::string g_gamePath;
+extern std::filesystem::path g_gamePath;
 extern bool g_allowBCPPatches, g_allowDataDirectory, g_macFileNamesFallbackEnabled;
 
 void LoadBCP(const char *fn);
