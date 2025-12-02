@@ -476,12 +476,16 @@ void MissileTask::onStart()
 	}
 	// add target's movement into account
 	if (this->target->movement.isMoving()) {
+		const float terrainOffset = dest.y - Server::instance->terrain->getHeightEx(dest.x, dest.z, this->target->blueprint->floatsOnWater);
+
 		// Note: This is not perfect, as it kind of assumes that the time the missile will take to hit
 		// the adjusted position won't change, which is not always true. For slow target movement this
 		// might be ok, but faster ones not so much.
 		Vector3 hvec = (dest - this->order->gameObject->position);
 		float b = hvec.len2xz() / speed; // time when missile hits target on XZ coordinates (on original position!!!)
 		dest += this->target->movement.getNewPosition(Server::instance->timeManager.currentTime + b) - this->target->position;
+
+		dest.y = Server::instance->terrain->getHeightEx(dest.x, dest.z, this->target->blueprint->floatsOnWater) + terrainOffset;
 	}
 
 	// compute initial vertical velocity such that the missile hits the target in its trajectory
