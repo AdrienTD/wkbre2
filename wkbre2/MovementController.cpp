@@ -109,6 +109,9 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 			while (true) {
 				test += dir;
 				PFPos near = { (int)(test.x / 5.0f), (int)(test.z / 5.0f) };
+				if (!(near.x >= 0 && near.x < trnsize.first && near.z >= 0 && near.z < trnsize.second)) {
+					break;
+				}
 				if (!pred(near)) {
 					posEnd = near;
 					realDestination = test;
