@@ -51,14 +51,38 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 	auto& tiles = Server::instance->tiles;
 	auto trnsize = trn->getNumPlayableTiles();
 	auto pred = [&](PFPos pfp) -> bool {
-		if (pfp.x >= 0 && pfp.x < trnsize.first && pfp.z >= 0 && pfp.z < trnsize.second) {
-			const auto& tile = tiles[pfp.z * trnsize.first + pfp.x];
-			if (tile.building.getFrom<Server>() && !tile.buildingPassable)
+		if (!(pfp.x >= 0 && pfp.x < trnsize.first && pfp.z >= 0 && pfp.z < trnsize.second))
+			return true;
+
+		const auto& tile = tiles[pfp.z * trnsize.first + pfp.x];
+		if (tile.building.getFrom<Server>() && !tile.buildingPassable)
+			return true;
+
+		const auto* trnTile = trn->getPlayableTile(pfp.x, pfp.z);
+		if (trnTile) {
+			const float h[4] = {
+				trn->getVertex(trn->edge + pfp.x, trn->height - (trn->edge + pfp.z)),
+				trn->getVertex(trn->edge + pfp.x + 1, trn->height - (trn->edge + pfp.z)),
+				trn->getVertex(trn->edge + pfp.x, trn->height - (trn->edge + pfp.z + 1)),
+				trn->getVertex(trn->edge + pfp.x + 1, trn->height - (trn->edge + pfp.z + 1))
+			};
+			auto [minH, maxH] = std::minmax_element(std::begin(h), std::end(h));
+
+			const bool waterUnit = m_object->blueprint->canWalkOnWater() && m_object->blueprint->bpClass != Tags::GAMEOBJCLASS_FORMATION;
+			if (waterUnit && !trnTile->fullOfWater)
 				return true;
-			else
-				return false;
+
+			if (!waterUnit && trnTile->fullOfWater) {
+				if (trnTile->waterLevel - *minH > 1.5f)
+					return true;
+			}
+
+			// no gradients above 45 degrees
+			if (!waterUnit && *maxH - *minH > 5.0f)
+				return true;
 		}
-		return true;
+
+		return false;
 	};
 
 	PFPos posStart{ (int)(m_object->position.x / 5.0f), (int)(m_object->position.z / 5.0f) };
