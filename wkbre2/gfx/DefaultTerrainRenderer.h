@@ -24,5 +24,5 @@ private:
 	RBatch *batch;
 	TextureCache *texcache;
 	std::map<TerrainTexture*, texture> ttexmap;
-	std::map<texture, std::vector<TerrainTile*>> tilesPerTex;
+	std::map<texture, std::vector<const TerrainTile*>> tilesPerTex;
 };

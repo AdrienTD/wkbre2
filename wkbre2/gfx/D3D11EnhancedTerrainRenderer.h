@@ -34,5 +34,5 @@ private:
 	Impl* _impl;
 	TextureCache *texcache;
 	std::map<TerrainTexture*, LoadedTexture> ttexmap;
-	std::map<LoadedTexture, std::vector<TerrainTile*>> tilesPerTex;
+	std::map<LoadedTexture, std::vector<const TerrainTile*>> tilesPerTex;
 };

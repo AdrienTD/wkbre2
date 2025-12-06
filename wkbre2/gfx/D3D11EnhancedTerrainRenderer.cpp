@@ -428,7 +428,7 @@ void D3D11EnhancedTerrainRenderer::init()
 	for (int z = 0; z < terrain->height; z++) {
 		for (int x = 0; x < terrain->width; x++) {
 			int lx = x - terrain->edge, lz = z - terrain->edge;
-			Terrain::Tile* tile = &terrain->tiles[(terrain->height - 1 - z) * terrain->width + x];
+			const Terrain::Tile* tile = terrain->getTile(x, z);
 
 			TerrainTexture* trntex = tile->texture;
 			float sx = trntex->startx / 256.0f;
@@ -606,7 +606,7 @@ void D3D11EnhancedTerrainRenderer::render() {
 			Vector3 ttpp = pp.transformScreenCoords(camera->sceneMatrix);
 			if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
 				continue;
-			Terrain::Tile *tile = &terrain->tiles[(terrain->height - 1 - z)*terrain->width + x];
+			const Terrain::Tile* tile = terrain->getTile(x, z);
 			TerrainTexture *trntex = tile->texture;
 			auto& newgfxtex = ttexmap.at(trntex);
 			tilesPerTex[newgfxtex].push_back(tile);
@@ -620,7 +620,7 @@ void D3D11EnhancedTerrainRenderer::render() {
 			continue;
 		gfx->SetTexture(0, pack.first.diffuseMap);
 		gfx->SetTexture(1, pack.first.normalMap);
-		for (TerrainTile *tile : pack.second) {
+		for (const TerrainTile* tile : pack.second) {
 			unsigned int x = tile->x;
 			unsigned int z = terrain->height - 1 - tile->z;
 

@@ -80,7 +80,7 @@ void DefaultTerrainRenderer::render() {
 			if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
 				continue;
 			//zoccurs[(int)(oriz * 100)]++;
-			Terrain::Tile *tile = &terrain->tiles[(terrain->height - 1 - z)*terrain->width + x];
+			const TerrainTile* tile = terrain->getTile(x, z);
 			TerrainTexture *trntex = tile->texture;
 			texture newgfxtex = ttexmap[trntex];
 			tilesPerTex[newgfxtex].push_back(tile);
@@ -91,7 +91,7 @@ void DefaultTerrainRenderer::render() {
 		if (pack.second.empty())
 			continue;
 		gfx->SetTexture(0, pack.first);
-		for (TerrainTile *tile : pack.second) {
+		for (const TerrainTile* tile : pack.second) {
 			unsigned int x = tile->x;
 			unsigned int z = terrain->height - 1 - tile->z;
 			int lx = x - terrain->edge, lz = z - terrain->edge;
