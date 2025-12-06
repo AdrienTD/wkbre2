@@ -449,8 +449,10 @@ void ClientInterface::iter()
 			selection.clear();
 		if (nextSelectedObject) {
 			selection.insert(nextSelectedObject);
-			if (g_mouseDoubleClicked == SDL_BUTTON_LEFT) {
-				printf("Double click!\n");
+			const bool doubleClick = g_mouseDoubleClicked == SDL_BUTTON_LEFT;
+			const int singleClickSelectAllItem = client->gameSet->items.names.getIndex("Single Click Selects All Units Of This Type");
+			const bool selectAllOnSingleClick = singleClickSelectAllItem >= 0 && nextSelectedObject->getItem(singleClickSelectAllItem) > 0.0f;
+			if (doubleClick ^ selectAllOnSingleClick) {
 				// select nearby units of same type
 				auto walkObj = [&](ClientGameObject* obj, const auto& rec) -> void {
 					if (obj->blueprint == nextSelectedObject->blueprint) {
