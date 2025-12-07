@@ -457,10 +457,10 @@ void D3D11EnhancedTerrainRenderer::init()
 
 			constexpr float tilesize = 5.0f;
 			Vector3 poses[4];
-			poses[0] = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - z), lz * tilesize);
-			poses[1] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - z), lz * tilesize);
-			poses[2] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, terrain->height - (z + 1)), (lz + 1) * tilesize);
-			poses[3] = Vector3(lx * tilesize, terrain->getVertex(x, terrain->height - (z + 1)), (lz + 1) * tilesize);
+			poses[0] = Vector3(lx * tilesize, terrain->getVertex(x, z), lz * tilesize);
+			poses[1] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, z), lz * tilesize);
+			poses[2] = Vector3((lx + 1) * tilesize, terrain->getVertex(x + 1, z + 1), (lz + 1) * tilesize);
+			poses[3] = Vector3(lx * tilesize, terrain->getVertex(x, z + 1), (lz + 1) * tilesize);
 
 			float du1 = uvs[3].first - uvs[0].first, dv1 = uvs[3].second - uvs[0].second;
 			float du2 = uvs[1].first - uvs[0].first, dv2 = uvs[1].second - uvs[0].second;
@@ -476,25 +476,25 @@ void D3D11EnhancedTerrainRenderer::init()
 
 			D11NTRVtx outvert[4];
 			outvert[0].pos = poses[0];
-			outvert[0].normal = getPrecomputedNormal(x, terrain->height - z);
+			outvert[0].normal = getPrecomputedNormal(x, z);
 			outvert[0].tangent = cmprTangent;
 			outvert[0].bitangent = cmprBitangent;
 			outvert[0].u = uvs[0].first;
 			outvert[0].v = uvs[0].second;
 			outvert[1].pos = poses[1];
-			outvert[1].normal = getPrecomputedNormal(x + 1, terrain->height - z);
+			outvert[1].normal = getPrecomputedNormal(x + 1, z);
 			outvert[1].tangent = cmprTangent;
 			outvert[1].bitangent = cmprBitangent;
 			outvert[1].u = uvs[1].first;
 			outvert[1].v = uvs[1].second;
 			outvert[2].pos = poses[2];
-			outvert[2].normal = getPrecomputedNormal(x + 1, terrain->height - z - 1);
+			outvert[2].normal = getPrecomputedNormal(x + 1, z + 1);
 			outvert[2].tangent = cmprTangent;
 			outvert[2].bitangent = cmprBitangent;
 			outvert[2].u = uvs[2].first;
 			outvert[2].v = uvs[2].second;
 			outvert[3].pos = poses[3];
-			outvert[3].normal = getPrecomputedNormal(x, terrain->height - z - 1);
+			outvert[3].normal = getPrecomputedNormal(x, z + 1);
 			outvert[3].tangent = cmprTangent;
 			outvert[3].bitangent = cmprBitangent;
 			outvert[3].u = uvs[3].first;
@@ -600,7 +600,7 @@ void D3D11EnhancedTerrainRenderer::render() {
 	for (int z = tlsz; z <= tlez; z++) {
 		for (int x = tlsx; x <= tlex; x++) {
 			int lx = x - terrain->edge, lz = z - terrain->edge;
-			Vector3 pp((lx + 0.5f)*tilesize, terrain->getVertex(x, terrain->height - z), (lz + 0.5f)*tilesize);
+			Vector3 pp((lx + 0.5f)*tilesize, terrain->getVertex(x, z), (lz + 0.5f)*tilesize);
 			Vector3 camcenter = camera->position + camera->direction * 125.0f;
 			pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
 			Vector3 ttpp = pp.transformScreenCoords(camera->sceneMatrix);
@@ -622,7 +622,7 @@ void D3D11EnhancedTerrainRenderer::render() {
 		gfx->SetTexture(1, pack.first.normalMap);
 		for (const TerrainTile* tile : pack.second) {
 			unsigned int x = tile->x;
-			unsigned int z = terrain->height - 1 - tile->z;
+			unsigned int z = tile->z;
 
 			uint32_t firstindex = 4 * (z * terrain->width + x);
 			uint32_t* oix;
@@ -649,7 +649,7 @@ void D3D11EnhancedTerrainRenderer::render() {
 			const TerrainTile* tile = terrain->getTile(x, z);
 			if (tile && tile->fullOfWater) {
 				unsigned int x = tile->x;
-				unsigned int z = terrain->height - 1 - tile->z;
+				unsigned int z = tile->z;
 				int lx = x - terrain->edge, lz = z - terrain->edge;
 
 				// is water tile visible on screen?

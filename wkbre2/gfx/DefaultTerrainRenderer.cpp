@@ -70,7 +70,7 @@ void DefaultTerrainRenderer::render() {
 	for (int z = tlsz; z <= tlez; z++) {
 		for (int x = tlsx; x <= tlex; x++) {
 			int lx = x - terrain->edge, lz = z - terrain->edge;
-			Vector3 pp((lx + 0.5f)*tilesize, terrain->getVertex(x, terrain->height - z), (lz + 0.5f)*tilesize);
+			Vector3 pp((lx + 0.5f)*tilesize, terrain->getVertex(x, z), (lz + 0.5f)*tilesize);
 			Vector3 camcenter = camera->position + camera->direction * 125.0f;
 			pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
 			//TransformVector3(&ttpp, &pp, &camera->sceneMatrix);
@@ -93,7 +93,7 @@ void DefaultTerrainRenderer::render() {
 		gfx->SetTexture(0, pack.first);
 		for (const TerrainTile* tile : pack.second) {
 			unsigned int x = tile->x;
-			unsigned int z = terrain->height - 1 - tile->z;
+			unsigned int z = tile->z;
 			int lx = x - terrain->edge, lz = z - terrain->edge;
 
 			TerrainTexture *trntex = tile->texture;
@@ -123,14 +123,14 @@ void DefaultTerrainRenderer::render() {
 
 			batchVertex *outvert; uint16_t *outindices; unsigned int firstindex;
 			batch->next(4, 6, &outvert, &outindices, &firstindex);
-			outvert[0].x = lx * tilesize; outvert[0].z = lz * tilesize; outvert[0].y = terrain->getVertex(x, terrain->height - z);
-			outvert[1].x = (lx + 1) * tilesize; outvert[1].z = lz * tilesize; outvert[1].y = terrain->getVertex(x + 1, terrain->height - z);
-			outvert[2].x = (lx + 1) * tilesize; outvert[2].z = (lz + 1) * tilesize; outvert[2].y = terrain->getVertex(x + 1, terrain->height - (z + 1));
-			outvert[3].x = lx * tilesize; outvert[3].z = (lz + 1) * tilesize; outvert[3].y = terrain->getVertex(x, terrain->height - (z + 1));
-			outvert[0].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x, terrain->height - z).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
-			outvert[1].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x + 1, terrain->height - z).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
-			outvert[2].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x + 1, terrain->height - z - 1).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
-			outvert[3].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x, terrain->height - z - 1).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
+			outvert[0].x = lx * tilesize; outvert[0].z = lz * tilesize; outvert[0].y = terrain->getVertex(x, z);
+			outvert[1].x = (lx + 1) * tilesize; outvert[1].z = lz * tilesize; outvert[1].y = terrain->getVertex(x + 1, z);
+			outvert[2].x = (lx + 1) * tilesize; outvert[2].z = (lz + 1) * tilesize; outvert[2].y = terrain->getVertex(x + 1, z + 1);
+			outvert[3].x = lx * tilesize; outvert[3].z = (lz + 1) * tilesize; outvert[3].y = terrain->getVertex(x, z + 1);
+			outvert[0].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x, z).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
+			outvert[1].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x + 1, z).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
+			outvert[2].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x + 1, z + 1).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
+			outvert[3].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x, z + 1).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
 
 			for (int i = 0; i < 4; i++) {
 				outvert[i].u = uvs[i].first;
@@ -155,7 +155,7 @@ void DefaultTerrainRenderer::render() {
 			const TerrainTile* tile = terrain->getTile(x, z);
 			if (tile && tile->fullOfWater) {
 				unsigned int x = tile->x;
-				unsigned int z = terrain->height - 1 - tile->z;
+				unsigned int z = tile->z;
 				int lx = x - terrain->edge, lz = z - terrain->edge;
 
 				// is water tile visible on screen?

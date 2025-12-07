@@ -16,7 +16,7 @@ float Terrain::getHeight(float ipx, float ipy) const {
 	//if (tx < 0 || tx >= width || tz < 0 || tz >= height)
 	//	return 0.0f;
 	//return getVertex(tx, tz);
-	float x = edge + ipx / 5.0f, y = height - (edge + ipy / 5.0f);
+	float x = edge + ipx / 5.0f, y = edge + ipy / 5.0f;
 	if (x < 0) x = 0; if (x >= width) x = width - 0.001f;
 	if (y < 0) y = 0; if (y >= height) y = height - 0.001f;
 	float h1 = getVertex((int)x, (int)y), h2 = getVertex((int)x + 1, (int)y);
@@ -164,8 +164,7 @@ void Terrain::readBCM(const char * filename) {
 	Tile *t = tiles;
 	int ngrpbits = GetMaxBits(nnames);
 	int nidbits = GetMaxBits(nids);
-	//for (int z = height - 1; z >= 0; z--) {
-	for (int z = 0 ; z < height; z++) {
+	for (int z = height - 1; z >= 0; z--) {
 		t = &tiles[z*width];
 		for (int x = 0; x < width; x++)
 		{
@@ -191,8 +190,9 @@ void Terrain::readBCM(const char * filename) {
 	}
 
 	// Heightmap
-	for (int i = 0; i < numVerts; i++)
-		vertices[i] = (uint8_t)br.readnb(8);
+	for (int y = 0; y <= height; y++)
+		for (int x = 0; x <= width; x++)
+			vertices[(height - y) * (width + 1) + x] = (uint8_t)br.readnb(8);
 
 	free(fcnt);
 
@@ -229,7 +229,9 @@ void Terrain::readSNR(const char* filename)
 			Bitmap bmp = Bitmap::loadBitmap(gsf.nextString(true).c_str());
 			if (bmp.width != width + 1 || bmp.height != height + 1)
 				ferr("Incorrect heightmap bitmap size");
-			vertices = std::move(bmp.pixels);
+			vertices.resize(numVerts);
+			for (int y = 0; y <= height; ++y)
+				memcpy(vertices.data() + (height - y) * (width + 1), bmp.pixels.data() + y * (width + 1), width + 1);
 		}
 		else if (tag == "SCENARIO_HEIGHT_SCALE_FACTOR") {
 			scale = gsf.nextFloat();
@@ -285,7 +287,7 @@ void Terrain::readTRN(const char* filename)
 			int x = gsf.nextInt() - 1;
 
 			str = gsf.nextString();
-			int z = height - gsf.nextInt();
+			int z = gsf.nextInt() - 1;
 
 			str = gsf.nextString();
 			auto grp = gsf.nextString(true);
@@ -353,6 +355,6 @@ void Terrain::floodfillWater()
 		}
 	};
 	for (Vector3& lake : lakes) {
-		floodfill((int)(lake.x / 5.0f), height - 1 - (int)(lake.z / 5.0f), lake.y, floodfill);
+		floodfill((int)(lake.x / 5.0f), (int)(lake.z / 5.0f), lake.y, floodfill);
 	}
 }

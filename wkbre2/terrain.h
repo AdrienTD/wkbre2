@@ -73,7 +73,7 @@ struct Terrain
 
 	Vector3 getNormal(int x, int z) const;
 
-	const Tile* getTile(int tx, int tz) const { return (tx >= 0 && tx < width && tz >= 0 && tz < height) ? &tiles[(height-1-tz) * width + tx] : nullptr; }
+	const Tile* getTile(int tx, int tz) const { return (tx >= 0 && tx < width && tz >= 0 && tz < height) ? &tiles[tz * width + tx] : nullptr; }
 	const Tile* getPlayableTile(int tx, int tz) const { return getTile(tx + edge, tz + edge); }
 
 	void freeArrays() {

@@ -61,10 +61,10 @@ Vector3 MovementController::startMovement(const Vector3& destination)
 		const auto* trnTile = trn->getPlayableTile(pfp.x, pfp.z);
 		if (trnTile) {
 			const float h[4] = {
-				trn->getVertex(trn->edge + pfp.x, trn->height - (trn->edge + pfp.z)),
-				trn->getVertex(trn->edge + pfp.x + 1, trn->height - (trn->edge + pfp.z)),
-				trn->getVertex(trn->edge + pfp.x, trn->height - (trn->edge + pfp.z + 1)),
-				trn->getVertex(trn->edge + pfp.x + 1, trn->height - (trn->edge + pfp.z + 1))
+				trn->getVertex(trn->edge + pfp.x, trn->edge + pfp.z),
+				trn->getVertex(trn->edge + pfp.x + 1, trn->edge + pfp.z),
+				trn->getVertex(trn->edge + pfp.x, trn->edge + pfp.z + 1),
+				trn->getVertex(trn->edge + pfp.x + 1, trn->edge + pfp.z + 1)
 			};
 			auto [minH, maxH] = std::minmax_element(std::begin(h), std::end(h));
 
