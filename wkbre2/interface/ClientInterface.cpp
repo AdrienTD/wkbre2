@@ -146,133 +146,130 @@ namespace {
 	}
 }
 
-void ClientInterface::drawObject(ClientGameObject *obj) {
+void ClientInterface::drawObject(ClientGameObject *obj)
+{
 	using namespace Tags;
-	//if ((obj->blueprint->bpClass == GAMEOBJCLASS_BUILDING) || (obj->blueprint->bpClass == GAMEOBJCLASS_CHARACTER)) {
-	if(true) {
-		static const float tolerance = 25.0f;
-		const float dirDist = client->camera.direction.dot(obj->position - client->camera.position);
-		const float nearBound = client->camera.nearDist - tolerance;
-		const float farBound = client->camera.farDist + tolerance;
-		if (dirDist < nearBound || dirDist > farBound)
-			goto drawsub;
 
-		const Vector3 side = client->camera.direction.cross(Vector3(0, 1, 0));
-		const float fovX = 0.9f * client->camera.aspect;
-		const float tanFov = std::tan(fovX / 2.0f);
-		const float cosFov = std::cos(fovX / 2.0f);
-		const float sideDist = std::abs(side.dot(obj->position - client->camera.position));
-		const float sideBound = std::max(0.0f, dirDist) * tanFov + tolerance / cosFov;
-		if (sideDist > sideBound)
-			goto drawsub;
-
-		Model* model = nullptr;
-		if (const auto* appear = obj->blueprint->getAppearance(obj->subtype, obj->appearance)) {
-			const auto& ap = *appear;
-			auto it = ap.animations.find(obj->animationIndex);
-			if (it == ap.animations.end())
-				it = ap.animations.find(0);
-			if (it != ap.animations.end()) {
-				const auto& anim = it->second;
-				if (!anim.empty())
-					model = anim[obj->animationVariant];
-			}
-		}
-		if (!model)
-			model = obj->blueprint->representAs;
-		if (!model)
-			goto drawsub;
-
-		const Matrix transformMatrix = obj->getWorldMatrix();
-
-		Vector3 sphereCenter = model->getSphereCenter().transform(transformMatrix);
-		float sphereRadius = model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z });
-		Vector3 ttpp = sphereCenter.transformScreenCoords(client->camera.sceneMatrix);
-		bool onCam = (client->camera.position - sphereCenter).len3() < sphereRadius;
-		if (!onCam)
-			onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
-		if (!onCam) {
-			Vector3 camdir = client->camera.direction.normal();
-			Vector3 H = client->camera.position + camdir * camdir.dot(sphereCenter - client->camera.position);
-			Vector3 sphereEnd = sphereCenter + (H - sphereCenter).normal() * sphereRadius;
-			ttpp = sphereEnd.transformScreenCoords(client->camera.sceneMatrix);
-			onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
-		}
-		if (onCam) {
-			if (model) {
-				obj->sceneEntity.model = model;
-				obj->sceneEntity.transform = transformMatrix;
-				obj->sceneEntity.color = obj->getPlayer()->color;
-				if (obj->animSynchronizedTask != -1) {
-					CliScriptContext ctx{ client, obj };
-					float frac = client->gameSet->tasks[obj->animSynchronizedTask].synchAnimationToFraction->eval(&ctx);
-					obj->sceneEntity.animTime = (uint32_t)(model->getDuration() * frac * 1000.0f);
-				}
-				else
-					obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
-				obj->sceneEntity.flags = 0;
-				if (obj->animClamped) obj->sceneEntity.flags |= SceneEntity::SEFLAG_ANIM_CLAMP_END;
-				if (selection.count(obj) >= 1) obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
-				scene->add(&obj->sceneEntity);
-				numObjectsDrawn++;
-				// Attachment points
-				drawAttachmentPoints(&obj->sceneEntity, obj->id);
-
-				if (devMode || (obj->flags & (ClientGameObject::fSelectable | ClientGameObject::fTargetable))) {
-					// Ray collision check
-					if (auto spherePoint = RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
-						if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
-							const float sphereDist = (client->camera.position - *spherePoint).sqlen3();
-							if (sphereDist < nextSelObjDistanceBySphere) {
-								nextSelectedObjectBySphere = obj;
-								nextSelObjDistanceBySphere = sphereDist;
-							}
-						}
-
-						const float* verts = model->interpolate(obj->sceneEntity.animTime);
-						Mesh& mesh = model->getStaticModel()->getMesh();
-						PolygonList& polylist = mesh.polyLists[0];
-						for (size_t g = 0; g < polylist.groups.size(); g++) {
-							PolyListGroup& group = polylist.groups[g];
-							for (auto& tuple : group.tupleIndex) {
-								Vector3 vec[3];
-								for (int j = 0; j < 3; j++) {
-									uint16_t i = tuple[j];
-									IndexTuple& tind = mesh.groupIndices[g][i];
-									const float* fl = &verts[tind.vertex * 3];
-									Vector3 prever(fl[0], fl[1], fl[2]);
-									vec[j] = prever.transform(obj->sceneEntity.transform);
-								}
-								const auto trianglePoint = getRayTriangleIntersection(client->camera.position, rayDirection, vec[0], vec[2], vec[1]);
-								if (trianglePoint) {
-									float dist = (client->camera.position - *trianglePoint).sqlen3();
-									if (dist < nextSelObjDistanceByMesh) {
-										nextSelectedObjectByMesh = obj;
-										nextSelObjDistanceByMesh = dist;
-									}
-								}
-							}
-						}
-					}
-					// Box selection check
-					if (selBoxOn) {
-						int bx = static_cast<int>((ttpp.x + 1.0f) * g_windowWidth / 2.0f);
-						int by = static_cast<int>((-ttpp.y + 1.0f) * g_windowHeight / 2.0f);
-						bool inBox = ((selBoxStartX < bx) && (bx < selBoxEndX)) || ((selBoxEndX < bx) && (bx < selBoxStartX));
-						inBox = inBox && (((selBoxStartY < by) && (by < selBoxEndY)) || ((selBoxEndY < by) && (by < selBoxStartY)));
-						if (inBox) {
-							nextSelFromBox.push_back(obj);
-						}
-					}
-				}
-			}
-		}
-	}
-drawsub:
-	for (auto &typechildren : obj->children) {
-		//GameObjBlueprint* blueprint = client->gameSet->getBlueprint(typechildren.first);
+	for (auto& typechildren : obj->children) {
 		for (CommonGameObject* child : typechildren.second) {
 			drawObject((ClientGameObject*)child);
+		}
+	}
+
+	static const float tolerance = 25.0f;
+	const float dirDist = client->camera.direction.dot(obj->position - client->camera.position);
+	const float nearBound = client->camera.nearDist - tolerance;
+	const float farBound = client->camera.farDist + tolerance;
+	if (dirDist < nearBound || dirDist > farBound)
+		return;
+
+	const Vector3 side = client->camera.direction.cross(Vector3(0, 1, 0));
+	const float fovX = 0.9f * client->camera.aspect;
+	const float tanFov = std::tan(fovX / 2.0f);
+	const float cosFov = std::cos(fovX / 2.0f);
+	const float sideDist = std::abs(side.dot(obj->position - client->camera.position));
+	const float sideBound = std::max(0.0f, dirDist) * tanFov + tolerance / cosFov;
+	if (sideDist > sideBound)
+		return;
+
+	Model* model = nullptr;
+	if (const auto* appear = obj->blueprint->getAppearance(obj->subtype, obj->appearance)) {
+		const auto& ap = *appear;
+		auto it = ap.animations.find(obj->animationIndex);
+		if (it == ap.animations.end())
+			it = ap.animations.find(0);
+		if (it != ap.animations.end()) {
+			const auto& anim = it->second;
+			if (!anim.empty())
+				model = anim[obj->animationVariant];
+		}
+	}
+	if (!model)
+		model = obj->blueprint->representAs;
+	if (!model)
+		return;
+
+	const Matrix transformMatrix = obj->getWorldMatrix();
+
+	Vector3 sphereCenter = model->getSphereCenter().transform(transformMatrix);
+	float sphereRadius = model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z });
+	Vector3 ttpp = sphereCenter.transformScreenCoords(client->camera.sceneMatrix);
+	bool onCam = (client->camera.position - sphereCenter).len3() < sphereRadius;
+	if (!onCam)
+		onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
+	if (!onCam) {
+		Vector3 camdir = client->camera.direction.normal();
+		Vector3 H = client->camera.position + camdir * camdir.dot(sphereCenter - client->camera.position);
+		Vector3 sphereEnd = sphereCenter + (H - sphereCenter).normal() * sphereRadius;
+		ttpp = sphereEnd.transformScreenCoords(client->camera.sceneMatrix);
+		onCam = !(ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1);
+	}
+	if (!onCam)
+		return;
+
+	obj->sceneEntity.model = model;
+	obj->sceneEntity.transform = transformMatrix;
+	obj->sceneEntity.color = obj->getPlayer()->color;
+	if (obj->animSynchronizedTask != -1) {
+		CliScriptContext ctx{ client, obj };
+		float frac = client->gameSet->tasks[obj->animSynchronizedTask].synchAnimationToFraction->eval(&ctx);
+		obj->sceneEntity.animTime = (uint32_t)(model->getDuration() * frac * 1000.0f);
+	}
+	else
+		obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
+	obj->sceneEntity.flags = 0;
+	if (obj->animClamped) obj->sceneEntity.flags |= SceneEntity::SEFLAG_ANIM_CLAMP_END;
+	if (selection.count(obj) >= 1) obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+	scene->add(&obj->sceneEntity);
+	numObjectsDrawn++;
+	// Attachment points
+	drawAttachmentPoints(&obj->sceneEntity, obj->id);
+
+	if (devMode || (obj->flags & (ClientGameObject::fSelectable | ClientGameObject::fTargetable))) {
+		// Ray collision check
+		if (auto spherePoint = RayIntersectsSphere(client->camera.position, rayDirection, obj->position + obj->sceneEntity.model->getSphereCenter() * obj->scale, obj->sceneEntity.model->getSphereRadius() * std::max({ obj->scale.x, obj->scale.y, obj->scale.z }))) {
+			if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER) {
+				const float sphereDist = (client->camera.position - *spherePoint).sqlen3();
+				if (sphereDist < nextSelObjDistanceBySphere) {
+					nextSelectedObjectBySphere = obj;
+					nextSelObjDistanceBySphere = sphereDist;
+				}
+			}
+
+			const float* verts = model->interpolate(obj->sceneEntity.animTime);
+			Mesh& mesh = model->getStaticModel()->getMesh();
+			PolygonList& polylist = mesh.polyLists[0];
+			for (size_t g = 0; g < polylist.groups.size(); g++) {
+				PolyListGroup& group = polylist.groups[g];
+				for (auto& tuple : group.tupleIndex) {
+					Vector3 vec[3];
+					for (int j = 0; j < 3; j++) {
+						uint16_t i = tuple[j];
+						IndexTuple& tind = mesh.groupIndices[g][i];
+						const float* fl = &verts[tind.vertex * 3];
+						Vector3 prever(fl[0], fl[1], fl[2]);
+						vec[j] = prever.transform(obj->sceneEntity.transform);
+					}
+					const auto trianglePoint = getRayTriangleIntersection(client->camera.position, rayDirection, vec[0], vec[2], vec[1]);
+					if (trianglePoint) {
+						float dist = (client->camera.position - *trianglePoint).sqlen3();
+						if (dist < nextSelObjDistanceByMesh) {
+							nextSelectedObjectByMesh = obj;
+							nextSelObjDistanceByMesh = dist;
+						}
+					}
+				}
+			}
+		}
+		// Box selection check
+		if (selBoxOn) {
+			int bx = static_cast<int>((ttpp.x + 1.0f) * g_windowWidth / 2.0f);
+			int by = static_cast<int>((-ttpp.y + 1.0f) * g_windowHeight / 2.0f);
+			bool inBox = ((selBoxStartX < bx) && (bx < selBoxEndX)) || ((selBoxEndX < bx) && (bx < selBoxStartX));
+			inBox = inBox && (((selBoxStartY < by) && (by < selBoxEndY)) || ((selBoxEndY < by) && (by < selBoxStartY)));
+			if (inBox) {
+				nextSelFromBox.push_back(obj);
+			}
 		}
 	}
 }
