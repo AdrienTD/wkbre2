@@ -66,10 +66,10 @@ Vector3 Terrain::getNormal(int x, int z) const {
 	if (z < height)	c = getVertex(x, z + 1) - h;
 	if (x < width)	d = getVertex(x + 1, z) - h;
 
-	if (x > 0 && z > 0)				nrm += Vector3(b , 5, -a);
-	if (x > 0 && z < height)		nrm += Vector3(b , 5,  c);
-	if (x < width && z < height)	nrm += Vector3(-d, 5,  c);
-	if (x < width && z > 0)			nrm += Vector3(-d, 5, -a);
+	if (x > 0 && z > 0)				nrm += Vector3(b , 5,  a);
+	if (x > 0 && z < height)		nrm += Vector3(b , 5, -c);
+	if (x < width && z < height)	nrm += Vector3(-d, 5, -c);
+	if (x < width && z > 0)			nrm += Vector3(-d, 5,  a);
 	return nrm.normal();
 
 }
