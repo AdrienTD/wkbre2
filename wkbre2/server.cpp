@@ -417,7 +417,11 @@ ServerGameObject* Server::loadObject(GSFileParser & gsf, const std::string &clsn
 			break;
 		}
 		case Tags::GAMEOBJ_DISABLE_COUNT: {
-			obj->disableCount = gsf.nextInt(); // report to client?
+			const int disableCount = gsf.nextInt();
+			if (disableCount > 0) {
+				obj->disable();
+				obj->disableCount = disableCount;
+			}
 			break;
 		}
 		case Tags::GAMEOBJ_TERMINATED: {
@@ -769,13 +773,21 @@ void ServerGameObject::updateFlags(int value)
 
 void ServerGameObject::disable()
 {
+	if (disableCount == 0) {
+		orderConfig.cancelAllOrders();
+		updateFlags(flags & ~(fRenderable | fSelectable | fTargetable));
+	}
 	disableCount++;
 }
 
 void ServerGameObject::enable()
 {
-	if (disableCount > 0)
+	if (disableCount > 0) {
 		disableCount--;
+		if (disableCount == 0) {
+			updateFlags(flags | (fRenderable | fSelectable | fTargetable));
+		}
+	}
 }
 
 void ServerGameObject::setIndexedItem(int item, int index, float value)
@@ -1326,6 +1338,8 @@ void Server::tick()
 	static std::vector<SrvGORef> toprocess;
 	toprocess.clear();
 	const auto processObjOrders = [this](ServerGameObject *obj, auto &func) -> void {
+		if (obj->disableCount > 0)
+			return;
 		if (!obj->orderConfig.orders.empty() || obj->blueprint->receiveSightRangeEvents || obj->blueprint->removeWhenNotReferenced)
 			toprocess.emplace_back(obj);
 		if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_ARMY) {
