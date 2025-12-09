@@ -156,6 +156,9 @@ void ClientInterface::drawObject(ClientGameObject *obj)
 		}
 	}
 
+	if (!devMode && !(obj->flags & ClientGameObject::fRenderable))
+		return;
+
 	static const float tolerance = 25.0f;
 	const float dirDist = client->camera.direction.dot(obj->position - client->camera.position);
 	const float nearBound = client->camera.nearDist - tolerance;
@@ -184,7 +187,7 @@ void ClientInterface::drawObject(ClientGameObject *obj)
 				model = anim[obj->animationVariant];
 		}
 	}
-	if (!model)
+	if (!model && devMode)
 		model = obj->blueprint->representAs;
 	if (!model)
 		return;
