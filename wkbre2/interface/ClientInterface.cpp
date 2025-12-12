@@ -225,7 +225,18 @@ void ClientInterface::drawObject(ClientGameObject *obj)
 		obj->sceneEntity.animTime = (uint32_t)((client->timeManager.currentTime - obj->animStartTime) * 1000.0f);
 	obj->sceneEntity.flags = 0;
 	if (obj->animClamped) obj->sceneEntity.flags |= SceneEntity::SEFLAG_ANIM_CLAMP_END;
-	if (selection.count(obj) >= 1) obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+
+	// highlight selected object
+	bool highlighted = selection.count(obj) >= 1;
+	if (!highlighted) {
+		highlighted = obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER
+			&& obj->parent && obj->parent->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION
+			&& selection.count(obj->getParent());
+	}
+	if (highlighted) {
+		obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+	}
+
 	scene->add(&obj->sceneEntity);
 	numObjectsDrawn++;
 	// Attachment points
@@ -1047,8 +1058,22 @@ void ClientInterface::iter()
 		if (client->getLevel())
 			drawObject(client->getLevel());
 		nextSelectedObject = nextSelectedObjectByMesh ? nextSelectedObjectByMesh : nextSelectedObjectBySphere;
-		if (nextSelectedObject)
+
+		// highlight hovered object
+		if (nextSelectedObject) {
 			nextSelectedObject->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+			if (nextSelectedObject->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER
+				&& nextSelectedObject->parent && nextSelectedObject->parent->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
+				for (const auto& [chType, chList] : nextSelectedObject->parent->children) {
+					if (chType.bpClass() == Tags::GAMEOBJCLASS_CHARACTER) {
+						for (auto* child : chList) {
+							child->dyncast<ClientGameObject>()->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+						}
+					}
+				}
+			}
+		}
+
 		// test
 		//Vector3 peapos = client->camera.position + getRay(client->camera).normal() * 16;
 		peapos = Vector3(0, 0, 0);
