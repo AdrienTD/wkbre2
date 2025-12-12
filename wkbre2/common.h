@@ -102,7 +102,8 @@ struct CommonGameObject {
 	template<typename AnyGameObject> AnyGameObject* dyncast() { return (AnyGameObject*)this; }
 	template<typename AnyGameObject> const AnyGameObject* dyncast() const { return (const AnyGameObject*)this; }
 
-	CommonGameObject(uint32_t id, const GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr) {}
+	CommonGameObject(uint32_t id, const GameObjBlueprint *blueprint) : id(id), blueprint(blueprint), parent(nullptr),
+		flags(blueprint->getStartingFlags()) {}
 };
 
 template<typename Program, typename AnyGameObject> struct SpecificGameObject : CommonGameObject {

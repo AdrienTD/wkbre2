@@ -734,6 +734,8 @@ void ServerGameObject::convertTo(const GameObjBlueprint * postbp)
 	this->updateSightRange();
 	// update footprint
 	this->updateOccupiedTiles(this->position, this->orientation, this->position, this->orientation);
+	// reset flags
+	this->updateFlags((this->flags & ~(fRenderable | fSelectable | fTargetable)) | postbp->getStartingFlags());
 }
 
 void ServerGameObject::setScale(const Vector3& scale)

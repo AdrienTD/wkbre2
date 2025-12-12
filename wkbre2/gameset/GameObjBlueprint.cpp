@@ -8,6 +8,7 @@
 #include <string>
 #include "../file.h"
 #include "finder.h"
+#include "../common.h"
 
 void GameObjBlueprint::loadAnimations(GameObjBlueprint::BPAppearance &ap, const std::string &dir, bool overrideAnims) {
 	//printf("Loading anims from %s\n", dir.c_str());
@@ -295,6 +296,18 @@ void GameObjBlueprint::parse(GSFileParser & gsf, const std::string &directory, b
 			buildingType = Tags::BUILDINGTYPE_tagDict.getTagID(gsf.nextString(false).c_str());
 			break;
 		}
+		case Tags::CBLUEPRINT_OBJECT_IS_RENDERABLE: {
+			objectIsRenderable = gsf.nextInt() != 0;
+			break;
+		}
+		case Tags::CBLUEPRINT_OBJECT_IS_SELECTABLE: {
+			objectIsSelectable = gsf.nextInt() != 0;
+			break;
+		}
+		case Tags::CBLUEPRINT_OBJECT_IS_TARGETABLE: {
+			objectIsTargetable = gsf.nextInt() != 0;
+			break;
+		}
 		}
 		if (strtag == "AI__SPAWN_LOCATION_SELECTOR") {
 			aiSpawnLocationSelector = ReadFinder(gsf, *gameSet);
@@ -404,4 +417,16 @@ float GameObjBlueprint::getStartingItemValue(int itemIndex) const
 		return 0.0f;
 	}
 	return it->second;
+}
+
+int GameObjBlueprint::getStartingFlags() const
+{
+	int flags = 0;
+	if (objectIsRenderable)
+		flags |= CommonGameObject::fRenderable;
+	if (objectIsSelectable)
+		flags |= CommonGameObject::fSelectable;
+	if (objectIsTargetable)
+		flags |= CommonGameObject::fTargetable;
+	return flags;
 }
