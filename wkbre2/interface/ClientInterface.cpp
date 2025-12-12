@@ -31,6 +31,9 @@
 #include "../gfx/D3D11EnhancedSceneRenderer.h"
 #include "../StampdownPlan.h"
 
+#define SOL_NO_CHECK_NUMBER_PRECISION 1
+#include <sol/sol.hpp>
+
 namespace {
 	Vector3 getRay(const Camera &cam) {
 		//float ay = (1 - g_mouseX * 2.0f / g_windowWidth) * 0.45 * g_windowWidth / g_windowHeight;
@@ -305,9 +308,6 @@ void ClientInterface::drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t ob
 		}
 	}
 }
-
-#define SOL_NO_CHECK_NUMBER_PRECISION 1
-#include <sol/sol.hpp>
 
 void ClientInterface::iter()
 {
