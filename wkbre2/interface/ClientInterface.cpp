@@ -256,11 +256,15 @@ void ClientInterface::drawObject(ClientGameObject *obj)
 			}
 			shadowTexture = gfx->CreateTexture(bmp, 0);
 		}
-		const float radius = model->getStaticModel()->getSphereRadius();
-		const Vector3 pos = obj->position + Vector3(1, 0, 1) * (client->terrain->edge * 5.0f - radius);
-		TerrainSpriteContainer::Point p1{ pos.x, pos.z };
-		TerrainSpriteContainer::Point p2{ pos.x + 2.0f * radius, pos.z };
-		TerrainSpriteContainer::Point p3{ pos.x, pos.z + 2.0f * radius };
+		const auto [aabbLow, aabbHigh] = model->interpolateBoundingBox(obj->sceneEntity.animTime);
+		const Vector3 preOff = -(aabbLow + aabbHigh) / 2.0f;
+		const Vector3 postOff = Vector3(1, 0, 1) * (client->terrain->edge * 5.0f);
+		const Vector3 v1 = (Vector3(aabbLow.x, 0.0f, aabbLow.z) + preOff).transform(transformMatrix) + postOff;
+		const Vector3 v2 = (Vector3(aabbLow.x, 0.0f, aabbHigh.z) + preOff).transform(transformMatrix) + postOff;
+		const Vector3 v3 = (Vector3(aabbHigh.x, 0.0f, aabbLow.z) + preOff).transform(transformMatrix) + postOff;
+		const TerrainSpriteContainer::Point p1{ v1.x, v1.z };
+		const TerrainSpriteContainer::Point p2{ v2.x, v2.z };
+		const TerrainSpriteContainer::Point p3{ v3.x, v3.z };
 		terrainSpriteContainer->addSprite(*shadowTexture, p1, p2, p3);
 	}
 
