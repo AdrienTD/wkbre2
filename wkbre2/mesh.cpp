@@ -4,8 +4,10 @@
 
 #include "mesh.h"
 #include "file.h"
-#include <cassert>
 #include "util/BinaryReader.h"
+
+#include <cassert>
+#include <limits>
 
 const std::array<Vector3, 256> Mesh::s_normalTable = {
 Vector3{0.808092f, 0.444655f, -0.386355f}, {-0.456426f, -0.729133f, 0.509942f}, {-0.600703f, -0.527135f, -0.601069f}, {-0.898221f, -0.203762f, -0.389462f}, {0.243796f, -0.096599f, 0.965004f}, {0.608059f, 0.752839f, -0.251987f}, {-0.421935f, 0.886955f, -0.187833f}, {0.910585f, 0.268347f, 0.314364f}, {-0.673626f, -0.723759f, 0.149674f}, {0.625561f, 0.209396f, -0.751550f}, {-0.696196f, 0.269262f, -0.665439f}, {-0.184171f, -0.982517f, -0.027217f}, {0.343731f, -0.067672f, -0.936627f}, {-0.602991f, 0.737327f, -0.304552f}, {-0.587473f, 0.510824f, -0.627642f}, {-0.647096f, -0.554946f, 0.522784f},
@@ -159,6 +161,19 @@ void Mesh::load(const char * filename)
 		normalRemapper.resize(numNormals);
 		for (int i = 0; i < numNormals; i++)
 			normalRemapper[i] = i;
+	}
+
+	// Compute bounding box
+	static const float inf = std::numeric_limits<float>::infinity();
+	aabbLow = Vector3(inf, inf, inf);
+	aabbHigh = -Vector3(inf, inf, inf);
+	const float* vtxData = vertices.data();
+	for (size_t v = 0; v < vertices.size() / 3; ++v) {
+		for (size_t c = 0; c < 3; ++c) {
+			aabbLow.coord[c] = std::min(aabbLow.coord[c], *vtxData);
+			aabbHigh.coord[c] = std::max(aabbHigh.coord[c], *vtxData);
+			++vtxData;
+		}
 	}
 }
 

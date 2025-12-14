@@ -152,3 +152,26 @@ size_t Anim::AnimAttachPoint::getAPFrame(uint32_t animTime)
 			break;
 	return frame;
 }
+
+std::array<Vector3, 2> Anim::interpolateBoundingBox(uint32_t animTime)
+{
+	if ((int32_t)animTime < 0) animTime = 0;
+	animTime %= this->duration;
+
+	std::array<Vector3, 2> aabb;
+	for (int c = 0; c < 3; c++) {
+		auto& ac = this->coords[c];
+		size_t cf = 0;
+		for (; cf < ac.numFrames - 1; cf++)
+			if (ac.frameTimes[cf + 1] >= animTime)
+				break;
+		size_t frame = cf;
+
+		for (int i = 0; i < 2; ++i) {
+			float v1 = ac.vertadd[frame] + ac.vertmul[frame] * i;
+			float v2 = ac.vertadd[frame + 1] + ac.vertmul[frame + 1] * i;
+			aabb[i].coord[c] = v1 + (v2 - v1) * (animTime - ac.frameTimes[frame]) / (ac.frameTimes[frame + 1] - ac.frameTimes[frame]);
+		}
+	}
+	return aabb;
+}

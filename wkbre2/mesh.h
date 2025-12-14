@@ -62,6 +62,8 @@ struct Mesh
 	DynArray<uint8_t> normals;
 	DynArray<uint16_t> normalRemapper;
 
+	Vector3 aabbLow, aabbHigh;
+
 	void load(const char *filename);
 	const Vector3* decodeNormals();
 

@@ -51,6 +51,7 @@ struct Anim
 	const float* interpolate(uint32_t animTime, const Mesh& mesh);
 	AttachmentPointState getAPState(size_t index, uint32_t animTime);
 	const Vector3* interpolateNormals(uint32_t animTime, const Mesh& mesh);
+	std::array<Vector3, 2> interpolateBoundingBox(uint32_t animTime);
 
 	Anim() {}
 	Anim(const char *filename) { load(filename); }

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <array>
 #include <map>
 #include <string>
 #include <memory>
@@ -32,6 +33,7 @@ struct Model {
 	virtual float getDuration() { return 1.5f; }
 	virtual const float* interpolate(uint32_t animTime) = 0;
 	virtual const Vector3* interpolateNormals(uint32_t animTime) = 0;
+	virtual std::array<Vector3, 2> interpolateBoundingBox(uint32_t animTime) = 0;
 	virtual size_t getNumAPs() = 0;
 	virtual const AttachmentPoint& getAPInfo(size_t index) = 0;
 	virtual AttachmentPointState getAPState(size_t index, uint32_t animTime) = 0;
@@ -55,6 +57,7 @@ struct StaticModel : Model {
 	float getSphereRadius() override;
 	const float* interpolate(uint32_t animTime) override;
 	const Vector3* interpolateNormals(uint32_t animTime) override;
+	std::array<Vector3, 2> interpolateBoundingBox(uint32_t animTime) override;
 	size_t getNumAPs() override;
 	const AttachmentPoint& getAPInfo(size_t index) override;
 	AttachmentPointState getAPState(size_t index, uint32_t animTime) override;
@@ -83,6 +86,7 @@ struct AnimatedModel : Model {
 	float getDuration() override;
 	const float* interpolate(uint32_t animTime) override;
 	const Vector3* interpolateNormals(uint32_t animTime) override;
+	std::array<Vector3, 2> interpolateBoundingBox(uint32_t animTime) override;
 	size_t getNumAPs() override;
 	const AttachmentPoint& getAPInfo(size_t index) override;
 	AttachmentPointState getAPState(size_t index, uint32_t animTime) override;
