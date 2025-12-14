@@ -51,8 +51,8 @@ void TerrainSpriteRenderer::render()
 			const float det = matUv2World._11 * matUv2World._22 - matUv2World._21 * matUv2World._12;
 			Matrix matWorld2Uv = Matrix::getIdentity();
 			matWorld2Uv._11 = matUv2World._22 / det;
-			matWorld2Uv._12 = -matUv2World._21 / det;
-			matWorld2Uv._21 = -matUv2World._12 / det;
+			matWorld2Uv._12 = -matUv2World._12 / det;
+			matWorld2Uv._21 = -matUv2World._21 / det;
 			matWorld2Uv._22 = matUv2World._11 / det;
 			matWorld2Uv = Matrix::getTranslationMatrix(-Vector3(p1.x, p1.y, 0.0f)) * matWorld2Uv;
 
