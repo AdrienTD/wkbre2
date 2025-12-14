@@ -21,6 +21,8 @@ struct GameObjBlueprint;
 struct ParticleContainer;
 struct PSCache;
 struct ParticleRenderer;
+struct TerrainSpriteContainer;
+struct TerrainSpriteRenderer;
 
 struct ClientInterface {
 	Client *client;
@@ -32,6 +34,8 @@ struct ClientInterface {
 	ParticleContainer* particlesContainer;
 	PSCache* psCache;
 	ParticleRenderer* particleRenderer;
+	TerrainSpriteContainer* terrainSpriteContainer;
+	TerrainSpriteRenderer* terrainSpriteRenderer;
 
 	void iter();
 	void render();
@@ -40,7 +44,7 @@ struct ClientInterface {
 
 	ClientInterface(Client *client, IRenderer *gfx) : client(client), gfx(gfx), terrainRenderer(nullptr),
 		sceneRenderer(nullptr), debugger(client, this), scene(nullptr), particlesContainer(nullptr), psCache(nullptr),
-		particleRenderer(nullptr), uiTexCache(gfx) {}
+		particleRenderer(nullptr), uiTexCache(gfx), terrainSpriteContainer(nullptr), terrainSpriteRenderer(nullptr) {}
 
 	const GameObjBlueprint *stampdownBlueprint = nullptr;
 	CliGORef stampdownPlayer;
@@ -65,6 +69,7 @@ private:
 	int selBoxStartX, selBoxStartY, selBoxEndX, selBoxEndY;
 	std::vector<CliGORef> nextSelFromBox;
 	bool devMode = false;
+	std::unordered_set<ClientGameObject*> highlightedObjects;
 
 	void drawObject(ClientGameObject* obj);
 	void drawAttachmentPoints(SceneEntity* sceneEntity, uint32_t objid = 0);

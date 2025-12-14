@@ -30,6 +30,8 @@
 #include <nlohmann/json.hpp>
 #include "../gfx/D3D11EnhancedSceneRenderer.h"
 #include "../StampdownPlan.h"
+#include "../gfx/TerrainSpriteContainer.h"
+#include "../gfx/TerrainSpriteRenderer.h"
 
 #define SOL_NO_CHECK_NUMBER_PRECISION 1
 #include <sol/sol.hpp>
@@ -234,7 +236,7 @@ void ClientInterface::drawObject(ClientGameObject *obj)
 			&& selection.count(obj->getParent());
 	}
 	if (highlighted) {
-		obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+		highlightedObjects.insert(obj);
 	}
 
 	scene->add(&obj->sceneEntity);
@@ -1061,18 +1063,45 @@ void ClientInterface::iter()
 
 		// highlight hovered object
 		if (nextSelectedObject) {
-			nextSelectedObject->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+			highlightedObjects.insert(nextSelectedObject);
 			if (nextSelectedObject->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER
 				&& nextSelectedObject->parent && nextSelectedObject->parent->blueprint->bpClass == Tags::GAMEOBJCLASS_FORMATION) {
 				for (const auto& [chType, chList] : nextSelectedObject->parent->children) {
 					if (chType.bpClass() == Tags::GAMEOBJCLASS_CHARACTER) {
 						for (auto* child : chList) {
-							child->dyncast<ClientGameObject>()->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+							highlightedObjects.insert(child->dyncast<ClientGameObject>());
 						}
 					}
 				}
 			}
 		}
+		static bool healthTexLoaded = false;
+		static texture healthTex[8];
+		if (!healthTexLoaded) {
+			for (int i = 0; i < 8; ++i) {
+				std::string name = "Interface\\InGame\\health" + std::to_string(i + 1) + ".tga";
+				healthTex[i] = uiTexCache.getTexture(name.c_str());
+			}
+			healthTexLoaded = true;
+		}
+		for (const auto& obj : highlightedObjects) {
+			obj->sceneEntity.flags |= SceneEntity::SEFLAG_NOLIGHTING;
+			if (obj->blueprint->bpClass == Tags::GAMEOBJCLASS_CHARACTER && terrainSpriteContainer && client->terrain) {
+				float health = obj->getItem(Tags::PDITEM_HIT_POINTS);
+				float capacity = obj->getItem(Tags::PDITEM_HIT_POINT_CAPACITY);
+				Model* model = obj->getModel();
+				if (model) {
+					int healthIndex = (capacity > 0.0f) ? std::clamp(static_cast<int>(health * 8.0f / capacity), 0, 7) : 0;
+					const float radius = model->getStaticModel()->getSphereRadius();
+					const Vector3 pos = obj->position + Vector3(1, 0, 1) * (client->terrain->edge * 5.0f - radius);
+					TerrainSpriteContainer::Point p1{ pos.x, pos.z };
+					TerrainSpriteContainer::Point p2{ pos.x + 2.0f * radius, pos.z };
+					TerrainSpriteContainer::Point p3{ pos.x, pos.z + 2.0f * radius };
+					terrainSpriteContainer->addSprite(healthTex[healthIndex], p1, p2, p3);
+				}
+			}
+		}
+		highlightedObjects.clear();
 
 		// test
 		//Vector3 peapos = client->camera.position + getRay(client->camera).normal() * 16;
@@ -1149,6 +1178,11 @@ void ClientInterface::iter()
 	if (terrainRenderer && showTerrain)
 		terrainRenderer->render();
 
+	if (terrainSpriteRenderer && showTerrain)
+		terrainSpriteRenderer->render();
+	if (terrainSpriteContainer)
+		terrainSpriteContainer->clear();
+
 	if (particleRenderer && particlesContainer) {
 		gfx->BeginParticles();
 		gfx->BeginBatchDrawing();
@@ -1192,4 +1226,6 @@ void ClientInterface::updateTerrain() {
 #else
 	this->terrainRenderer = new DefaultTerrainRenderer(gfx, client->terrain, &client->camera);
 #endif
+	this->terrainSpriteContainer = new TerrainSpriteContainer;
+	this->terrainSpriteRenderer = new TerrainSpriteRenderer(gfx, client->terrain, this->terrainSpriteContainer);
 }
