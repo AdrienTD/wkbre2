@@ -32,6 +32,7 @@
 #include "../StampdownPlan.h"
 #include "../gfx/TerrainSpriteContainer.h"
 #include "../gfx/TerrainSpriteRenderer.h"
+#include "../gfx/bitmap.h"
 
 #define SOL_NO_CHECK_NUMBER_PRECISION 1
 #include <sol/sol.hpp>
@@ -243,6 +244,25 @@ void ClientInterface::drawObject(ClientGameObject *obj)
 	numObjectsDrawn++;
 	// Attachment points
 	drawAttachmentPoints(&obj->sceneEntity, obj->id);
+
+	// shadow
+	if (model && obj->blueprint->hasDynamicShadow) {
+		static std::optional<texture> shadowTexture;
+		if (!shadowTexture) {
+			Bitmap bmp = Bitmap::loadBitmap("Warrior Kings Game Set\\Textures\\shadow.pcx").convertToR8G8B8A8();
+			uint32_t* pix = reinterpret_cast<uint32_t*>(bmp.pixels.data());
+			for (int i = 0; i < bmp.width * bmp.height; ++i) {
+				pix[i] = (pix[i] & 255) << 24;
+			}
+			shadowTexture = gfx->CreateTexture(bmp, 0);
+		}
+		const float radius = model->getStaticModel()->getSphereRadius();
+		const Vector3 pos = obj->position + Vector3(1, 0, 1) * (client->terrain->edge * 5.0f - radius);
+		TerrainSpriteContainer::Point p1{ pos.x, pos.z };
+		TerrainSpriteContainer::Point p2{ pos.x + 2.0f * radius, pos.z };
+		TerrainSpriteContainer::Point p3{ pos.x, pos.z + 2.0f * radius };
+		terrainSpriteContainer->addSprite(*shadowTexture, p1, p2, p3);
+	}
 
 	if (devMode || (obj->flags & (ClientGameObject::fSelectable | ClientGameObject::fTargetable))) {
 		// Ray collision check
