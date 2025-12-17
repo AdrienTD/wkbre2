@@ -332,6 +332,7 @@ struct OGL3Renderer : IRenderer {
 
 		// Default state
 		glFrontFace(GL_CW);
+		glDepthFunc(GL_LEQUAL);
 	}
 
 	virtual void Reset() override {}
@@ -392,6 +393,8 @@ struct OGL3Renderer : IRenderer {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 		return (texture)gltex;
 	}

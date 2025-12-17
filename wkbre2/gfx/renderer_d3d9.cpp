@@ -304,6 +304,9 @@ struct D3D9Renderer : public IRenderer
 		ddev->SetTransform(D3DTS_WORLD, (D3DMATRIX*)&idmx);
 		ddev->SetTransform(D3DTS_VIEW, (D3DMATRIX*)&idmx);
 		//ddev->SetTransform(D3DTS_PROJECTION, (D3DMATRIX*)&idmx);
+
+		ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+		ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 	}
 
 	void EndDrawing() override
