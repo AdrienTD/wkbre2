@@ -81,17 +81,22 @@ VS_OUTPUT VS_Fog(float4 Pos : POSITION, float4 Color : COLOR, float2 Texcoord : 
 	return output;
 };
 
+float4 ApplyFog(float4 color, float fog)
+{
+	return float4(lerp(color.rgb, FogColor.rgb, fog), color.a);
+}
+
 float4 PS(VS_OUTPUT input) : SV_Target
 {
 	float4 tex = inpTexture.Sample(inpSampler, input.Texcoord);
-	return lerp(input.Color * tex, FogColor, input.Fog);
+	return ApplyFog(input.Color * tex, input.Fog);
 };
 
 float4 PS_AlphaTest(VS_OUTPUT input) : SV_Target
 {
 	float4 tex = inpTexture.Sample(inpSampler, input.Texcoord);
 	if(tex.a < ALPHA_REF) discard;
-	return lerp(input.Color * tex, FogColor, input.Fog);
+	return ApplyFog(input.Color * tex, input.Fog);
 };
 
 float4 PS_Map(VS_OUTPUT input) : SV_Target
@@ -106,12 +111,12 @@ float4 PS_Map(VS_OUTPUT input) : SV_Target
 
 	float2 fuv = clamp(subuv, float2(ha,ha), float2(0.25-ha,0.25-ha)) + tile*0.25;
 	float4 tex = inpTexture.Sample(inpSampler, fuv);
-	return lerp(input.Color * tex, FogColor, input.Fog);
+	return ApplyFog(input.Color * tex, input.Fog);
 }
 
 float4 PS_Lake(VS_OUTPUT input) : SV_Target
 {
-	return lerp(input.Color, FogColor, input.Fog);
+	return ApplyFog(input.Color, input.Fog);
 };
 )---";
 
@@ -439,6 +444,8 @@ void D3D11Renderer::BeginDrawing() {
 	ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
 	ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
 	ddImmediateContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&whiteTexture);
+
+	fogEnabled = false;
 }
 
 void D3D11Renderer::EndDrawing() {
@@ -566,10 +573,13 @@ void D3D11Renderer::SetFog(uint32_t color, float farz) {
 	ddImmediateContext->VSSetConstantBuffers(1, 1, &fogBuffer);
 	ddImmediateContext->PSSetConstantBuffers(1, 1, &fogBuffer);
 	ddImmediateContext->VSSetShader(ddFogVertexShader, nullptr, 0);
+
+	fogEnabled = true;
 }
 
 void D3D11Renderer::DisableFog() {
 	ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
+	fogEnabled = false;
 }
 
 void D3D11Renderer::EnableAlphaTest() {
@@ -778,7 +788,7 @@ void D3D11Renderer::BeginParticles() {
 	ddImmediateContext->OMSetBlendState(alphaBlendState, {}, 0xFFFFFFFF);
 	ddImmediateContext->OMSetDepthStencilState(depthTestOnlyState, 0);
 	ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
-	ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
+	ddImmediateContext->VSSetShader(fogEnabled ? ddFogVertexShader : ddVertexShader, nullptr, 0);
 }
 
 void D3D11Renderer::SetLineTopology() {

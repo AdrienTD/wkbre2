@@ -43,6 +43,9 @@ struct D3D11Renderer : IRenderer {
 	texture whiteTexture;
 	int msaaNumSamples = 1;
 
+	// State
+	bool fogEnabled = false;
+
 	static ComPtr<ID3DBlob> compileShader(const char* shaderCode, size_t shaderSize, const char* func, const char* model);
 	ID3D11VertexShader* getVertexShader(ID3DBlob* blob);
 	ID3D11PixelShader* getPixelShader(ID3DBlob* blob);

@@ -54,7 +54,8 @@ out vec4 FragColor;
 uniform sampler2D texSampler;
 void main() {
 	vec4 texColor = texture(texSampler, vtxTexCoords);
-	FragColor = mix(vtxColor * texColor, FogColor, vtxFog);
+	vec4 endColor = vtxColor * texColor;
+	FragColor = vec4(mix(endColor.rgb, FogColor.rgb, vtxFog), endColor.a);
 }
 )---";
 
@@ -69,7 +70,8 @@ void main() {
 	vec4 texColor = texture(texSampler, vtxTexCoords);
 	if(texColor.a < ALPHA_REF)
 		discard;
-	FragColor = mix(vtxColor * texColor, FogColor, vtxFog);
+	vec4 endColor = vtxColor * texColor;
+	FragColor = vec4(mix(endColor.rgb, FogColor.rgb, vtxFog), endColor.a);
 }
 )---";
 
