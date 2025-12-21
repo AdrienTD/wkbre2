@@ -9,8 +9,23 @@
 #include "../util/util.h"
 #include "../server.h"
 #include "ScriptContext.h"
-#include <cassert>
 #include "../BreakpointManager.h"
+#include "../settings.h"
+
+#include <cassert>
+#include <string_view>
+#include <nlohmann/json.hpp>
+
+static bool traceMessageEnabled(std::string_view message)
+{
+	const auto it = g_settings.find("tracePrefixFilter");
+	if (it == g_settings.end())
+		return false;
+	if (!it->is_string())
+		return false;
+	const std::string& filter = it->get_ref<const std::string&>();
+	return message.substr(0, filter.size()) == filter;
+}
 
 struct ActionUnknown : Action {
 	std::string name, location;
@@ -24,6 +39,8 @@ struct ActionUnknown : Action {
 struct ActionTrace : Action {
 	std::string message;
 	virtual void run(SrvScriptContext* ctx) override {
+		if (!traceMessageEnabled(message))
+			return;
 		printf("Trace: %s\n", message.c_str());
 	}
 	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
@@ -37,6 +54,8 @@ struct ActionTraceValue : Action {
 	std::string message;
 	std::unique_ptr<ValueDeterminer> value;
 	virtual void run(SrvScriptContext* ctx) override {
+		if (!traceMessageEnabled(message))
+			return;
 		printf("Trace Value: %s %f\n", message.c_str(), value->eval(ctx));
 	}
 	virtual void parse(GSFileParser & gsf, const GameSet & gs) override {
@@ -51,6 +70,8 @@ struct ActionTraceFinderResults : Action {
 	std::string message;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
+		if (!traceMessageEnabled(message))
+			return;
 		auto vec = finder->eval(ctx);
 		printf("Trace Finder: %s\n %zi objects:\n", message.c_str(), vec.size());
 		for (ServerGameObject *obj : vec)
@@ -66,6 +87,8 @@ struct ActionTracePosition : Action {
 	std::string message;
 	std::unique_ptr<PositionDeterminer> position;
 	virtual void run(SrvScriptContext* ctx) override {
+		if (!traceMessageEnabled(message))
+			return;
 		OrientedPosition result = position->eval(ctx);
 		printf("Trace Position: %s\n   Position: %f %f %f\n   Orientation: %f %f %f\n", message.c_str(),
 			result.position.x, result.position.y, result.position.z,
@@ -81,6 +104,8 @@ struct ActionTracePositionsOf : Action {
 	std::string message;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual void run(SrvScriptContext* ctx) override {
+		if (!traceMessageEnabled(message))
+			return;
 		auto vec = finder->eval(ctx);
 		printf("Trace Positions of objects: %s\n %zi objects:\n", message.c_str(), vec.size());
 		for (ServerGameObject* obj : vec) {
