@@ -4,12 +4,12 @@
 
 #define _USE_MATH_DEFINES
 #include "position.h"
-#include "../util/vecmat.h"
+#include "util/vecmat.h"
 #include "../server.h"
 #include "finder.h"
 #include <memory>
-#include "../util/util.h"
-#include "../util/GSFileParser.h"
+#include "util/util.h"
+#include "util/GSFileParser.h"
 #include "../tags.h"
 #include "../terrain.h"
 #include <tuple>

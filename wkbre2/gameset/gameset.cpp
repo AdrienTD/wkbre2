@@ -4,7 +4,7 @@
 
 #include "gameset.h"
 #include "../file.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "../tags.h"
 #include <vector>
 #include <string>

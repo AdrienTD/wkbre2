@@ -1,6 +1,6 @@
 #include "Commission.h"
 #include "gameset.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "finder.h"
 
 void GSCharacterLadder::parse(GSFileParser& gsf, GameSet& gs)
