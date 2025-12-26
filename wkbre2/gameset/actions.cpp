@@ -343,10 +343,22 @@ struct ActionTransferControl : Action {
 		}
 		for (ServerGameObject* obj : objs) {
 			ServerGameObject* oldParent = obj->getParent();
-			obj->setParent(recipient);
+			if (oldParent == recipient) {
+				continue;
+			}
+
+			if (!recipient->deleted) {
+				obj->setParent(recipient);
+			}
+			else {
+				printf("WARNING: Parent object deleted during TRANSFER_CONTROL\n");
+			}
+
+			// Events are sent even when the recipient is deleted
 			// TODO: Event Order
-			if (oldParent->countChildren() == 0)
-				oldParent->sendEvent(Tags::PDEVENT_ON_LAST_SUBORDINATE_RELEASED);
+			// Below commented as already done in obj->setParent (is this correct?)
+			//if (oldParent->countChildren() == 0)
+			//	oldParent->sendEvent(Tags::PDEVENT_ON_LAST_SUBORDINATE_RELEASED);
 			obj->sendEvent(Tags::PDEVENT_ON_CONTROL_TRANSFERRED);
 			recipient->sendEvent(Tags::PDEVENT_ON_SUBORDINATE_RECEIVED, obj);
 		}

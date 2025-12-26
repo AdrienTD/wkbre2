@@ -523,6 +523,8 @@ void ServerGameObject::setItem(int index, float value)
 
 void ServerGameObject::setParent(ServerGameObject * newParent)
 {
+	assert(!this->deleted && !newParent->deleted);
+
 	if (this->parent == newParent)
 		return;
 
