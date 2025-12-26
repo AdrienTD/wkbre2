@@ -320,8 +320,6 @@ void OrderConfiguration::process()
 	while (!orders.empty() && orders.front().isDone()) {
 		orders.pop_front();
 	}
-	const auto itEnd = std::remove_if(orders.begin(), orders.end(), [](const Order& order) {return order.isDone(); });
-	orders.erase(itEnd, orders.end());
 	if (!orders.empty()) {
 		orders.front().process();
 	}
