@@ -20,7 +20,7 @@ static const std::filesystem::path configPath = "wkconfig.json";
 
 static void ResetDefaultSettings()
 {
-	g_settings["game_path"] = ".";
+	g_settings["gamePath"] = ".";
 	g_settings["gameVersion"] = 0;
 	g_settings["musicEnabled"] = true;
 #ifdef _WIN32

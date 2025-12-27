@@ -64,7 +64,7 @@ int main()
 	printf("Welcome to wkbre2 ! :)\n\n");
 
 	LoadSettings();
-	g_gamePath = std::filesystem::u8path(g_settings["game_path"].get<std::string>());
+	g_gamePath = std::filesystem::u8path(g_settings["gamePath"].get<std::string>());
 
 	if (!std::filesystem::exists(g_gamePath / "data.bcp")) {
 		std::string message = "Could not find the file \"data.bcp\".\n\nYou need to copy \"data.bcp\" from Warrior Kings (Battles) game to the following path:\n\n";
