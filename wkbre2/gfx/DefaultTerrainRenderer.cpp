@@ -127,10 +127,11 @@ void DefaultTerrainRenderer::render() {
 			outvert[1].x = (lx + 1) * tilesize; outvert[1].z = lz * tilesize; outvert[1].y = terrain->getVertex(x + 1, z);
 			outvert[2].x = (lx + 1) * tilesize; outvert[2].z = (lz + 1) * tilesize; outvert[2].y = terrain->getVertex(x + 1, z + 1);
 			outvert[3].x = lx * tilesize; outvert[3].z = (lz + 1) * tilesize; outvert[3].y = terrain->getVertex(x, z + 1);
-			outvert[0].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x, z).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
-			outvert[1].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x + 1, z).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
-			outvert[2].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x + 1, z + 1).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
-			outvert[3].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x, z + 1).dot(sunNormal) + 1) * 255 / 2) * 0x010101);
+			int lum = (x >= terrain->edge && z >= terrain->edge && x < terrain->width - terrain->edge && z < terrain->height - terrain->edge) ? 255 : 128;
+			outvert[0].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x, z).dot(sunNormal) + 1) * lum / 2) * 0x010101);
+			outvert[1].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x + 1, z).dot(sunNormal) + 1) * lum / 2) * 0x010101);
+			outvert[2].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x + 1, z + 1).dot(sunNormal) + 1) * lum / 2) * 0x010101);
+			outvert[3].color = 0xFF000000 | ((unsigned int)((terrain->getNormal(x, z + 1).dot(sunNormal) + 1) * lum / 2) * 0x010101);
 
 			for (int i = 0; i < 4; i++) {
 				outvert[i].u = uvs[i].first;

@@ -89,13 +89,13 @@ void GS( triangle VS_OUTPUT input[3], inout TriangleStream<VS_OUTPUT> TriStream 
 	TriStream.RestartStrip();
 }
 
-VS_OUTPUT VS(float4 Pos : POSITION, float3 Normal : NORMAL, float3 Tangent : TANGENT, float3 Bitangent : BITANGENT, float2 Texcoord : TEXCOORD)
+VS_OUTPUT VS(float4 Pos : POSITION, float4 Normal : NORMAL, float3 Tangent : TANGENT, float3 Bitangent : BITANGENT, float2 Texcoord : TEXCOORD)
 {
 	VS_OUTPUT output = (VS_OUTPUT)0;
 	output.Pos = mul(Pos, Transform);
 	output.FragPos = Pos.xyz;
-	output.Norm = Normal * 2 - float3(1,1,1);
-	output.Color = float4(1,1,1,1);
+	output.Norm = Normal.xyz * 2 - float3(1,1,1);
+	output.Color = float4((Normal.w * 0.5 + 0.5).xxx, 1);
 	output.Texcoord = Texcoord;
 	output.Fog = clamp((output.Pos.w-FogStartDist) / (FogEndDist-FogStartDist), 0, 1);
 	output.Tangent = Tangent * 2 - float3(1,1,1);
@@ -473,28 +473,31 @@ void D3D11EnhancedTerrainRenderer::init()
 			uint32_t cmprBitangent = NormalToR10G10B10A2(bitangent.normal());
 
 			auto getPrecomputedNormal = [this](int x, int z) { return _impl->trnNormals[z * (terrain->width + 1) + x]; };
+			const uint32_t colorBits =
+				(x >= terrain->edge && z >= terrain->edge && x < terrain->width - terrain->edge && z < terrain->height - terrain->edge) ?
+				0xC000'0000 : 0;
 
 			D11NTRVtx outvert[4];
 			outvert[0].pos = poses[0];
-			outvert[0].normal = getPrecomputedNormal(x, z);
+			outvert[0].normal = getPrecomputedNormal(x, z) | colorBits;
 			outvert[0].tangent = cmprTangent;
 			outvert[0].bitangent = cmprBitangent;
 			outvert[0].u = uvs[0].first;
 			outvert[0].v = uvs[0].second;
 			outvert[1].pos = poses[1];
-			outvert[1].normal = getPrecomputedNormal(x + 1, z);
+			outvert[1].normal = getPrecomputedNormal(x + 1, z) | colorBits;
 			outvert[1].tangent = cmprTangent;
 			outvert[1].bitangent = cmprBitangent;
 			outvert[1].u = uvs[1].first;
 			outvert[1].v = uvs[1].second;
 			outvert[2].pos = poses[2];
-			outvert[2].normal = getPrecomputedNormal(x + 1, z + 1);
+			outvert[2].normal = getPrecomputedNormal(x + 1, z + 1) | colorBits;
 			outvert[2].tangent = cmprTangent;
 			outvert[2].bitangent = cmprBitangent;
 			outvert[2].u = uvs[2].first;
 			outvert[2].v = uvs[2].second;
 			outvert[3].pos = poses[3];
-			outvert[3].normal = getPrecomputedNormal(x, z + 1);
+			outvert[3].normal = getPrecomputedNormal(x, z + 1) | colorBits;
 			outvert[3].tangent = cmprTangent;
 			outvert[3].bitangent = cmprBitangent;
 			outvert[3].u = uvs[3].first;
