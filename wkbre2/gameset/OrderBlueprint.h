@@ -56,6 +56,8 @@ struct TaskBlueprint {
 
 	ValueDeterminer* synchAnimationToFraction = nullptr;
 
+	std::vector<int> filterConditionEquations;
+
 	void parse(GSFileParser &gsf, GameSet &gs);
 };
 

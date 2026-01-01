@@ -119,6 +119,9 @@ void TaskBlueprint::parse(GSFileParser & gsf, GameSet &gs)
 			movementCompletedSequence.init(gsf, gs, "END_MOVEMENT_COMPLETED_SEQUENCE");
 		else if (tag == "SYNCH_ANIMATION_TO_FRACTION")
 			synchAnimationToFraction = ReadValueDeterminer(gsf, gs);
+		else if (tag == "FILTER_CONDITION")
+			if (int equation = gs.equations.readIndex(gsf); equation != -1)
+				filterConditionEquations.push_back(equation);
 		gsf.advanceLine();
 	}
 }

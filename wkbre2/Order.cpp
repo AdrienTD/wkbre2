@@ -133,6 +133,21 @@ void Task::start()
 		this->setTarget(blueprint->taskTarget->getFirst(&ctx)); // FIXME: that would override the order's target!!!
 	}
 	this->startSequenceExecuted = false; // is this correct?
+
+	// Check the filter conditions
+	// Task is instantly terminated if any condition turns false (termination sequence is executed).
+	// The one in TASK "Spawn" needs to be ignored as it is bugged.
+	if (this->blueprint->classType != Tags::ORDTSKTYPE_SPAWN) {
+		for (int filterConditionEquation : this->blueprint->filterConditionEquations) {
+			auto* condition = Server::instance->gameSet->equations[filterConditionEquation];
+			SrvScriptContext ctx(Server::instance, this->order->gameObject);
+			if (!condition->booleval(&ctx)) {
+				this->terminate();
+				return;
+			}
+		}
+	}
+
 	if (this->target) {
 		if (!this->startSequenceExecuted) {
 			this->blueprint->startSequence.run(order->gameObject);
