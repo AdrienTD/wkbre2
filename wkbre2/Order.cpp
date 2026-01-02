@@ -277,6 +277,18 @@ Order* OrderConfiguration::addOrder(const OrderBlueprint* orderBlueprint, int as
 		if (currentOrder->blueprint->cannotInterruptOrder && assignMode != Tags::ORDERASSIGNMODE_DO_LAST)
 			return nullptr;
 	}
+
+	// Check preconditions
+	for (int preConditionEquationIndex : orderBlueprint->preConditions) {
+		if (preConditionEquationIndex != -1) {
+			auto* equation = Server::instance->gameSet->equations[preConditionEquationIndex];
+			SrvScriptContext ctx(Server::instance, this->gameobj);
+			if (!equation->booleval(&ctx)) {
+				return nullptr;
+			}
+		}
+	}
+
 	Order* neworder;
 	bool orderInFront = false;
 	switch (assignMode) {
