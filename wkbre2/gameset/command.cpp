@@ -8,6 +8,7 @@
 #include "../server.h"
 #include "../window.h"
 #include "../gameset/ScriptContext.h"
+#include <algorithm>
 
 void Command::parse(GSFileParser &gsf, GameSet &gs) {
 	gsf.advanceLine();
@@ -72,7 +73,25 @@ void Command::parse(GSFileParser &gsf, GameSet &gs) {
 	ferr("Command reached end of file without END_COMMAND!");
 }
 
-void Command::execute(ServerGameObject *self, ServerGameObject *target, int assignmentMode, const Vector3 &destination) const {
+bool Command::canBeExecuted(ServerGameObject* self, ServerGameObject* target) const
+{
+	SrvScriptContext ctx(Server::instance, self);
+	auto _1 = ctx.target.change(target);
+	auto _2 = ctx.selectedObject.change(self);
+	auto testCondition = [&ctx](GSCondition* cond) -> bool {return cond->test->booleval(&ctx); };
+	auto testEquation = [&ctx](int equ) -> bool { return equ != -1 ? Server::instance->gameSet->equations[equ]->booleval(&ctx) : true; };
+
+	return std::all_of(this->conditionsImpossible.begin(), this->conditionsImpossible.end(), testCondition)
+		&& std::all_of(this->conditionsWait.begin(), this->conditionsWait.end(), testCondition)
+		&& (std::all_of(this->iconConditions.begin(), this->iconConditions.end(), testEquation)
+			|| std::all_of(this->cursorConditions.begin(), this->cursorConditions.end(), testEquation));
+}
+
+void Command::execute(ServerGameObject *self, ServerGameObject *target, int assignmentMode, const Vector3 &destination) const
+{
+	if (!canBeExecuted(self, target))
+		return;
+
 	SrvScriptContext ctx(Server::instance, self);
 	auto _ = ctx.change(ctx.target, target);
 	this->startSequence.run(&ctx);

@@ -31,5 +31,6 @@ struct Command {
 	bool canBeAssignedToSpawnedUnits = false;
 
 	void parse(GSFileParser &gsf, GameSet &gs);
+	bool canBeExecuted(ServerGameObject* self, ServerGameObject* target = nullptr) const;
 	void execute(ServerGameObject *self, ServerGameObject *target = nullptr, int assignmentMode = 0, const Vector3 &destination = Vector3()) const;
 };
