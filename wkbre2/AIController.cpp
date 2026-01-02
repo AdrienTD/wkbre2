@@ -159,6 +159,8 @@ void AIController::update()
 				auto& charToSpawn = gsreq.ladder->entries.back();
 				SrvFinderResult buildingList = charToSpawn.finder->eval(&ctx);
 				for (ServerGameObject* building : buildingList) {
+					if (!this->gameObj->canAffordObject(charToSpawn.type))
+						continue;
 					if (building->blueprint->bpClass == Tags::GAMEOBJCLASS_BUILDING) {
 						if (building->orderConfig.getCurrentOrder() == nullptr) {
 							int ordid = Server::instance->gameSet->orders.names.getIndex("Spawn " + charToSpawn.type->name);
@@ -191,7 +193,9 @@ void AIController::update()
 			while (existingCount + inCtrCount < requiredCount) {
 				auto posori = gsreq.pdBuildPosition->eval(&ctx);
 				const GameObjBlueprint* bpFoundation = Server::instance->gameSet->findBlueprint(Tags::GAMEOBJCLASS_BUILDING, gsreq.bpBuilding->name + " Foundation");
-				ServerGameObject* foundation = Server::instance->spawnObject(bpFoundation, obj->getPlayer(), posori.position, Vector3(0,0,0));
+				ServerGameObject* foundation = Server::instance->stampdownObject(bpFoundation, obj->getPlayer(), posori.position, Vector3(0,0,0), false, true);
+				if (!foundation)
+					break;
 				obj->sendEvent(Tags::PDEVENT_ON_COMMISSIONED, foundation);
 				reqinst.foundations.emplace_back(foundation);
 				inCtrCount = reqinst.foundations.size();

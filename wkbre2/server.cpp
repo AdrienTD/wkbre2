@@ -138,6 +138,44 @@ ServerGameObject* Server::spawnObject(const GameObjBlueprint* blueprint, ServerG
 	return obj;
 }
 
+ServerGameObject* Server::stampdownObject(const GameObjBlueprint* blueprint, ServerGameObject* player, const Vector3& position, const Vector3& orientation, bool sendEvent, bool inGameplay)
+{
+	ServerGameObject* parent = player;
+
+	if (inGameplay) {
+		if (!player->canAffordObject(blueprint))
+			return nullptr;
+
+		StampdownPlan plan = StampdownPlan::getStampdownPlan(this, player, blueprint, position, Vector3(0, 0, 0));
+		if (plan.status != StampdownPlan::Status::Valid)
+			return nullptr;
+
+		if (auto* pparent = plan.ownerObject.getFrom<Server>())
+			parent = pparent;
+		else if (plan.newOwnerBlueprint)
+			parent = spawnObject(plan.newOwnerBlueprint, player, Vector3(0, 0, 0), Vector3(0, 0, 0));
+
+		if (parent->blueprint->bpClass == Tags::GAMEOBJCLASS_CITY)
+			parent->cityRectangles.push_back(plan.cityRectangle);
+
+		for (const auto& removal : plan.toRemove) {
+			destroyObject(removal.object.getFrom<Server>());
+		}
+		for (const auto& creation : plan.toCreate) {
+			spawnObject(creation.blueprint, parent, creation.position, creation.orientation);
+		}
+
+	}
+
+	ServerGameObject* obj = spawnObject(blueprint, parent, position, Vector3(0, 0, 0));
+	if (inGameplay)
+		player->payObjectCost(obj->blueprint);
+	if (sendEvent)
+		obj->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
+
+	return obj;
+}
+
 void Server::deleteObject(ServerGameObject * obj)
 {
 	if (obj->deleted) return;
@@ -1075,6 +1113,36 @@ void ServerGameObject::notifySubordinateRemoved()
 	}
 }
 
+static const std::pair<int, int> objectCostResourceItems[3] = {
+	{Tags::PDITEM_FOOD, Tags::PDITEM_FOOD_COST},
+	{Tags::PDITEM_WOOD, Tags::PDITEM_WOOD_COST},
+	{Tags::PDITEM_GOLD, Tags::PDITEM_GOLD_COST},
+};
+
+bool ServerGameObject::canAffordObject(const GameObjBlueprint* blueprint)
+{
+	for (auto [resItem, costItem] : objectCostResourceItems) {
+		float cost = blueprint->getStartingItemValue(costItem);
+		if (cost > 0.0f && this->getItem(resItem) < cost)
+			return false;
+	}
+	return true;
+}
+
+void ServerGameObject::payObjectCost(const GameObjBlueprint* blueprint)
+{
+	for (auto [resItem, costItem] : objectCostResourceItems) {
+		this->setItem(resItem, this->getItem(resItem) - blueprint->getStartingItemValue(costItem));
+	}
+}
+
+void ServerGameObject::reclaimObjectCost(const GameObjBlueprint* blueprint)
+{
+	for (auto [resItem, costItem] : objectCostResourceItems) {
+		this->setItem(resItem, this->getItem(resItem) + blueprint->getStartingItemValue(costItem));
+	}
+}
+
 void Server::sendToAll(const NetPacket & packet)
 {
 	for (NetLink *cli : clientLinks)
@@ -1479,32 +1547,8 @@ void Server::tick()
 				if (!blueprint || !owningPlayer)
 					break;
 
-				ServerGameObject* parent = owningPlayer;
+				ServerGameObject* obj = stampdownObject(blueprint, owningPlayer, pos, Vector3(0.0f, 0.0f, 0.0f), sendEvent, inGameplay);
 
-				if (inGameplay) {
-					StampdownPlan plan = StampdownPlan::getStampdownPlan(this, owningPlayer, blueprint, pos, Vector3(0, 0, 0));
-					if (plan.status != StampdownPlan::Status::Valid)
-						break;
-
-					if (auto* pparent = plan.ownerObject.getFrom<Server>())
-						parent = pparent;
-					else if (plan.newOwnerBlueprint)
-						parent = spawnObject(plan.newOwnerBlueprint, owningPlayer, Vector3(0, 0, 0), Vector3(0, 0, 0));
-
-					if (parent->blueprint->bpClass == Tags::GAMEOBJCLASS_CITY)
-						parent->cityRectangles.push_back(plan.cityRectangle);
-					
-					for (const auto& removal : plan.toRemove) {
-						destroyObject(removal.object.getFrom<Server>());
-					}
-					for (const auto& creation : plan.toCreate) {
-						spawnObject(creation.blueprint, parent, creation.position, creation.orientation);
-					}
-				}
-
-				ServerGameObject* obj = spawnObject(blueprint, parent, pos, Vector3(0,0,0));
-				if (sendEvent)
-					obj->sendEvent(Tags::PDEVENT_ON_STAMPDOWN);
 				clientInfos[clientIndex].lastStampdown = obj;
 				break;
 			}

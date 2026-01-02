@@ -709,9 +709,7 @@ SpawnTask::~SpawnTask()
 	if (!this->isSpawned) {
 		ServerGameObject* obj = this->order->gameObject;
 		ServerGameObject* player = obj->getPlayer();
-		player->setItem(Tags::PDITEM_FOOD, player->getItem(Tags::PDITEM_FOOD) + toSpawn->getStartingItemValue(Tags::PDITEM_FOOD_COST));
-		player->setItem(Tags::PDITEM_WOOD, player->getItem(Tags::PDITEM_WOOD) + toSpawn->getStartingItemValue(Tags::PDITEM_WOOD_COST));
-		player->setItem(Tags::PDITEM_GOLD, player->getItem(Tags::PDITEM_GOLD) + toSpawn->getStartingItemValue(Tags::PDITEM_GOLD_COST));
+		player->reclaimObjectCost(toSpawn);
 	}
 }
 
@@ -720,9 +718,7 @@ void SpawnTask::setSpawnBlueprint(const GameObjBlueprint* blueprint)
 	toSpawn = blueprint;
 	ServerGameObject* obj = order->gameObject;
 	ServerGameObject* player = obj->getPlayer();
-	player->setItem(Tags::PDITEM_FOOD, player->getItem(Tags::PDITEM_FOOD) - toSpawn->getStartingItemValue(Tags::PDITEM_FOOD_COST));
-	player->setItem(Tags::PDITEM_WOOD, player->getItem(Tags::PDITEM_WOOD) - toSpawn->getStartingItemValue(Tags::PDITEM_WOOD_COST));
-	player->setItem(Tags::PDITEM_GOLD, player->getItem(Tags::PDITEM_GOLD) - toSpawn->getStartingItemValue(Tags::PDITEM_GOLD_COST));
+	player->payObjectCost(toSpawn);
 }
 
 void SpawnTask::onStart()

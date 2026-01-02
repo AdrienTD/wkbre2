@@ -95,6 +95,10 @@ struct ServerGameObject : SpecificGameObject<Server, ServerGameObject> {
 	void removeIfNotReferenced();
 	float computeSpeed();
 	void notifySubordinateRemoved();
+
+	bool canAffordObject(const GameObjBlueprint* blueprint);
+	void payObjectCost(const GameObjBlueprint* blueprint);
+	void reclaimObjectCost(const GameObjBlueprint* blueprint);
 };
 
 struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
@@ -149,6 +153,8 @@ struct Server : SpecificGameState<ServerGameObject, ProgramType::SERVER>
 	void loadSaveGame(const char *filename);
 	ServerGameObject *createObject(const GameObjBlueprint *blueprint, uint32_t id = 0);
 	ServerGameObject* spawnObject(const GameObjBlueprint* blueprint, ServerGameObject* parent, const Vector3& initialPosition, const Vector3& initialOrientation);
+	ServerGameObject* stampdownObject(const GameObjBlueprint* blueprint, ServerGameObject* player, const Vector3& position, const Vector3& orientation,
+		bool sendEvent, bool inGameplay);
 	void deleteObject(ServerGameObject *obj);
 	void destroyObject(ServerGameObject* obj);
 
