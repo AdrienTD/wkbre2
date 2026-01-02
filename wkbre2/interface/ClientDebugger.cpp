@@ -20,7 +20,7 @@ extern std::atomic_int g_diag_serverTicks;
 
 namespace {
 	const ImVec4 ivcolortable[8] = {
-		ImVec4(0.5f, 0.25f, 0.25f, 1), ImVec4(0, 0, 1, 1), ImVec4(1, 1, 0, 1), ImVec4(1, 0, 0, 1),
+		ImVec4(0.5f, 0.25f, 0.25f, 1), ImVec4(0.125f, 0.25f, 1, 1), ImVec4(1, 1, 0, 1), ImVec4(1, 0, 0, 1),
 		ImVec4(0, 1, 0, 1), ImVec4(1, 0, 1, 1), ImVec4(1, 0.5f, 0, 1), ImVec4(0, 1, 1, 1)
 	};
 
@@ -106,8 +106,14 @@ void ClientDebugger::draw()
 
 	ImGui::Begin("Client Object Tree");
 	const auto walkOnObj = [this](const auto &walkOnObj, ClientGameObject *obj) -> void {
+		const bool colored = obj->blueprint->bpClass == Tags::GAMEOBJCLASS_PLAYER && obj->color >= 0 && obj->color < 8;
+		if (colored)
+			ImGui::PushStyleColor(ImGuiCol_Text, ivcolortable[obj->color]);
 		
 		bool b = ImGui::TreeNodeEx(obj, /*ImGuiTreeNodeFlags_DefaultOpen |*/ (obj->children.empty() ? ImGuiTreeNodeFlags_Leaf : 0), "%i: %s \"%s\"", obj->id, Tags::GAMEOBJCLASS_tagDict.getStringFromID(obj->blueprint->bpClass), obj->blueprint->name.c_str());
+		
+		if (colored)
+			ImGui::PopStyleColor();
 		if (ImGui::IsItemClicked())
 			selectedObject = obj;
 		if (b) {
