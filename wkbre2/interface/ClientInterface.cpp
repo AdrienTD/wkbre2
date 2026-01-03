@@ -254,7 +254,7 @@ void ClientInterface::drawObject(ClientGameObject *obj)
 			for (int i = 0; i < bmp.width * bmp.height; ++i) {
 				pix[i] = (pix[i] & 255) << 24;
 			}
-			shadowTexture = gfx->CreateTexture(bmp, 0);
+			shadowTexture = gfx->CreateTexture(bmp, 1);
 		}
 		const auto [aabbLow, aabbHigh] = model->interpolateBoundingBox(obj->sceneEntity.animTime);
 		const Vector3 preOff = -(aabbLow + aabbHigh) / 2.0f;
@@ -1104,7 +1104,7 @@ void ClientInterface::iter()
 		if (!healthTexLoaded) {
 			for (int i = 0; i < 8; ++i) {
 				std::string name = "Interface\\InGame\\health" + std::to_string(i + 1) + ".tga";
-				healthTex[i] = uiTexCache.getTexture(name.c_str());
+				healthTex[i] = uiTexCache.getTexture(name.c_str(), false);
 			}
 			healthTexLoaded = true;
 		}
