@@ -162,6 +162,8 @@ ServerGameObject* Server::stampdownObject(const GameObjBlueprint* blueprint, Ser
 			destroyObject(removal.object.getFrom<Server>());
 		}
 		for (const auto& creation : plan.toCreate) {
+			if (player->aiController.planBlueprint) // TEMP: no wall creation for AI
+				continue;
 			spawnObject(creation.blueprint, parent, creation.position, creation.orientation);
 		}
 
