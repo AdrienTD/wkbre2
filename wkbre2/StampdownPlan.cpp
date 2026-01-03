@@ -153,7 +153,7 @@ StampdownPlan StampdownPlan::getStampdownPlan(
 						}
 						else if (bottomType != TOutside && topType == TOutside) {
 							needWall = bpWall;
-							needAngle = 0.0f;
+							needAngle = 0.5f;
 						}
 						else if (leftType == TOutside && rightType != TOutside) {
 							needWall = bpWall;
@@ -161,7 +161,7 @@ StampdownPlan StampdownPlan::getStampdownPlan(
 						}
 						else if (bottomType == TOutside && topType != TOutside) {
 							needWall = bpWall;
-							needAngle = 0.5f;
+							needAngle = 0.0f;
 						}
 
 						if (needWall) {
