@@ -543,7 +543,9 @@ struct ValueBuildingType : ValueDeterminer {
 	int type;
 	std::unique_ptr<ObjectFinder> finder;
 	virtual float eval(ScriptContext* ctx) override {
-		// TODO
+		if (auto* obj = finder->getFirst(ctx)) {
+			return (obj->blueprint->buildingType == type) ? 1.0f : 0.0f;
+		}
 		return 0.0f;
 	}
 	virtual void parse(GSFileParser& gsf, const GameSet& gs) override {
