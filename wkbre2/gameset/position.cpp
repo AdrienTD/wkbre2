@@ -331,8 +331,19 @@ struct PDNearestValidStampdownPos : PositionDeterminer {
 	bool isTileFree(CommonGameState* server, int tx, int tz) {
 		int sx, sz;
 		std::tie(sx, sz) = server->terrain->getNumPlayableTiles();
-		if (tx >= 0 && tx < sx && tz >= 0 && tz < sz)
-			return !server->tiles[tz * sx + tx].building.getFrom<Server>();
+		if (!(tx >= 0 && tx < sx && tz >= 0 && tz < sz))
+			return false;
+		const auto& occupiedBuilding = server->tiles[tz * sx + tx].building.getFrom<Server>();
+		if (!occupiedBuilding)
+			return true;
+		if (objbp->buildingType == Tags::BUILDINGTYPE_CIVIC || objbp->buildingType == Tags::BUILDINGTYPE_CIVIC_CENTRE) {
+			const auto occupiedBuildingType = occupiedBuilding->blueprint->buildingType;
+			if (occupiedBuildingType == Tags::BUILDINGTYPE_WALL
+				|| occupiedBuildingType == Tags::BUILDINGTYPE_WALL_CORNER_IN
+				|| occupiedBuildingType == Tags::BUILDINGTYPE_WALL_CORNER_OUT
+				|| occupiedBuildingType == Tags::BUILDINGTYPE_WALL_CROSSROADS)
+				return true;
+		}
 		return false;
 	}
 	bool canBuildOn(CommonGameState* server, int tx, int tz) {
