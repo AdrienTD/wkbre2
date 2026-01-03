@@ -128,7 +128,7 @@ void Task::start()
 		if (this->id > 0)
 			this->setTarget(this->order->tasks[this->id - 1]->target.get());
 	}
-	else if (!this->target && blueprint->taskTarget) {
+	else if ((!this->target || blueprint->identifyTargetEachCycle) && blueprint->taskTarget) {
 		SrvScriptContext ctx(Server::instance, this->order->gameObject);
 		this->setTarget(blueprint->taskTarget->getFirst(&ctx)); // FIXME: that would override the order's target!!!
 	}

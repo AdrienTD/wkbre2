@@ -41,6 +41,7 @@ struct TaskBlueprint {
 	int category = -1;
 	ObjectFinder *taskTarget = nullptr;
 	bool usePreviousTaskTarget = false, terminateEntireOrderIfNoTarget = false, rejectTargetIfItIsTerminated = false;
+	bool identifyTargetEachCycle = false;
 	ActionSequence initSequence, startSequence, resumptionSequence, terminationSequence, cancellationSequence;
 	std::vector<TriggerBlueprint> triggers;
 	ActionSequence collisionTrigger, struckFloorTrigger;
