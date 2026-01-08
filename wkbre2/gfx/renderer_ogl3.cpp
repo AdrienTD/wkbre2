@@ -5,7 +5,7 @@
 #include "renderer.h"
 #include "../window.h"
 #include "bitmap.h"
-#include "../util/util.h"
+#include "util/util.h"
 #include <cassert>
 #include <string>
 

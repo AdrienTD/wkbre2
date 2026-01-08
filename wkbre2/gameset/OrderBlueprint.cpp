@@ -3,7 +3,7 @@
 // Licensed under the GNU General Public License 3
 
 #include "OrderBlueprint.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "../gameset/gameset.h"
 #include "finder.h"
 #include "../server.h"

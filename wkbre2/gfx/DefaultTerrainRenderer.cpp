@@ -3,7 +3,7 @@
 // Licensed under the GNU General Public License 3
 
 #include "DefaultTerrainRenderer.h"
-#include "../util/vecmat.h"
+#include "util/vecmat.h"
 #include "renderer.h"
 #include "../window.h"
 #include "../terrain.h"

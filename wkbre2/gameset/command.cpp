@@ -4,7 +4,7 @@
 
 #include "command.h"
 #include "gameset.h"
-#include "../util/util.h"
+#include "util/util.h"
 #include "../server.h"
 #include "../window.h"
 #include "../gameset/ScriptContext.h"

@@ -2,7 +2,7 @@
 // (C) 2021 AdrienTD
 // Licensed under the GNU General Public License 3
 
-#include "vecmat.h"
+#include "util/vecmat.h"
 
 Matrix Matrix::getTranslationMatrix(const Vector3 & translation)
 {

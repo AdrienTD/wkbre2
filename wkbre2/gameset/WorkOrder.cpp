@@ -4,7 +4,7 @@
 
 #include "WorkOrder.h"
 #include "gameset.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "finder.h"
 
 void WorkOrder::parse(GSFileParser& gsf, const GameSet& gs)

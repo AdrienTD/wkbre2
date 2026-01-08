@@ -2,7 +2,7 @@
 #include "../server.h"
 #include "../imgui/imgui.h"
 #include "../gameset/gameset.h"
-#include "../util/StriCompare.h"
+#include "util/StriCompare.h"
 
 #include "../settings.h"
 #include <nlohmann/json.hpp>
