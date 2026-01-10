@@ -15,17 +15,17 @@ struct GameObjectRef {
 
 	uint32_t objid;
 
-	template<int I = 1>
-	CommonGameObject* getFrom(CommonGameState* program) const {
+	template<typename Program>
+	typename Program::GameObject* getFrom(Program* gameState) const {
 		if (objid != NULL_GOREF)
-			return program->findObject(objid);
+			return gameState->findObject(objid);
 		else
 			return nullptr;
 	}
 
-	template<typename Program, typename AnyGameObject = typename Program::GameObject>
-	AnyGameObject* getFrom() const {
-		return (AnyGameObject*)getFrom(Program::instance);
+	template<typename Program>
+	typename Program::GameObject* getFrom() const {
+		return getFrom(Program::instance);
 	}
 
 	void set(uint32_t id) { objid = id; }
@@ -46,7 +46,7 @@ struct GameObjectRef {
 };
 
 template<typename Program, typename AnyGameObject> struct SpecificGORef : GameObjectRef {
-	AnyGameObject* get() const { return getFrom<Program, AnyGameObject>(); }
+	AnyGameObject* get() const { return getFrom<Program>(); }
 	AnyGameObject* operator->() const { return get(); }
 	explicit operator bool() const { return get() != nullptr; }
 	operator AnyGameObject*() const { return get(); }

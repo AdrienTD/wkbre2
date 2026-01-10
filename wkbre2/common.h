@@ -113,6 +113,8 @@ template<typename Program, typename AnyGameObject> struct SpecificGameObject : C
 };
 
 struct CommonGameState {
+	using GameObject = CommonGameObject;
+
 	ProgramType programType;
 	std::shared_ptr<const GameSet> gameSet = nullptr;
 

@@ -43,8 +43,8 @@ struct ScriptContext {
 	CommonGameObject* getSelf() const { return get(self); }
 	TemporaryValue<CommonGameObject*> changeSelf(CommonGameObject* obj) { return change(self, obj); }
 
-	template<int I = 1> bool isServer() const { return gameState->isServer(); }
-	template<int I = 1> bool isClient() const { return gameState->isClient(); }
+	bool isServer() const;
+	bool isClient() const;
 
 	ScriptContext(CommonGameState* gameState, CommonGameObject* self = nullptr) : gameState(gameState), self{self} {}
 

@@ -6,4 +6,7 @@
 #include "../server.h"
 #include "../client.h"
 
-// Empty, might need to be removed
+// (not anymore, almost) Empty, might need to be removed
+
+bool ScriptContext::isServer() const { return gameState->isServer(); }
+bool ScriptContext::isClient() const { return gameState->isClient(); }

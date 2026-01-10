@@ -97,7 +97,7 @@ StampdownPlan StampdownPlan::getStampdownPlan(
 							TInside,
 							TWall
 						};
-						auto tileType = [&](int tx, int tz) {
+						auto tileType = [&, tileWidth = tileWidth](int tx, int tz) {
 							if (cityContainsTile(cityRectangles, tx, tz)) {
 								if (!gameState->tiles)
 									return TInside;
