@@ -15,6 +15,8 @@
 #include <thread>
 #include <atomic>
 #include <optional>
+#include <chrono>
+#include <unordered_map>
 
 #include "WavDocument.h"
 #include "file.h"
@@ -27,7 +29,7 @@
 #include <nlohmann/json.hpp>
 
 struct OALSoundPlayer : SoundPlayer {
-	static constexpr size_t MAX_SOURCES = 64;
+	static constexpr size_t MAX_SOURCES = 48;
 
 	bool initialised = false;
 	ALCdevice* device;
@@ -45,6 +47,8 @@ struct OALSoundPlayer : SoundPlayer {
 
 	std::thread musicLoadingThread;
 	std::atomic<bool> isMusicLoading{ false };
+
+	std::unordered_map<std::string, std::chrono::time_point<std::chrono::steady_clock>> lastTimePlayedMap;
 
 	std::optional<ALuint> getSoundBuf(const std::string& filePath) {
 		auto it = sndBufCache.find(filePath);
@@ -106,7 +110,21 @@ struct OALSoundPlayer : SoundPlayer {
 		initialised = false;
 	}
 
+	bool checkSoundPlayedRecently(const std::string& filePath) {
+		const auto currentTime = std::chrono::steady_clock::now();
+		if (auto it = lastTimePlayedMap.find(filePath); it != lastTimePlayedMap.end()) {
+			if (currentTime - it->second < std::chrono::milliseconds(75)) {
+				return true;
+			}
+		}
+		lastTimePlayedMap[filePath] = currentTime;
+		return false;
+	}
+
 	void playSound(const std::string& filePath) override {
+		if (checkSoundPlayedRecently(filePath))
+			return;
+
 		const auto optBuffer = getSoundBuf(filePath);
 		if (!optBuffer) {
 			printf("WARNING: Sound \"%s\" not found\n", filePath.c_str());
@@ -131,6 +149,9 @@ struct OALSoundPlayer : SoundPlayer {
 
 	void playSound3D(const std::string& filePath, const Vector3& pos, float refDist, float maxDist) override {
 		if ((pos - listenerPosition).sqlen3() > maxDist * maxDist)
+			return;
+
+		if (checkSoundPlayedRecently(filePath))
 			return;
 
 		const auto optBuffer = getSoundBuf(filePath);
