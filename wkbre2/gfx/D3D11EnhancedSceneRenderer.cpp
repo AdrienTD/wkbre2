@@ -56,7 +56,6 @@ cbuffer SunBuffer : register(b2)
 
 cbuffer SceneBuffer : register(b3)
 {
-	matrix OldEntityTransform;
 	int EntityFlags;
 	float EntityTime;
 };
@@ -296,7 +295,7 @@ void D3D11EnhancedSceneRenderer::init()
 	ddev->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &_impl->alphaPS);
 
 	D3D11_BUFFER_DESC bdesc;
-	bdesc.ByteWidth = 80;
+	bdesc.ByteWidth = 16;
 	bdesc.Usage = D3D11_USAGE_DYNAMIC;
 	bdesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bdesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -404,9 +403,9 @@ void D3D11EnhancedSceneRenderer::render()
 			dimm->Unmap(_impl->instanceBuffer.Get(), 0);
 
 			dimm->Map(_impl->sceneConstBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &scbm);
-			//*(Matrix*)scbm.pData = ent->transform.getTranspose();
-			((uint32_t*)scbm.pData)[16] = prevFlags;
-			((float*)scbm.pData)[17] = prevAnimLerp;
+			uint8_t* sceneBufferBytes = (uint8_t*)scbm.pData;
+			*(uint32_t*)(sceneBufferBytes+0) = prevFlags;
+			*(float*)(sceneBufferBytes+4) = prevAnimLerp;
 			dimm->Unmap(_impl->sceneConstBuffer.Get(), 0);
 			dimm->VSSetConstantBuffers(3, 1, _impl->sceneConstBuffer.GetAddressOf());
 
