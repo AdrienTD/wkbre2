@@ -64,9 +64,7 @@ cbuffer FogBuffer : register(b1)
 cbuffer SunBuffer : register(b2)
 {
 	float3 SunDirection;
-	float3 LampPos;
 	int BumpOn;
-	int LampOn;
 };
 
 struct VS_OUTPUT
@@ -80,14 +78,6 @@ struct VS_OUTPUT
 	float3 Tangent : TANGENT0;
 	float3 Bitangent : TANGENT1;
 };
-
-[maxvertexcount(3)]
-void GS( triangle VS_OUTPUT input[3], inout TriangleStream<VS_OUTPUT> TriStream )
-{
-	for(int i = 0; i < 3; i++)
-		TriStream.Append(input[i]);
-	TriStream.RestartStrip();
-}
 
 VS_OUTPUT VS(float4 Pos : POSITION, float4 Normal : NORMAL, float3 Tangent : TANGENT, float3 Bitangent : BITANGENT, float2 Texcoord : TEXCOORD)
 {
@@ -120,8 +110,6 @@ float4 PS(VS_OUTPUT input) : SV_Target
 
 	float lum = 0.2;
 
-	float3 lampDir = LampPos - input.FragPos;
-	const float lampRadius = 5;
 	if(BumpOn) {
 		float3 nrm = normalTexture.Sample(inpSampler, fuv).xyz * 2 - 1;
 
@@ -131,21 +119,10 @@ float4 PS(VS_OUTPUT input) : SV_Target
 		float3 actnorm = nrm.xxx * m1 + nrm.yyy * m2 + nrm.zzz * m3;
 		lum += clamp(dot(normalize(actnorm), SunDirection), 0, 1);
 		lum = clamp(lum, 0, 1);
-
-		float lampLum = clamp(dot(normalize(actnorm), normalize(lampDir)), 0, 1);
-		float lampDist = length(lampDir);
-		if(lampDist < lampRadius)
-			lum += lampLum;
-		//lum += lampLum * clamp(1 / (1 + 0.14*lampDist + 0.07*lampDist*lampDist), 0, 1);
 	}
 	else {
 		lum += clamp(dot(input.Norm, SunDirection), 0, 1);
 		lum = clamp(lum, 0, 1);
-
-		float lampLum = clamp(dot(input.Norm, normalize(lampDir)), 0, 1);
-		float lampDist = length(lampDir);
-		if(lampDist < lampRadius)
-			lum += lampLum;
 	}
 	//lum = clamp(lum, 0, 1);
 	return lerp(float4(lum.xxx, 1) * input.Color * tex, FogColor, input.Fog);
@@ -540,7 +517,7 @@ void D3D11EnhancedTerrainRenderer::init()
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	bd.MiscFlags = 0;
 	bd.StructureByteStride = 0;
-	bd.ByteWidth = 48;
+	bd.ByteWidth = 16;
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	d11gfx->ddDevice->CreateBuffer(&bd, nullptr, &_impl->sunBuffer);
 }
@@ -549,9 +526,6 @@ D3D11EnhancedTerrainRenderer::~D3D11EnhancedTerrainRenderer()
 {
 	delete texcache;
 }
-
-Vector3 g_gfxplusLampPos(0.0f, 0.0f, 0.0f);
-bool g_gfxplusBumpOn = true;
 
 void D3D11EnhancedTerrainRenderer::render() {
 	auto* d11gfx = (D3D11Renderer*)gfx;
@@ -592,9 +566,7 @@ void D3D11EnhancedTerrainRenderer::render() {
 	assert(!FAILED(hres));
 	char* sbdata = (char*)mappedRes.pData;
 	*(Vector3*)(sbdata+0) = sunNormal;
-	*(Vector3*)(sbdata+16) = m_lampPos;
-	*(int*)(sbdata + 28) = m_bumpOn ? 1 : 0;
-	*(int*)(sbdata + 32) = 1;
+	*(int*)(sbdata + 12) = m_bumpOn ? 1 : 0;
 	dimm->Unmap(_impl->sunBuffer.Get(), 0);
 	dimm->VSSetConstantBuffers(2, 1, _impl->sunBuffer.GetAddressOf());
 	dimm->PSSetConstantBuffers(2, 1, _impl->sunBuffer.GetAddressOf());

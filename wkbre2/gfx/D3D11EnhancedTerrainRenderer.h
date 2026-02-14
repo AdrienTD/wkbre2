@@ -22,7 +22,6 @@ public:
 	void render() override;
 	void init();
 
-	Vector3 m_lampPos;
 	bool m_bumpOn = true;
 private:
 	struct LoadedTexture {

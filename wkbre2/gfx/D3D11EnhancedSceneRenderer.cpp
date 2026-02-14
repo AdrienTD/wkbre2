@@ -51,9 +51,7 @@ cbuffer FogBuffer : register(b1)
 cbuffer SunBuffer : register(b2)
 {
 	float3 SunDirection;
-	float3 LampPos;
 	int BumpOn;
-	int LampOn;
 };
 
 cbuffer SceneBuffer : register(b3)
@@ -305,7 +303,7 @@ void D3D11EnhancedSceneRenderer::init()
 	bdesc.MiscFlags = 0;
 	bdesc.StructureByteStride = 0;
 	ddev->CreateBuffer(&bdesc, nullptr, &_impl->sceneConstBuffer);
-	bdesc.ByteWidth = 48;
+	bdesc.ByteWidth = 16;
 	ddev->CreateBuffer(&bdesc, nullptr, &_impl->sunConstBuffer);
 	bdesc.ByteWidth = 64 * _impl->MAX_INSTANCES;
 	bdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;

@@ -692,8 +692,6 @@ void ClientInterface::iter()
 			if (D3D11EnhancedTerrainRenderer* etr = static_cast<D3D11EnhancedTerrainRenderer*>(terrainRenderer)) {
 				if (client->terrain)
 					ImGui::DragFloat3("Sun", &client->terrain->sunVector.x, 0.1f);
-				etr->m_lampPos = peapos + Vector3(0, 4, 0);
-				ImGui::DragFloat3("Lamp", &etr->m_lampPos.x, 0.1f);
 				ImGui::Checkbox("Bump", &etr->m_bumpOn);
 			}
 		}
