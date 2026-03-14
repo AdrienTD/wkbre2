@@ -36,6 +36,7 @@
 *.pdb
 *.res
 *.ilk
+*.spirv
 build*/
 imgui.ini
 .vs/

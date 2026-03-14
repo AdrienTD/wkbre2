@@ -15,6 +15,8 @@ find_package(mpg123 CONFIG REQUIRED)
 find_package(glew CONFIG REQUIRED)
 find_package(sol2 CONFIG REQUIRED)
 find_package(Lua REQUIRED)
+find_package(Vulkan)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 
 # Find enet
 find_path(ENET_INCLUDE_DIR enet/enet.h)
@@ -50,7 +52,7 @@ add_executable (wkbre2 "wkbre2.cpp" "wkbre2.h" "file.cpp" "file.h" "lzrw3.c" "lz
 "gfx/D3D11EnhancedTerrainRenderer.h" "gfx/renderer_d3d11.h" "gfx/D3D11EnhancedSceneRenderer.h" "gfx/D3D11EnhancedSceneRenderer.cpp" "gameset/Plan.cpp" "gameset/Plan.h"  "AIController.h" "AIController.cpp"
 "gameset/ArmyCreationSchedule.h" "gameset/ArmyCreationSchedule.cpp" "gameset/WorkOrder.h" "gameset/WorkOrder.cpp" "common.cpp" "gameset/Commission.h" "gameset/Commission.cpp"
 "FormationController.h" "FormationController.cpp" "StampdownPlan.h" "StampdownPlan.cpp" "BreakpointManager.h" "BreakpointManager.cpp" "interface/QuickSkirmishMenu.h" "interface/QuickSkirmishMenu.cpp"
-"platform.cpp" "gfx/TerrainSpriteContainer.cpp" "gfx/TerrainSpriteContainer.h" "gfx/TerrainSpriteRenderer.h" "gfx/TerrainSpriteRenderer.cpp")
+"platform.cpp" "gfx/TerrainSpriteContainer.cpp" "gfx/TerrainSpriteContainer.h" "gfx/TerrainSpriteRenderer.h" "gfx/TerrainSpriteRenderer.cpp" "gfx/renderer_vulkan.cpp")
 target_link_libraries (wkbre2
   imgui
   SDL2::SDL2
@@ -63,6 +65,8 @@ target_link_libraries (wkbre2
   GLEW::GLEW
   sol2::sol2
   ${LUA_LIBRARIES}
+  Vulkan::Vulkan
+  GPUOpen::VulkanMemoryAllocator
   $<$<PLATFORM_ID:Windows>:
     d3d9
     ws2_32
