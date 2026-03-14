@@ -7,6 +7,8 @@
 #include "imgui/imgui.h"
 #include "gfx/renderer.h"
 #include "gfx/bitmap.h"
+#include "settings.h"
+#include <nlohmann/json.hpp>
 
 SDL_Window *g_sdlWindow = nullptr;
 bool g_windowQuit = false;
@@ -22,14 +24,20 @@ void InitWindow()
 {
 	SDL_SetMainReady();
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+
+	Uint32 flags = SDL_WINDOW_RESIZABLE;
+	if (g_settings.value<std::string>("renderer", "") == "vulkan") {
+		flags |= SDL_WINDOW_VULKAN;
+	}
+	else {
 #ifndef _WIN32
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	auto flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
-#else
-	auto flags = SDL_WINDOW_RESIZABLE;
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		flags |= SDL_WINDOW_OPENGL;
 #endif
+	}
+
 	g_sdlWindow = SDL_CreateWindow("wkbre2 \"Next\"", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, g_windowWidth, g_windowHeight, flags);
 }
 
