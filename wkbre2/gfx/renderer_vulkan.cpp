@@ -174,7 +174,7 @@ struct VulkanRenderer : IRenderer {
 	vk::Pipeline m_pipelineTerrain, m_pipelineLake;
 
 	vk::Sampler m_vkSampler;
-	vk::DescriptorSetLayout m_vkDescSetLayout;
+	vk::DescriptorSetLayout m_vkDescSetLayout0, m_vkDescSetLayout1;
 	vk::PipelineLayout m_vkPipelineLayout;
 	vk::DescriptorPool m_vkDescriptorPool;
 	vk::DescriptorSet m_vkMainDescriptorSet;
@@ -213,6 +213,7 @@ struct VulkanRenderer : IRenderer {
 	vk::Buffer m_currentTransformBuffer; VmaAllocation m_currentTransformBufferAlloc;
 	vk::Buffer m_currentFogBuffer; VmaAllocation m_currentFogBufferAlloc;
 	std::map<vk::ImageView, vk::Image> m_imageViewToImageMap;
+	std::map<vk::ImageView, vk::DescriptorSet> m_imageViewToDescriptorSetMap;
 
 	texture whiteTexture;
 	int msaaNumSamples = 1;
@@ -226,6 +227,7 @@ struct VulkanRenderer : IRenderer {
 	vk::Rect2D m_scissorRect;
 	vk::PrimitiveTopology m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
 	vk::Pipeline m_currentPipeline = nullptr;
+	vk::DescriptorSet m_currentTextureDescriptorSet = nullptr;
 
 	std::deque<vk::CommandBuffer> activeCommandBuffers;
 
@@ -265,12 +267,11 @@ struct VulkanRenderer : IRenderer {
 		m_vkQueue.submit(submit);
 	}
 
-	void setDescriptors(std::optional<vk::Buffer> transformBuffer, std::optional<vk::Buffer> fogBuffer, std::optional<vk::ImageView> texture) {
+	void setDescriptors(std::optional<vk::Buffer> transformBuffer, std::optional<vk::Buffer> fogBuffer) {
 		vk::DescriptorBufferInfo dbInfoTransform;
 		vk::DescriptorBufferInfo dbInfoFog;
-		vk::DescriptorImageInfo dbInfoTexture;
 
-		vk::WriteDescriptorSet writes[3];
+		vk::WriteDescriptorSet writes[2];
 		int index = 0;
 		if (transformBuffer) {
 			dbInfoTransform.buffer = *transformBuffer;
@@ -297,18 +298,6 @@ struct VulkanRenderer : IRenderer {
 			wds.descriptorCount = 1;
 			wds.descriptorType = vk::DescriptorType::eUniformBuffer;
 			wds.pBufferInfo = &dbInfoFog;
-		}
-		if (texture) {
-			dbInfoTexture.imageView = *texture;
-			dbInfoTexture.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-			auto& wds = writes[index++];
-			wds.dstSet = m_vkMainDescriptorSet;
-			wds.dstBinding = 2;
-			wds.dstArrayElement = 0;
-			wds.descriptorCount = 1;
-			wds.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-			wds.pImageInfo = &dbInfoTexture;
 		}
 
 		m_vkQueue.waitIdle();
@@ -340,9 +329,11 @@ struct VulkanRenderer : IRenderer {
 		rpbi.clearValueCount = 0;
 		rpbi.pClearValues = nullptr;
 
+		vk::DescriptorSet descSets[2] = { m_vkMainDescriptorSet, m_currentTextureDescriptorSet };
+
 		cmdBuffer.beginRenderPass(rpbi, vk::SubpassContents::eInline);
 		cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_vkPipelineLayout, 0, m_vkMainDescriptorSet, {});
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_vkPipelineLayout, 0, descSets, {});
 		cmdBuffer.setViewport(0, m_viewport);
 		cmdBuffer.setScissor(0, m_scissorRect);
 	}
@@ -828,37 +819,42 @@ void VulkanRenderer::Init() {
 	scInfo.unnormalizedCoordinates = vk::False;
 	m_vkSampler = m_vkDevice.createSampler(scInfo);
 
-	vk::DescriptorSetLayoutBinding bindings[3];
-	bindings[0].binding = 0;
-	bindings[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-	bindings[0].descriptorCount = 1;
-	bindings[0].stageFlags = vk::ShaderStageFlagBits::eVertex;
-	bindings[1].binding = 1;
-	bindings[1].descriptorType = vk::DescriptorType::eUniformBuffer;
-	bindings[1].descriptorCount = 1;
-	bindings[1].stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
-	bindings[2].binding = 2;
-	bindings[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-	bindings[2].descriptorCount = 1;
-	bindings[2].stageFlags = vk::ShaderStageFlagBits::eFragment;
-	bindings[2].pImmutableSamplers = &m_vkSampler;
+	vk::DescriptorSetLayoutBinding bindingsSet0[2];
+	bindingsSet0[0].binding = 0;
+	bindingsSet0[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+	bindingsSet0[0].descriptorCount = 1;
+	bindingsSet0[0].stageFlags = vk::ShaderStageFlagBits::eVertex;
+	bindingsSet0[1].binding = 1;
+	bindingsSet0[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+	bindingsSet0[1].descriptorCount = 1;
+	bindingsSet0[1].stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
+	vk::DescriptorSetLayoutBinding bindingsSet1[1];
+	bindingsSet1[0].binding = 0;
+	bindingsSet1[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+	bindingsSet1[0].descriptorCount = 1;
+	bindingsSet1[0].stageFlags = vk::ShaderStageFlagBits::eFragment;
+	bindingsSet1[0].pImmutableSamplers = &m_vkSampler;
 
 	vk::DescriptorSetLayoutCreateInfo dslcInfo;
-	dslcInfo.bindingCount = std::size(bindings);
-	dslcInfo.pBindings = bindings;
-	m_vkDescSetLayout = m_vkDevice.createDescriptorSetLayout(dslcInfo);
+	dslcInfo.bindingCount = std::size(bindingsSet0);
+	dslcInfo.pBindings = bindingsSet0;
+	m_vkDescSetLayout0 = m_vkDevice.createDescriptorSetLayout(dslcInfo);
+	dslcInfo.bindingCount = std::size(bindingsSet1);
+	dslcInfo.pBindings = bindingsSet1;
+	m_vkDescSetLayout1 = m_vkDevice.createDescriptorSetLayout(dslcInfo);
 
 	vk::PipelineLayoutCreateInfo plcInfo;
-	plcInfo.setLayoutCount = 1;
-	plcInfo.pSetLayouts = &m_vkDescSetLayout;
+	vk::DescriptorSetLayout setLayouts[2] = { m_vkDescSetLayout0, m_vkDescSetLayout1 };
+	plcInfo.setLayoutCount = std::size(setLayouts);
+	plcInfo.pSetLayouts = setLayouts;
 	m_vkPipelineLayout = m_vkDevice.createPipelineLayout(plcInfo);
 
 	vk::DescriptorPoolSize descPoolSizes[] = {
 		{vk::DescriptorType::eUniformBuffer, 2},
-		{vk::DescriptorType::eCombinedImageSampler, 1},
+		{vk::DescriptorType::eCombinedImageSampler, 2048},
 	};
 	vk::DescriptorPoolCreateInfo dpcInfo;
-	dpcInfo.maxSets = 1;
+	dpcInfo.maxSets = 2048;
 	dpcInfo.poolSizeCount = std::size(descPoolSizes);
 	dpcInfo.pPoolSizes = descPoolSizes;
 	m_vkDescriptorPool = m_vkDevice.createDescriptorPool(dpcInfo);
@@ -866,8 +862,7 @@ void VulkanRenderer::Init() {
 	vk::DescriptorSetAllocateInfo dsaInfo;
 	dsaInfo.descriptorPool = m_vkDescriptorPool;
 	dsaInfo.descriptorSetCount = 1;
-	dsaInfo.pSetLayouts = &m_vkDescSetLayout;
-
+	dsaInfo.pSetLayouts = &m_vkDescSetLayout0;
 	m_vkMainDescriptorSet = m_vkDevice.allocateDescriptorSets(dsaInfo).at(0);
 
 
@@ -1066,7 +1061,8 @@ void VulkanRenderer::Init() {
 	*(uint32_t*)whiteBmp.pixels.data() = 0xFFFFFFFF;
 	whiteTexture = CreateTexture(whiteBmp, 1);
 
-	setDescriptors(m_currentTransformBuffer, m_currentFogBuffer, VkImageView(whiteTexture));
+	setDescriptors(m_currentTransformBuffer, m_currentFogBuffer);
+	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(whiteTexture));
 
 	Reset();
 }
@@ -1228,7 +1224,7 @@ void VulkanRenderer::BeginDrawing() {
 	//ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
 	//ddImmediateContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&whiteTexture);
 
-	setDescriptors(std::nullopt, std::nullopt, VkImageView(whiteTexture));
+	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(whiteTexture));
 
 	fogEnabled = false;
 	m_currentPipeline = nullptr; // it needs to be decided by the caller!
@@ -1448,7 +1444,27 @@ texture VulkanRenderer::CreateTexture(const Bitmap& bm, int mipmaps) {
 
 	vmaDestroyBuffer(m_vmaAllocator, stageBuffer, stageAllocation);
 
+	vk::DescriptorSetAllocateInfo dsaInfo;
+	dsaInfo.descriptorPool = m_vkDescriptorPool;
+	dsaInfo.descriptorSetCount = 1;
+	dsaInfo.pSetLayouts = &m_vkDescSetLayout1;
+	vk::DescriptorSet imgDescSet = m_vkDevice.allocateDescriptorSets(dsaInfo).at(0);
+
+	vk::DescriptorImageInfo dbInfoTexture;
+	dbInfoTexture.imageView = imageView;
+	dbInfoTexture.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+	vk::WriteDescriptorSet wds;
+	wds.dstSet = imgDescSet;
+	wds.dstBinding = 0;
+	wds.dstArrayElement = 0;
+	wds.descriptorCount = 1;
+	wds.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+	wds.pImageInfo = &dbInfoTexture;
+	m_vkDevice.updateDescriptorSets(wds, {});
+
 	m_imageViewToImageMap[imageView] = imageHandle;
+	m_imageViewToDescriptorSetMap[imageView] = imgDescSet;
 	return imageView;
 }
 
@@ -1480,11 +1496,11 @@ void VulkanRenderer::SetTexture(uint32_t x, texture t) {
 	if (t == nullptr)
 		NoTexture(x);
 	else
-		setDescriptors(std::nullopt, std::nullopt, VkImageView(t));
+		m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(t));
 }
 
 void VulkanRenderer::NoTexture(uint32_t x) {
-	setDescriptors(std::nullopt, std::nullopt, VkImageView(whiteTexture));
+	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(whiteTexture));
 }
 
 void VulkanRenderer::SetFog(uint32_t color, float farz) {
