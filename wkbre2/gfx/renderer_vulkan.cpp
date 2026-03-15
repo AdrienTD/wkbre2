@@ -230,6 +230,7 @@ struct VulkanRenderer : IRenderer {
 	vk::DescriptorSet m_currentTextureDescriptorSet = nullptr;
 
 	std::deque<vk::CommandBuffer> activeCommandBuffers;
+	std::vector<std::pair<vk::Buffer, VmaAllocation>> m_buffersToDelete;
 
 	vk::ShaderModule loadShader(const char* name, const char* func);
 
@@ -493,6 +494,11 @@ struct RGeneralBufferVulkan
 		vmaCreateBuffer(gfx->m_vmaAllocator, bufferCreateInfo, &allocationCreateInfo, &tbuffer, &allocation, &allocInfo);
 		buffer = vk::Buffer(tbuffer);
 		mappedPtr = allocInfo.pMappedData;
+	}
+
+	~RGeneralBufferVulkan()
+	{
+		gfx->m_buffersToDelete.push_back({ buffer, allocation });
 	}
 };
 
@@ -1271,6 +1277,10 @@ void VulkanRenderer::EndDrawing() {
 		m_vkDevice.freeCommandBuffers(m_vkCommandPool, 1, &cmdBuffer);
 	}
 	activeCommandBuffers.clear();
+	for (const auto& [buffer, allocation] : m_buffersToDelete) {
+		vmaDestroyBuffer(m_vmaAllocator, buffer, allocation);
+	}
+	m_buffersToDelete.clear();
 
 	nextFrame();
 }
