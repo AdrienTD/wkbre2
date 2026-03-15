@@ -1,15 +1,15 @@
-[[vk::binding(2)]]
+[[vk::binding(0, 1)]]
 Texture2D inpTexture : register(t0);
-[[vk::binding(2)]]
+[[vk::binding(0, 1)]]
 SamplerState inpSampler : register(s0);
 
-[[vk::binding(0)]]
+[[vk::binding(0, 0)]]
 cbuffer ConstantBuffer : register(b0)
 {
 	matrix Transform;
 };
 
-[[vk::binding(1)]]
+[[vk::binding(1, 0)]]
 cbuffer FogBuffer : register(b1)
 {
 	float4 FogColor;
