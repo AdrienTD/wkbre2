@@ -1264,7 +1264,7 @@ void VulkanRenderer::EndDrawing() {
 	//pinfo.pWaitSemaphores = &m_swapchainSemaphore;
 	m_vkQueue.presentKHR(pinfo);
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	//std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	//if (hres != S_OK) {
 	//	Sleep(100);
 	//}
