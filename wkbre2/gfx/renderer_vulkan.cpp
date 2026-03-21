@@ -23,12 +23,15 @@
 #define WIN32_LEAN_AND_MEAN
 #define VULKAN_HPP_NO_SETTERS
 #include <vulkan/vulkan.hpp>
+
 #define VMA_IMPLEMENTATION
+#ifdef _WIN32
 #include <vma/vk_mem_alloc.h>
+#else
+#include <vk_mem_alloc.h>
+#endif
 
 #include <SDL.h>
-#include <SDL_syswm.h>
-#include <SDL_system.h>
 #include <SDL_vulkan.h>
 extern SDL_Window* g_sdlWindow;
 
@@ -75,36 +78,8 @@ struct DynamicBuffer {
 		bufferCreateInfo[I].sharingMode = vk::SharingMode::eExclusive;
 	}
 
-	void addNewBuffer()
-	{
-		auto& buffer = buffers.emplace_back();
-		vk::FenceCreateInfo fci;
-		buffer.fence = gfx->m_vkDevice.createFence(fci);
-		for (int i = 0; i < NumSubs; ++i) {
-			VkBuffer vkbuf;
-			VmaAllocation alloc;
-			VmaAllocationInfo allocInfo;
-			auto result = vmaCreateBuffer(gfx->m_vmaAllocator, bufferCreateInfo[i],
-				&allocationCreateInfo, &vkbuf, &alloc, &allocInfo);
-			assert(result == VK_SUCCESS);
-			buffer.buffer[i] = vkbuf;
-			buffer.allocation[i] = alloc;
-			buffer.mappedPtr[i] = allocInfo.pMappedData;
-			assert(buffer.mappedPtr);
-		}
-	}
-
-	void reset()
-	{
-		for (auto& inst : buffers) {
-			auto res = gfx->m_vkDevice.waitForFences(1, &inst.fence, VK_TRUE, 10'000'000'000u);
-			assert(res == vk::Result::eSuccess);
-			gfx->m_vkDevice.destroyFence(inst.fence);
-			for(int i = 0; i < NumSubs; ++i)
-				vmaDestroyBuffer(gfx->m_vmaAllocator, inst.buffer[i], inst.allocation[i]);
-		}
-		buffers.clear();
-	}
+	void addNewBuffer();
+	void reset();
 
 	// once received, the fence HAS TO be given to a queue submission ASAP
 	// otherwise calling reset() (by destructor) will deadlock
@@ -115,26 +90,7 @@ struct DynamicBuffer {
 		return &buffers[lastBuffer];
 	}
 
-	void nextBuffer()
-	{
-		for (size_t i = 0; i < buffers.size(); ++i) {
-			size_t b = (lastBuffer + i) % buffers.size();
-			auto result = gfx->m_vkDevice.getFenceStatus(buffers[b].fence);
-			if (result == vk::Result::eSuccess) {
-				// signaled -> done, can be reused
-				auto result = gfx->m_vkDevice.resetFences(1, &buffers[b].fence);
-				assert(result == vk::Result::eSuccess);
-				lastBuffer = b;
-				return;
-			}
-			else {
-				// unsignaled -> being used
-			}
-		}
-		// all buffers are occupied -> create a new one
-		addNewBuffer();
-		lastBuffer = buffers.size() - 1;
-	}
+	void nextBuffer();
 };
 
 struct VulkanRenderer : IRenderer {
@@ -491,7 +447,7 @@ struct RGeneralBufferVulkan
 
 		VmaAllocationInfo allocInfo;
 		VkBuffer tbuffer;
-		vmaCreateBuffer(gfx->m_vmaAllocator, bufferCreateInfo, &allocationCreateInfo, &tbuffer, &allocation, &allocInfo);
+		vmaCreateBuffer(gfx->m_vmaAllocator, &(VkBufferCreateInfo&)bufferCreateInfo, &allocationCreateInfo, &tbuffer, &allocation, &allocInfo);
 		buffer = vk::Buffer(tbuffer);
 		mappedPtr = allocInfo.pMappedData;
 	}
@@ -612,6 +568,61 @@ struct RBatchVulkan : public RBatch
 	}
 
 };
+
+template<int NumSubs>
+void DynamicBuffer<NumSubs>::addNewBuffer()
+{
+	auto& buffer = buffers.emplace_back();
+	vk::FenceCreateInfo fci;
+	buffer.fence = gfx->m_vkDevice.createFence(fci);
+	for (int i = 0; i < NumSubs; ++i) {
+		VkBuffer vkbuf;
+		VmaAllocation alloc;
+		VmaAllocationInfo allocInfo;
+		auto result = vmaCreateBuffer(gfx->m_vmaAllocator, &(VkBufferCreateInfo&)bufferCreateInfo[i],
+			&allocationCreateInfo, &vkbuf, &alloc, &allocInfo);
+		assert(result == VK_SUCCESS);
+		buffer.buffer[i] = vkbuf;
+		buffer.allocation[i] = alloc;
+		buffer.mappedPtr[i] = allocInfo.pMappedData;
+		assert(buffer.mappedPtr);
+	}
+}
+
+template<int NumSubs>
+void DynamicBuffer<NumSubs>::reset()
+{
+	for (auto& inst : buffers) {
+		auto res = gfx->m_vkDevice.waitForFences(1, &inst.fence, VK_TRUE, 10'000'000'000u);
+		assert(res == vk::Result::eSuccess);
+		gfx->m_vkDevice.destroyFence(inst.fence);
+		for(int i = 0; i < NumSubs; ++i)
+			vmaDestroyBuffer(gfx->m_vmaAllocator, inst.buffer[i], inst.allocation[i]);
+	}
+	buffers.clear();
+}
+
+template<int NumSubs>
+void DynamicBuffer<NumSubs>::nextBuffer()
+{
+	for (size_t i = 0; i < buffers.size(); ++i) {
+		size_t b = (lastBuffer + i) % buffers.size();
+		auto result = gfx->m_vkDevice.getFenceStatus(buffers[b].fence);
+		if (result == vk::Result::eSuccess) {
+			// signaled -> done, can be reused
+			auto result = gfx->m_vkDevice.resetFences(1, &buffers[b].fence);
+			assert(result == vk::Result::eSuccess);
+			lastBuffer = b;
+			return;
+		}
+		else {
+			// unsignaled -> being used
+		}
+	}
+	// all buffers are occupied -> create a new one
+	addNewBuffer();
+	lastBuffer = buffers.size() - 1;
+}
 
 vk::ShaderModule VulkanRenderer::loadShader(const char* name, const char* func) {
 	std::string fileName = std::string(name) + '_' + func + ".spirv";
@@ -882,10 +893,10 @@ void VulkanRenderer::Init() {
 	uniformCreateInfo.sharingMode = vk::SharingMode::eExclusive;
 
 	VkBuffer bufferTemp;
-	vmaCreateBuffer(m_vmaAllocator, uniformCreateInfo, &uniformAllocCreateInfo, &bufferTemp, &m_currentTransformBufferAlloc, nullptr);
+	vmaCreateBuffer(m_vmaAllocator, &(VkBufferCreateInfo&)uniformCreateInfo, &uniformAllocCreateInfo, &bufferTemp, &m_currentTransformBufferAlloc, nullptr);
 	m_currentTransformBuffer = bufferTemp;
 	uniformCreateInfo.size = 32;
-	vmaCreateBuffer(m_vmaAllocator, uniformCreateInfo, &uniformAllocCreateInfo, &bufferTemp, &m_currentFogBufferAlloc, nullptr);
+	vmaCreateBuffer(m_vmaAllocator, &(VkBufferCreateInfo&)uniformCreateInfo, &uniformAllocCreateInfo, &bufferTemp, &m_currentFogBufferAlloc, nullptr);
 	m_currentFogBuffer = bufferTemp;
 
 	// ==== Pipeline ====
@@ -1185,7 +1196,7 @@ void VulkanRenderer::Reset() {
 		ici.tiling = vk::ImageTiling::eOptimal;
 		allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 		VkImage depthImage;
-		auto result = vmaCreateImage(m_vmaAllocator, ici, &allocCreateInfo, &depthImage, &si.depthAllocation, nullptr);
+		auto result = vmaCreateImage(m_vmaAllocator, &(VkImageCreateInfo&)ici, &allocCreateInfo, &depthImage, &si.depthAllocation, nullptr);
 		assert(result == VK_SUCCESS);
 		si.depthImage = depthImage;
 
@@ -1375,7 +1386,7 @@ texture VulkanRenderer::CreateTexture(const Bitmap& bm, int mipmaps) {
 	VkImage imageHandle;
 	VmaAllocation allocationHandle;
 	VmaAllocationInfo allocationInfo;
-	auto res = vmaCreateImage(m_vmaAllocator, desc, &acInfo, &imageHandle, &allocationHandle, &allocationInfo);
+	auto res = vmaCreateImage(m_vmaAllocator, &(VkImageCreateInfo&)desc, &acInfo, &imageHandle, &allocationHandle, &allocationInfo);
 	assert(res == VK_SUCCESS);
 
 	//
@@ -1388,7 +1399,7 @@ texture VulkanRenderer::CreateTexture(const Bitmap& bm, int mipmaps) {
 	VmaAllocation stageAllocation;
 	VmaAllocationInfo stageAllocationInfo;
 
-	vmaCreateBuffer(m_vmaAllocator, bcInfo, &acInfo, &stageBuffer, &stageAllocation, &stageAllocationInfo);
+	vmaCreateBuffer(m_vmaAllocator, &(VkBufferCreateInfo&)bcInfo, &acInfo, &stageBuffer, &stageAllocation, &stageAllocationInfo);
 
 	//
 
