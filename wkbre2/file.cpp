@@ -377,13 +377,21 @@ std::string GetMacName(const char *fn)
 	return {};
 }
 
+std::string portablePath(std::string p)
+{
+	for(char& c : p)
+		if(c == '\\')
+			c = '/';
+	return p;
+}
+
 void LoadFile(const char *fn, char **out, int *outsize, int extraBytes)
 {
 	BCPReader *bp = GetBCPWithMostRecentFile(fn);
 	if(bp) if(bp->loadFile(fn, out, outsize, extraBytes)) return;
 
 	// File not found in the BCPs. Find it in the "data", "saved" and "redata" directories.
-	const auto u8fn = std::filesystem::u8path(fn);
+	const auto u8fn = std::filesystem::u8path(portablePath(fn));
 	FILE *sf = 0;
 	if(g_allowDataDirectory)
 	{
@@ -438,7 +446,7 @@ int FileExists(const char *fn)
 		if(bcp->fileExists(fn))
 			return 1;
 
-	const auto u8fn = std::filesystem::u8path(fn);
+	const auto u8fn = std::filesystem::u8path(portablePath(fn));
 
 	// File not found in the BCPs. Find it in the "saved" and "redata" folder.
 	if (std::filesystem::exists(g_gamePath / "saved" / u8fn))
