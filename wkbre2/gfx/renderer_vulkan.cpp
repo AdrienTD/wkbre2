@@ -137,22 +137,6 @@ struct VulkanRenderer : IRenderer {
 
 	VmaAllocator m_vmaAllocator;
 
-	//ID3D11RenderTargetView* ddRenderTargetView = nullptr;
-
-	//ID3D11InputLayout* ddInputLayout;
-	//ID3D11VertexShader* ddVertexShader, * ddFogVertexShader;
-	//ID3D11PixelShader* ddPixelShader, * ddAlphaTestPixelShader, * ddMapPixelShader, * ddLakePixelShader;
-
-	// Shapes
-	//ID3D11BlendState* alphaBlendState = nullptr;
-
-	// Depth
-	//ID3D11Texture2D* depthBuffer = nullptr;
-	//ID3D11DepthStencilView* depthView = nullptr;
-	//ID3D11DepthStencilState* depthOnState = nullptr;
-	//ID3D11DepthStencilState* depthOffState = nullptr;
-	//ID3D11DepthStencilState* depthTestOnlyState = nullptr;
-
 	// Constant buffers
 	struct GlobalBuffers {
 		DynamicBuffer<1> shapeVertexBuffer;
@@ -208,10 +192,6 @@ struct VulkanRenderer : IRenderer {
 		vk::SubmitInfo submit;
 		submit.commandBufferCount = 1;
 		submit.pCommandBuffers = &buffer;
-		//submit.signalSemaphoreCount = 1;
-		//submit.pSignalSemaphores = &m_mainSemaphore;
-		//submit.waitSemaphoreCount = 1;
-		//submit.pWaitSemaphores = &m_mainSemaphore;
 		m_vkQueue.submit(submit, fence);
 	}
 
@@ -564,7 +544,6 @@ struct RBatchVulkan : public RBatch
 		vk::DeviceSize offset = 0;
 		
 		auto cmdBuffer = gfx->createCommandBufferAndBegin();
-		//auto pipeline = gfx->m_primitiveTopology == vk::PrimitiveTopology::eLineList ? gfx->m_pipeline2DLines : gfx->m_pipeline2D;
 		gfx->beginPass(cmdBuffer);
 		cmdBuffer.bindVertexBuffers(0, 1, &currentBuf->buffer[0], &offset);
 		cmdBuffer.bindIndexBuffer(currentBuf->buffer[1], 0, vk::IndexType::eUint16);
@@ -840,7 +819,7 @@ void VulkanRenderer::Init() {
 	scInfo.anisotropyEnable = hasAnisotropy ? vk::True : vk::False;
 	scInfo.maxAnisotropy = 16;
 	scInfo.compareEnable = vk::False;
-	//scInfo.compareOp = 0;
+	scInfo.compareOp = vk::CompareOp::eNever;
 	scInfo.minLod = 0.0f;
 	scInfo.maxLod = VK_LOD_CLAMP_NONE;
 	scInfo.borderColor = vk::BorderColor::eFloatTransparentBlack;
@@ -1092,43 +1071,6 @@ void VulkanRenderer::Init() {
 }
 
 void VulkanRenderer::Reset() {
-	//ddImmediateContext->ClearState();
-	//if (depthView) depthView->Release();
-	//if (depthBuffer) depthBuffer->Release();
-	//if (ddRenderTargetView) ddRenderTargetView->Release();
-
-	//HRESULT hres = dxgiSwapChain->ResizeBuffers(1, g_windowWidth, g_windowHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
-	//assert(!FAILED(hres));
-
-	//ID3D11Texture2D* backBuffer;
-	//hres = dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
-	//assert(backBuffer != nullptr);
-	//ddDevice->CreateRenderTargetView(backBuffer, NULL, &ddRenderTargetView);
-	//backBuffer->Release();
-
-	//D3D11_TEXTURE2D_DESC dsdesc;
-	//dsdesc.Width = g_windowWidth;
-	//dsdesc.Height = g_windowHeight;
-	//dsdesc.MipLevels = 1;
-	//dsdesc.ArraySize = 1;
-	//dsdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	//dsdesc.SampleDesc.Count = msaaNumSamples;
-	//dsdesc.SampleDesc.Quality = 0;
-	//dsdesc.Usage = D3D11_USAGE_DEFAULT;
-	//dsdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	//dsdesc.CPUAccessFlags = 0;
-	//dsdesc.MiscFlags = 0;
-	//hres = ddDevice->CreateTexture2D(&dsdesc, nullptr, &depthBuffer);
-	//assert(!FAILED(hres));
-
-	//D3D11_DEPTH_STENCIL_VIEW_DESC dsviewdesc;
-	//dsviewdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	//dsviewdesc.ViewDimension = (msaaNumSamples > 1) ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D;
-	//dsviewdesc.Flags = 0;
-	//dsviewdesc.Texture2D.MipSlice = 0;
-	//hres = ddDevice->CreateDepthStencilView(depthBuffer, &dsviewdesc, &depthView);
-	//assert(!FAILED(hres));
-	
 	m_vkDevice.waitIdle();
 
 	m_surfaceWidth = g_windowWidth;
@@ -1146,11 +1088,8 @@ void VulkanRenderer::Reset() {
 
 	if (m_vkSwapchain)
 		m_vkDevice.destroySwapchainKHR(m_vkSwapchain);
-	//if (m_vkSurface)
-	//	m_vkInstance.destroySurfaceKHR(m_vkSurface);
 
 	m_vkSwapchain = nullptr;
-	//m_vkSurface = nullptr;
 
 	// Create swapchain
 
@@ -1239,14 +1178,6 @@ void VulkanRenderer::BeginDrawing() {
 
 	auto rr = m_vkDevice.waitForFences(1, &m_swapchainFence, vk::True, 10'000'000'000);
 	assert(rr == vk::Result::eSuccess);
-
-	//ddImmediateContext->ClearState();
-	//ddImmediateContext->OMSetRenderTargets(1, &ddRenderTargetView, depthView);
-	////ddImmediateContext->RSSetViewports(1, &vp);
-	//ddImmediateContext->IASetInputLayout(ddInputLayout);
-	//ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
-	//ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
-	//ddImmediateContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&whiteTexture);
 
 	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(whiteTexture));
 
@@ -1452,13 +1383,6 @@ texture VulkanRenderer::CreateTexture(const Bitmap& bm, int mipmaps) {
 		m_vkQueue.waitIdle();
 	}
 
-	//D3D11_SUBRESOURCE_DATA sub[std::size(mmbmp)];
-	//for (size_t i = 0; i < (size_t)numMipmaps; i++) {
-	//	sub[i].pSysMem = mmbmp[i].pixels.data();
-	//	sub[i].SysMemPitch = mmbmp[i].width * 4u;
-	//	sub[i].SysMemSlicePitch = sub[i].SysMemPitch * mmbmp[i].height;
-	//}
-
 	vk::ImageViewCreateInfo ivcInfo;
 	ivcInfo.image = imageHandle;
 	ivcInfo.viewType = vk::ImageViewType::e2D;
@@ -1553,26 +1477,21 @@ void VulkanRenderer::SetFog(uint32_t color, float farz) {
 	cmdBuffer.end();
 	submitSingleCommandBuffer(cmdBuffer, stage->fence);
 
-	//ddImmediateContext->VSSetShader(ddFogVertexShader, nullptr, 0);
-
 	fogEnabled = true;
 }
 
 void VulkanRenderer::DisableFog() {
-	//ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
 	fogEnabled = false;
 }
 
 void VulkanRenderer::EnableAlphaTest() {
 	if (m_currentPipeline == m_pipeline3D)
 		m_currentPipeline = m_pipeline3DAlphaTest;
-	//ddImmediateContext->PSSetShader(ddAlphaTestPixelShader, nullptr, 0);
 }
 
 void VulkanRenderer::DisableAlphaTest() {
 	if (m_currentPipeline == m_pipeline3DAlphaTest)
 		m_currentPipeline = m_pipeline3D;
-	//ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
 }
 
 void VulkanRenderer::EnableColorBlend() {}
@@ -1586,11 +1505,9 @@ void VulkanRenderer::EnableAlphaBlend() {}
 void VulkanRenderer::DisableAlphaBlend() {}
 
 void VulkanRenderer::EnableScissor() {
-	//ddImmediateContext->RSSetState(scissorRasterizerState);
 }
 
 void VulkanRenderer::DisableScissor() {
-	//ddImmediateContext->RSSetState(nullptr);
 	SetScissorRect(0, 0, 8192, 8192);
 }
 
@@ -1616,10 +1533,6 @@ void VulkanRenderer::InitRectDrawing() {
 	SetFog();
 	
 	m_currentPipeline = m_pipeline2D;
-	//ddImmediateContext->OMSetBlendState(alphaBlendState, {}, 0xFFFFFFFF);
-	//ddImmediateContext->OMSetDepthStencilState(depthOffState, 0);
-	//ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
-	//ddImmediateContext->VSSetShader(ddVertexShader, nullptr, 0);
 }
 
 void VulkanRenderer::DrawRect(int x, int y, int w, int h, int c, float u, float v, float o, float p) {
@@ -1686,23 +1599,16 @@ void VulkanRenderer::DrawFrame(int x, int y, int w, int h, int c) {
 
 void VulkanRenderer::BeginMapDrawing() {
 	m_currentPipeline = m_pipelineTerrain;
-	//ddImmediateContext->PSSetShader(ddMapPixelShader, nullptr, 0);
-	//ddImmediateContext->OMSetBlendState(nullptr, {}, 0xFFFFFFFF);
 }
 
 void VulkanRenderer::BeginLakeDrawing() {
 	m_currentPipeline = m_pipelineLake;
-	//ddImmediateContext->PSSetShader(ddLakePixelShader, nullptr, 0);
-	//ddImmediateContext->OMSetBlendState(alphaBlendState, {}, 0xFFFFFFFF);
 }
 
 // 3D Mesh drawing
 
 void VulkanRenderer::BeginMeshDrawing() {
 	m_currentPipeline = m_pipeline3D;
-	//ddImmediateContext->OMSetBlendState(nullptr, {}, 0xFFFFFFFF);
-	//ddImmediateContext->OMSetDepthStencilState(depthOnState, 0);
-	//ddImmediateContext->PSSetShader(ddAlphaTestPixelShader, nullptr, 0);
 }
 
 // Batch drawing
@@ -1782,10 +1688,6 @@ void VulkanRenderer::InitImGuiDrawing() {
 
 void VulkanRenderer::BeginParticles() {
 	m_currentPipeline = m_pipeline3DAlphaBlend;
-	//ddImmediateContext->OMSetBlendState(alphaBlendState, {}, 0xFFFFFFFF);
-	//ddImmediateContext->OMSetDepthStencilState(depthTestOnlyState, 0);
-	//ddImmediateContext->PSSetShader(ddPixelShader, nullptr, 0);
-	//ddImmediateContext->VSSetShader(fogEnabled ? ddFogVertexShader : ddVertexShader, nullptr, 0);
 }
 
 void VulkanRenderer::SetLineTopology() {
