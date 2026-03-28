@@ -178,7 +178,6 @@ struct VulkanRenderer : IRenderer {
 	bool fogEnabled = false;
 	RVertexBufferVulkan* currentVertexBuffer = nullptr;
 	RIndexBufferVulkan* currentIndexBuffer = nullptr;
-	vk::Fence m_nonDynamicBufferFence;
 	vk::Viewport m_viewport;
 	vk::Rect2D m_scissorRect;
 	vk::PrimitiveTopology m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
@@ -429,27 +428,28 @@ struct VulkanRenderer : IRenderer {
 struct RGeneralBufferVulkan
 {
 	VulkanRenderer* const gfx;
+
 	vk::Buffer buffer;
 	VmaAllocation allocation;
-	void* mappedPtr;
-	RGeneralBufferVulkan(VulkanRenderer* gfx, int size, vk::BufferUsageFlags usage) : gfx(gfx)
+	
+	DynamicBuffer<1> stageBuffer;
+
+	RGeneralBufferVulkan(VulkanRenderer* gfx, int size, vk::BufferUsageFlags usage)
+		: gfx(gfx), stageBuffer(gfx, size, vk::BufferUsageFlagBits::eTransferSrc)
 	{
 		VmaAllocationCreateInfo allocationCreateInfo;
 		memset(&allocationCreateInfo, 0, sizeof(allocationCreateInfo));
-		allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT
-			| VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-		allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+		allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
 		vk::BufferCreateInfo bufferCreateInfo;
 		bufferCreateInfo.size = size;
-		bufferCreateInfo.usage = usage;
+		bufferCreateInfo.usage = usage | vk::BufferUsageFlagBits::eTransferDst;
 		bufferCreateInfo.sharingMode = vk::SharingMode::eExclusive;
 
 		VmaAllocationInfo allocInfo;
 		VkBuffer tbuffer;
 		vmaCreateBuffer(gfx->m_vmaAllocator, &(VkBufferCreateInfo&)bufferCreateInfo, &allocationCreateInfo, &tbuffer, &allocation, &allocInfo);
 		buffer = vk::Buffer(tbuffer);
-		mappedPtr = allocInfo.pMappedData;
 	}
 
 	~RGeneralBufferVulkan()
@@ -461,36 +461,47 @@ struct RGeneralBufferVulkan
 struct RVertexBufferVulkan : public RVertexBuffer, RGeneralBufferVulkan
 {
 	RVertexBufferVulkan(VulkanRenderer* gfx, int size)
-		: RGeneralBufferVulkan(gfx, size, vk::BufferUsageFlagBits::eVertexBuffer) {}
+		: RGeneralBufferVulkan(gfx, size, vk::BufferUsageFlagBits::eVertexBuffer) {
+		this->size = size;
+	}
 
 	batchVertex* lock()
 	{
-		auto res = gfx->m_vkDevice.waitForFences(1, &gfx->m_nonDynamicBufferFence, vk::True, 10'000'000'000u);
-		assert(res == vk::Result::eSuccess);
-		return (batchVertex*)mappedPtr;
+		if (!dirty) {
+			stageBuffer.nextBuffer();
+			dirty = true;
+		}
+		return (batchVertex*)stageBuffer.getCurrentBuffer()->mappedPtr[0];
 	}
 	void unlock()
 	{
-		vmaFlushAllocation(gfx->m_vmaAllocator, allocation, 0, size);
+		vmaFlushAllocation(gfx->m_vmaAllocator, stageBuffer.getCurrentBuffer()->allocation[0], 0, size);
 	}
+
+	bool dirty = false;
 };
 
 struct RIndexBufferVulkan : public RIndexBuffer, RGeneralBufferVulkan
 {
 	RIndexBufferVulkan(VulkanRenderer* gfx, int size)
 		: RGeneralBufferVulkan(gfx, size, vk::BufferUsageFlagBits::eIndexBuffer) {
+		this->size = size;
 	}
 
 	uint16_t* lock()
 	{
-		auto res = gfx->m_vkDevice.waitForFences(1, &gfx->m_nonDynamicBufferFence, vk::True, 10'000'000'000u);
-		assert(res == vk::Result::eSuccess);
-		return (uint16_t*)mappedPtr;
+		if (!dirty) {
+			stageBuffer.nextBuffer();
+			dirty = true;
+		}
+		return (uint16_t*)stageBuffer.getCurrentBuffer()->mappedPtr[0];
 	}
 	void unlock()
 	{
-		vmaFlushAllocation(gfx->m_vmaAllocator, allocation, 0, size);
+		vmaFlushAllocation(gfx->m_vmaAllocator, stageBuffer.getCurrentBuffer()->allocation[0], 0, size);
 	}
+
+	bool dirty = false;
 };
 
 struct RBatchVulkan : public RBatch
@@ -1062,10 +1073,6 @@ void VulkanRenderer::Init() {
 	m_pipelineLake = m_vkDevice.createGraphicsPipeline(m_vkPipelineCache, gpcInfo).value;
 
 	// Fence
-
-	vk::FenceCreateInfo fcInfo;
-	fcInfo.flags = vk::FenceCreateFlagBits::eSignaled;
-	m_nonDynamicBufferFence = m_vkDevice.createFence(fcInfo);
 
 	// Buffers
 	globalBuffers = std::make_unique<GlobalBuffers>(this);
@@ -1734,6 +1741,27 @@ void VulkanRenderer::SetIndexBuffer(RIndexBuffer* _ri) {
 void VulkanRenderer::DrawBuffer(int first, int count) {
 	assert(this->currentVertexBuffer);
 	assert(this->currentIndexBuffer);
+
+	vk::BufferCopy bc;
+	bc.srcOffset = 0;
+	bc.dstOffset = 0;
+	if (currentVertexBuffer->dirty) {
+		vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
+		bc.size = currentVertexBuffer->size;
+		cmdBuffer.copyBuffer(currentVertexBuffer->stageBuffer.getCurrentBuffer()->buffer[0], currentVertexBuffer->buffer, bc);
+		cmdBuffer.end();
+		currentVertexBuffer->dirty = false;
+		submitSingleCommandBuffer(cmdBuffer, currentVertexBuffer->stageBuffer.getCurrentBuffer()->fence);
+	}
+	if (currentIndexBuffer->dirty) {
+		vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
+		bc.size = currentIndexBuffer->size;
+		cmdBuffer.copyBuffer(currentIndexBuffer->stageBuffer.getCurrentBuffer()->buffer[0], currentIndexBuffer->buffer, bc);
+		cmdBuffer.end();
+		currentIndexBuffer->dirty = false;
+		submitSingleCommandBuffer(cmdBuffer, currentIndexBuffer->stageBuffer.getCurrentBuffer()->fence);
+	}
+
 	vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
 	VkDeviceSize offset = 0;
 	beginPass(cmdBuffer);
@@ -1742,8 +1770,7 @@ void VulkanRenderer::DrawBuffer(int first, int count) {
 	cmdBuffer.drawIndexed(count, 1, first, 0, 0);
 	endPass(cmdBuffer);
 	cmdBuffer.end();
-	m_vkDevice.resetFences(1, &m_nonDynamicBufferFence);
-	submitSingleCommandBuffer(cmdBuffer, m_nonDynamicBufferFence);
+	submitSingleCommandBuffer(cmdBuffer);
 }
 
 // ImGui
