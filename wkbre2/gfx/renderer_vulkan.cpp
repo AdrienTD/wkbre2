@@ -149,26 +149,26 @@ struct VulkanRenderer : IRenderer {
 		{
 		}
 	};
-	std::unique_ptr<GlobalBuffers> globalBuffers;
+	std::unique_ptr<GlobalBuffers> m_globalBuffers;
 	vk::Buffer m_currentTransformBuffer; VmaAllocation m_currentTransformBufferAlloc;
 	vk::Buffer m_currentFogBuffer; VmaAllocation m_currentFogBufferAlloc;
 	std::map<vk::ImageView, vk::Image> m_imageViewToImageMap;
 	std::map<vk::ImageView, vk::DescriptorSet> m_imageViewToDescriptorSetMap;
 
-	texture whiteTexture;
-	int msaaNumSamples = 1;
+	texture m_whiteTexture;
+	int m_msaaNumSamples = 1;
 
 	// State
-	bool fogEnabled = false;
-	RVertexBufferVulkan* currentVertexBuffer = nullptr;
-	RIndexBufferVulkan* currentIndexBuffer = nullptr;
+	bool m_fogEnabled = false;
+	RVertexBufferVulkan* m_currentVertexBuffer = nullptr;
+	RIndexBufferVulkan* m_currentIndexBuffer = nullptr;
 	vk::Viewport m_viewport;
 	vk::Rect2D m_scissorRect;
 	vk::PrimitiveTopology m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
 	vk::Pipeline m_currentPipeline = nullptr;
 	vk::DescriptorSet m_currentTextureDescriptorSet = nullptr;
 
-	std::deque<vk::CommandBuffer> activeCommandBuffers;
+	std::deque<vk::CommandBuffer> m_activeCommandBuffers;
 	std::vector<std::pair<vk::Buffer, VmaAllocation>> m_buffersToDelete;
 
 	vk::ShaderModule loadShader(const char* name, const char* func);
@@ -183,7 +183,7 @@ struct VulkanRenderer : IRenderer {
 		vk::CommandBufferBeginInfo beginInfo;
 		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 		cmdBuffer.begin(beginInfo);
-		activeCommandBuffers.push_back(cmdBuffer);
+		m_activeCommandBuffers.push_back(cmdBuffer);
 		return cmdBuffer;
 	}
 
@@ -1054,7 +1054,7 @@ void VulkanRenderer::Init() {
 	// Fence
 
 	// Buffers
-	globalBuffers = std::make_unique<GlobalBuffers>(this);
+	m_globalBuffers = std::make_unique<GlobalBuffers>(this);
 
 	Bitmap whiteBmp;
 	whiteBmp.width = 1;
@@ -1062,10 +1062,10 @@ void VulkanRenderer::Init() {
 	whiteBmp.format = BMFORMAT_R8G8B8A8;
 	whiteBmp.pixels.resize(4);
 	*(uint32_t*)whiteBmp.pixels.data() = 0xFFFFFFFF;
-	whiteTexture = CreateTexture(whiteBmp, 1);
+	m_whiteTexture = CreateTexture(whiteBmp, 1);
 
 	setDescriptors(m_currentTransformBuffer, m_currentFogBuffer);
-	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(whiteTexture));
+	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
 
 	Reset();
 }
@@ -1179,9 +1179,9 @@ void VulkanRenderer::BeginDrawing() {
 	auto rr = m_vkDevice.waitForFences(1, &m_swapchainFence, vk::True, 10'000'000'000);
 	assert(rr == vk::Result::eSuccess);
 
-	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(whiteTexture));
+	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
 
-	fogEnabled = false;
+	m_fogEnabled = false;
 	m_currentPipeline = nullptr; // it needs to be decided by the caller!
 	m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
 }
@@ -1222,10 +1222,10 @@ void VulkanRenderer::EndDrawing() {
 
 	m_vkQueue.waitIdle();
 
-	for (const vk::CommandBuffer& cmdBuffer : activeCommandBuffers) {
+	for (const vk::CommandBuffer& cmdBuffer : m_activeCommandBuffers) {
 		m_vkDevice.freeCommandBuffers(m_vkCommandPool, 1, &cmdBuffer);
 	}
-	activeCommandBuffers.clear();
+	m_activeCommandBuffers.clear();
 	for (const auto& [buffer, allocation] : m_buffersToDelete) {
 		vmaDestroyBuffer(m_vmaAllocator, buffer, allocation);
 	}
@@ -1427,8 +1427,8 @@ void VulkanRenderer::UpdateTexture(texture t, const Bitmap& bmp) {}
 // State changes
 
 void VulkanRenderer::SetTransformMatrix(const Matrix* m) {
-	globalBuffers->transformBuffer.nextBuffer();
-	auto* stage = globalBuffers->transformBuffer.getCurrentBuffer();
+	m_globalBuffers->transformBuffer.nextBuffer();
+	auto* stage = m_globalBuffers->transformBuffer.getCurrentBuffer();
 
 	void* transformBytes = stage->mappedPtr[0];
 	*(Matrix*)transformBytes = m->getTranspose();
@@ -1452,12 +1452,12 @@ void VulkanRenderer::SetTexture(uint32_t x, texture t) {
 }
 
 void VulkanRenderer::NoTexture(uint32_t x) {
-	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(whiteTexture));
+	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
 }
 
 void VulkanRenderer::SetFog(uint32_t color, float farz) {
-	globalBuffers->fogBuffer.nextBuffer();
-	auto* stage = globalBuffers->fogBuffer.getCurrentBuffer();
+	m_globalBuffers->fogBuffer.nextBuffer();
+	auto* stage = m_globalBuffers->fogBuffer.getCurrentBuffer();
 
 	float* cc = (float*)stage->mappedPtr[0];
 	cc[0] = (float)((color >> 16) & 255) / 255.0f;
@@ -1477,11 +1477,11 @@ void VulkanRenderer::SetFog(uint32_t color, float farz) {
 	cmdBuffer.end();
 	submitSingleCommandBuffer(cmdBuffer, stage->fence);
 
-	fogEnabled = true;
+	m_fogEnabled = true;
 }
 
 void VulkanRenderer::DisableFog() {
-	fogEnabled = false;
+	m_fogEnabled = false;
 }
 
 void VulkanRenderer::EnableAlphaTest() {
@@ -1536,8 +1536,8 @@ void VulkanRenderer::InitRectDrawing() {
 }
 
 void VulkanRenderer::DrawRect(int x, int y, int w, int h, int c, float u, float v, float o, float p) {
-	globalBuffers->shapeVertexBuffer.nextBuffer();
-	const auto* buffer = globalBuffers->shapeVertexBuffer.getCurrentBuffer();
+	m_globalBuffers->shapeVertexBuffer.nextBuffer();
+	const auto* buffer = m_globalBuffers->shapeVertexBuffer.getCurrentBuffer();
 
 	//batchVertex* verts = (batchVertex*)buffer->mappedPtr;
 	batchVertex verts[6];
@@ -1568,8 +1568,8 @@ void VulkanRenderer::DrawGradientRect(int x, int y, int w, int h, int c0, int c1
 }
 
 void VulkanRenderer::DrawFrame(int x, int y, int w, int h, int c) {
-	globalBuffers->shapeVertexBuffer.nextBuffer();
-	const auto* buffer = globalBuffers->shapeVertexBuffer.getCurrentBuffer();
+	m_globalBuffers->shapeVertexBuffer.nextBuffer();
+	const auto* buffer = m_globalBuffers->shapeVertexBuffer.getCurrentBuffer();
 	
 	//batchVertex* verts = (batchVertex*)buffer->mappedPtr;
 	batchVertex verts[8];
@@ -1636,43 +1636,43 @@ RIndexBuffer* VulkanRenderer::CreateIndexBuffer(int ni) {
 }
 
 void VulkanRenderer::SetVertexBuffer(RVertexBuffer* _rv) {
-	this->currentVertexBuffer = (RVertexBufferVulkan*)_rv;
+	this->m_currentVertexBuffer = (RVertexBufferVulkan*)_rv;
 
 }
 
 void VulkanRenderer::SetIndexBuffer(RIndexBuffer* _ri) {
-	this->currentIndexBuffer = (RIndexBufferVulkan*)_ri;
+	this->m_currentIndexBuffer = (RIndexBufferVulkan*)_ri;
 }
 
 void VulkanRenderer::DrawBuffer(int first, int count) {
-	assert(this->currentVertexBuffer);
-	assert(this->currentIndexBuffer);
+	assert(this->m_currentVertexBuffer);
+	assert(this->m_currentIndexBuffer);
 
 	vk::BufferCopy bc;
 	bc.srcOffset = 0;
 	bc.dstOffset = 0;
-	if (currentVertexBuffer->dirty) {
+	if (m_currentVertexBuffer->dirty) {
 		vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
-		bc.size = currentVertexBuffer->size;
-		cmdBuffer.copyBuffer(currentVertexBuffer->stageBuffer.getCurrentBuffer()->buffer[0], currentVertexBuffer->buffer, bc);
+		bc.size = m_currentVertexBuffer->size;
+		cmdBuffer.copyBuffer(m_currentVertexBuffer->stageBuffer.getCurrentBuffer()->buffer[0], m_currentVertexBuffer->buffer, bc);
 		cmdBuffer.end();
-		currentVertexBuffer->dirty = false;
-		submitSingleCommandBuffer(cmdBuffer, currentVertexBuffer->stageBuffer.getCurrentBuffer()->fence);
+		m_currentVertexBuffer->dirty = false;
+		submitSingleCommandBuffer(cmdBuffer, m_currentVertexBuffer->stageBuffer.getCurrentBuffer()->fence);
 	}
-	if (currentIndexBuffer->dirty) {
+	if (m_currentIndexBuffer->dirty) {
 		vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
-		bc.size = currentIndexBuffer->size;
-		cmdBuffer.copyBuffer(currentIndexBuffer->stageBuffer.getCurrentBuffer()->buffer[0], currentIndexBuffer->buffer, bc);
+		bc.size = m_currentIndexBuffer->size;
+		cmdBuffer.copyBuffer(m_currentIndexBuffer->stageBuffer.getCurrentBuffer()->buffer[0], m_currentIndexBuffer->buffer, bc);
 		cmdBuffer.end();
-		currentIndexBuffer->dirty = false;
-		submitSingleCommandBuffer(cmdBuffer, currentIndexBuffer->stageBuffer.getCurrentBuffer()->fence);
+		m_currentIndexBuffer->dirty = false;
+		submitSingleCommandBuffer(cmdBuffer, m_currentIndexBuffer->stageBuffer.getCurrentBuffer()->fence);
 	}
 
 	vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
 	VkDeviceSize offset = 0;
 	beginPass(cmdBuffer);
-	cmdBuffer.bindVertexBuffers(0, 1, &currentVertexBuffer->buffer, &offset);
-	cmdBuffer.bindIndexBuffer(currentIndexBuffer->buffer, 0, vk::IndexType::eUint16);
+	cmdBuffer.bindVertexBuffers(0, 1, &m_currentVertexBuffer->buffer, &offset);
+	cmdBuffer.bindIndexBuffer(m_currentIndexBuffer->buffer, 0, vk::IndexType::eUint16);
 	cmdBuffer.drawIndexed(count, 1, first, 0, 0);
 	endPass(cmdBuffer);
 	cmdBuffer.end();
