@@ -8,10 +8,20 @@
 #include "../client.h"
 #include "../ParticleSystem.h"
 
+DefaultParticleRenderer::DefaultParticleRenderer(IRenderer* gfx, ParticleContainer* particleContainer)
+	: ParticleRenderer(gfx, particleContainer), texCache(gfx)
+{
+}
+
+DefaultParticleRenderer::~DefaultParticleRenderer() = default;
+
 void DefaultParticleRenderer::render(float prevTime, float nextTime, const Camera& camera)
 {
-	RBatch* batch = gfx->CreateBatch(4 * 100, 6 * 100);
 	static constexpr float TRISIZE = 1.0f / 30.0f;
+
+	if (!batch)
+		batch.reset(gfx->CreateBatch(4 * 100, 6 * 100));
+
 	texture curTexture = nullptr;
 	gfx->NoTexture(0);
 	gfx->SetTransformMatrix(&camera.sceneMatrix);
@@ -92,6 +102,4 @@ void DefaultParticleRenderer::render(float prevTime, float nextTime, const Camer
 	}
 	batch->flush();
 	gfx->SetTriangleTopology();
-
-	delete batch;
 }

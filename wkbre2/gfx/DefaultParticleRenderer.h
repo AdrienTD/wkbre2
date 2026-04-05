@@ -6,10 +6,15 @@
 
 #include "ParticleRenderer.h"
 #include "TextureCache.h"
+#include <memory>
+
+struct RBatch;
 
 struct DefaultParticleRenderer : ParticleRenderer {
+	DefaultParticleRenderer(IRenderer* gfx, ParticleContainer* particleContainer);
+	~DefaultParticleRenderer();
 	virtual void render(float prevTime, float nextTime, const Camera& camera) override;
-	DefaultParticleRenderer(IRenderer* gfx, ParticleContainer* particleContainer) : ParticleRenderer(gfx, particleContainer), texCache(gfx) {}
 
 	TextureCache texCache;
+	std::unique_ptr<RBatch> batch;
 };
