@@ -3,7 +3,7 @@
 // Licensed under the GNU General Public License 3
 
 #include "ArmyCreationSchedule.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 #include "gameset.h"
 
 void ArmyCreationSchedule::parse(GSFileParser& gsf, const GameSet& gs)

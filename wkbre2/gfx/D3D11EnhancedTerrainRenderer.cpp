@@ -5,7 +5,7 @@
 #ifdef _WIN32
 
 #include "D3D11EnhancedTerrainRenderer.h"
-#include "../util/vecmat.h"
+#include "util/vecmat.h"
 #include "renderer.h"
 #include "../window.h"
 #include "../terrain.h"
@@ -15,7 +15,7 @@
 #include "../Camera.h"
 #include <cassert>
 #include <algorithm>
-#include "../util/util.h"
+#include "util/util.h"
 #include "bitmap.h"
 #include "../settings.h"
 #include <nlohmann/json.hpp>

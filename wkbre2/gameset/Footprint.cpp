@@ -4,7 +4,7 @@
 
 #include "Footprint.h"
 #include "gameset.h"
-#include "../util/GSFileParser.h"
+#include "util/GSFileParser.h"
 
 void Footprint::parse(GSFileParser& gsf, GameSet& gs)
 {

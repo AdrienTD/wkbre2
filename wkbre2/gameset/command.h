@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include "actions.h"
-#include "../util/vecmat.h"
+#include "util/vecmat.h"
 
 struct ServerGameObject;
 struct OrderBlueprint;

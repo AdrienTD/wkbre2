@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../util/DynArray.h"
+#include "util/DynArray.h"
 
 #define BMFORMAT_P8 1
 #define BMFORMAT_R8G8B8 2

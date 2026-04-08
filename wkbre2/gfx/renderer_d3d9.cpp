@@ -5,8 +5,8 @@
 #ifdef _WIN32
 
 #include "renderer.h"
-#include "../util/util.h"
-#include "../util/vecmat.h"
+#include "util/util.h"
+#include "util/vecmat.h"
 #include "bitmap.h"
 #include "../window.h"
 
