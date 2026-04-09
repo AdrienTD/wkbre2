@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "glew",
+    "lua",
+    "mpg123",
+    "sol2",
+    "stb"
+  ]
+}
