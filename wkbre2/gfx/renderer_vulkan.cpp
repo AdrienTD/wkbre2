@@ -710,6 +710,7 @@ void VulkanRenderer::Init() {
 
 	vk::CommandPoolCreateInfo commandPoolCreateInfo;
 	commandPoolCreateInfo.queueFamilyIndex = m_queueFamilyIndex;
+	commandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eTransient;
 	m_vkCommandPool = m_vkDevice.createCommandPool(commandPoolCreateInfo);
 
 	// ==== Surface ====
@@ -1226,6 +1227,7 @@ void VulkanRenderer::EndDrawing() {
 		m_vkDevice.freeCommandBuffers(m_vkCommandPool, 1, &cmdBuffer);
 	}
 	m_activeCommandBuffers.clear();
+	m_vkDevice.resetCommandPool(m_vkCommandPool, vk::CommandPoolResetFlags());
 	for (const auto& [buffer, allocation] : m_buffersToDelete) {
 		vmaDestroyBuffer(m_vmaAllocator, buffer, allocation);
 	}
