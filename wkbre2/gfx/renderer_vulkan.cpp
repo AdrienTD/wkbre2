@@ -537,12 +537,19 @@ struct RBatchVulkan : public RBatch
 
 	void flush()
 	{
+		if (!curverts || !curindis) {
+			curverts = curindis = 0;
+			return;
+		}
 		if (locked) unlock();
-		if (!curverts) return;
 
 		auto* currentBuf = dynamicBuffer.getCurrentBuffer();
-		vk::DeviceSize offset = 0;
 		
+		vk::DeviceSize flushOffsets[2] = { 0, 0 };
+		vk::DeviceSize flushSizes[2] = { curverts * sizeof(batchVertex), curindis * 2 };
+		vmaFlushAllocations(gfx->m_vmaAllocator, 2, currentBuf->allocation, flushOffsets, flushSizes);
+
+		vk::DeviceSize offset = 0;
 		auto cmdBuffer = gfx->createCommandBufferAndBegin();
 		gfx->beginPass(cmdBuffer);
 		cmdBuffer.bindVertexBuffers(0, 1, &currentBuf->buffer[0], &offset);
@@ -1434,6 +1441,7 @@ void VulkanRenderer::SetTransformMatrix(const Matrix* m) {
 
 	void* transformBytes = stage->mappedPtr[0];
 	*(Matrix*)transformBytes = m->getTranspose();
+	vmaFlushAllocation(m_vmaAllocator, stage->allocation[0], 0, 64);
 
 	vk::BufferCopy copy;
 	copy.srcOffset = 0;
@@ -1468,6 +1476,8 @@ void VulkanRenderer::SetFog(uint32_t color, float farz) {
 	cc[3] = (float)((color >> 24) & 255) / 255.0f;
 	cc[4] = farz * 0.5f;
 	cc[5] = farz;
+
+	vmaFlushAllocation(m_vmaAllocator, stage->allocation[0], 0, 24);
 
 	vk::BufferCopy copy;
 	copy.srcOffset = 0;
