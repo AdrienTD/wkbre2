@@ -103,11 +103,8 @@ private:
 	void addNewBuffer();
 	void reset();
 
-	static std::vector<DynamicBuffer*> allDynamicBuffers;
+	inline static std::vector<DynamicBuffer*> allDynamicBuffers;
 };
-
-template<> std::vector<DynamicBuffer<1>*> DynamicBuffer<1>::allDynamicBuffers;
-template<> std::vector<DynamicBuffer<2>*> DynamicBuffer<2>::allDynamicBuffers;
 
 struct VulkanRenderer : IRenderer {
 
