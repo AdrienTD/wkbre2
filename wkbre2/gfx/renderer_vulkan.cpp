@@ -39,18 +39,22 @@ struct VulkanRenderer;
 struct RVertexBufferVulkan;
 struct RIndexBufferVulkan;
 
+static constexpr int MAX_SWAPCHAIN_IMAGES = 6;
+
 template<int NumSubs = 1>
 struct DynamicBuffer {
 	VulkanRenderer* const gfx;
 
 	struct BufferInstance {
-		vk::Fence fence;
 		vk::Buffer buffer[NumSubs];
 		VmaAllocation allocation[NumSubs];
 		void* mappedPtr[NumSubs];
 	};
-	std::vector<BufferInstance> buffers;
-	int lastBuffer = 0;
+	struct Frame {
+		std::vector<BufferInstance> buffers;
+	};
+	std::array<Frame, MAX_SWAPCHAIN_IMAGES> frames;
+	int lastBuffer = -1;
 
 	VmaAllocationCreateInfo allocationCreateInfo;
 	vk::BufferCreateInfo bufferCreateInfo[NumSubs];
@@ -61,13 +65,19 @@ struct DynamicBuffer {
 		allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT
 			| VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 		allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+		allDynamicBuffers.push_back(this);
 	}
 	DynamicBuffer(VulkanRenderer* gfx, size_t bufferSize, vk::BufferUsageFlags usage)
 		: DynamicBuffer(gfx)
 	{
 		this->setSubbufferInfo<0>(bufferSize, usage);
 	}
-	~DynamicBuffer() { reset(); }
+	~DynamicBuffer() {
+		reset();
+		const auto it = std::find(allDynamicBuffers.begin(), allDynamicBuffers.end(), this);
+		allDynamicBuffers.erase(it);
+	}
 
 	template<int I>
 	void setSubbufferInfo(size_t bufferSize, vk::BufferUsageFlags usage)
@@ -78,30 +88,34 @@ struct DynamicBuffer {
 		bufferCreateInfo[I].sharingMode = vk::SharingMode::eExclusive;
 	}
 
+	// once received, the fence HAS TO be given to a queue submission ASAP
+	// otherwise calling reset() (by destructor) will deadlock
+	const BufferInstance* getCurrentBuffer();
+
+	void nextBuffer();
+
+	static void onFrameBegin() {
+		for (auto* dynBuf : allDynamicBuffers)
+			dynBuf->lastBuffer = -1;
+	}
+
+private:
 	void addNewBuffer();
 	void reset();
 
-	// once received, the fence HAS TO be given to a queue submission ASAP
-	// otherwise calling reset() (by destructor) will deadlock
-	const BufferInstance* getCurrentBuffer()
-	{
-		if (buffers.empty())
-			nextBuffer();
-		return &buffers[lastBuffer];
-	}
-
-	void nextBuffer();
+	static std::vector<DynamicBuffer*> allDynamicBuffers;
 };
+
+template<> std::vector<DynamicBuffer<1>*> DynamicBuffer<1>::allDynamicBuffers;
+template<> std::vector<DynamicBuffer<2>*> DynamicBuffer<2>::allDynamicBuffers;
 
 struct VulkanRenderer : IRenderer {
 
 	vk::Instance m_vkInstance;
 	vk::PhysicalDevice m_vkPhysicalDevice;
 	vk::Device m_vkDevice;
-	vk::CommandPool m_vkCommandPool;
 	int m_queueFamilyIndex = -1;
 	vk::Queue m_vkQueue;
-	vk::Semaphore m_mainSemaphore;
 
 	vk::Format m_surfaceFormat;
 	vk::ColorSpaceKHR m_surfaceColorSpace;
@@ -115,12 +129,28 @@ struct VulkanRenderer : IRenderer {
 		vk::Image depthImage;
 		vk::ImageView depthImageView;
 		vk::Framebuffer framebuffer;
+
+		vk::Semaphore swapchainSemaphore;
+		vk::Semaphore commandSemaphore;
+
+		vk::Fence fence;
+		vk::CommandPool commandPool;
+		vk::CommandBuffer mainCommandBuffer;
+		std::vector<std::tuple<vk::Buffer, VmaAllocation, std::unique_ptr<DynamicBuffer<1>>>> buffersToDelete;
+	
+		SwapchainImage() = default;
+		SwapchainImage(const SwapchainImage&) = delete;
+		SwapchainImage(SwapchainImage&&) = default;
 	};
 	std::vector<SwapchainImage> m_vkSwapchainImages;
-	uint32_t m_currentSwapchainImageIndex;
-	vk::Semaphore m_swapchainSemaphore;
-	vk::Fence m_swapchainFence;
+	uint32_t m_currentSwapchainImageIndex = 0;
 	int m_surfaceWidth = 800, m_surfaceHeight = 600;
+
+	std::vector<vk::Semaphore> m_swapchainSemaphorePool;
+	int m_nextSwapchainSemaphoreIndex = 0;
+
+	vk::CommandPool m_texCommandPool;
+	vk::CommandBuffer m_texCommandBuffer;
 
 	vk::RenderPass m_vkRenderPass;
 
@@ -148,6 +178,7 @@ struct VulkanRenderer : IRenderer {
 			fogBuffer(gfx, 32, vk::BufferUsageFlagBits::eTransferSrc)
 		{
 		}
+		GlobalBuffers(const GlobalBuffers&) = delete;
 	};
 	std::unique_ptr<GlobalBuffers> m_globalBuffers;
 	vk::Buffer m_currentTransformBuffer; VmaAllocation m_currentTransformBufferAlloc;
@@ -168,40 +199,14 @@ struct VulkanRenderer : IRenderer {
 	vk::Pipeline m_currentPipeline = nullptr;
 	vk::DescriptorSet m_currentTextureDescriptorSet = nullptr;
 
-	std::deque<vk::CommandBuffer> m_activeCommandBuffers;
-	std::vector<std::pair<vk::Buffer, VmaAllocation>> m_buffersToDelete;
+	std::optional<uint32_t> m_clearColor = 0;
+	bool m_clearDepth = true;
+
+	auto& currentFrameObject() {
+		return m_vkSwapchainImages[m_currentSwapchainImageIndex];
+	}
 
 	vk::ShaderModule loadShader(const char* name, const char* func);
-
-	vk::CommandBuffer createCommandBufferAndBegin()
-	{
-		vk::CommandBufferAllocateInfo cbaInfo;
-		cbaInfo.commandPool = m_vkCommandPool;
-		cbaInfo.level = vk::CommandBufferLevel::ePrimary;
-		cbaInfo.commandBufferCount = 1;
-		vk::CommandBuffer cmdBuffer = m_vkDevice.allocateCommandBuffers(cbaInfo).at(0);
-		vk::CommandBufferBeginInfo beginInfo;
-		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-		cmdBuffer.begin(beginInfo);
-		m_activeCommandBuffers.push_back(cmdBuffer);
-		return cmdBuffer;
-	}
-
-	void submitSingleCommandBuffer(vk::CommandBuffer buffer, vk::Fence fence = nullptr)
-	{
-		vk::SubmitInfo submit;
-		submit.commandBufferCount = 1;
-		submit.pCommandBuffers = &buffer;
-		m_vkQueue.submit(submit, fence);
-	}
-
-	void submitSignalSemaphore(vk::Semaphore semaphore)
-	{
-		vk::SubmitInfo submit;
-		submit.signalSemaphoreCount = 1;
-		submit.pSignalSemaphores = &semaphore;
-		m_vkQueue.submit(submit);
-	}
 
 	void setDescriptors(std::optional<vk::Buffer> transformBuffer, std::optional<vk::Buffer> fogBuffer) {
 		vk::DescriptorBufferInfo dbInfoTransform;
@@ -236,7 +241,6 @@ struct VulkanRenderer : IRenderer {
 			wds.pBufferInfo = &dbInfoFog;
 		}
 
-		m_vkQueue.waitIdle();
 		m_vkDevice.updateDescriptorSets(index, writes, 0, nullptr);
 	}
 
@@ -277,57 +281,6 @@ struct VulkanRenderer : IRenderer {
 	void endPass(vk::CommandBuffer cmdBuffer)
 	{
 		cmdBuffer.endRenderPass();
-	}
-
-	void nextFrame()
-	{
-		auto nextImageRes = m_vkDevice.acquireNextImageKHR(m_vkSwapchain, UINT64_MAX, m_swapchainSemaphore, {});
-		assert((int)nextImageRes.result >= 0);
-		m_currentSwapchainImageIndex = nextImageRes.value;
-		
-		vk::ImageMemoryBarrier imgBarrier0;
-		imgBarrier0.srcAccessMask = vk::AccessFlagBits::eNone;
-		imgBarrier0.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-		imgBarrier0.oldLayout = vk::ImageLayout::eUndefined;
-		imgBarrier0.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
-		imgBarrier0.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imgBarrier0.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imgBarrier0.image = m_vkSwapchainImages[m_currentSwapchainImageIndex].image;
-		imgBarrier0.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-		imgBarrier0.subresourceRange.baseArrayLayer = 0;
-		imgBarrier0.subresourceRange.baseMipLevel = 0;
-		imgBarrier0.subresourceRange.layerCount = 1;
-		imgBarrier0.subresourceRange.levelCount = 1;
-
-		vk::ImageMemoryBarrier imgBarrier1 = imgBarrier0;
-		imgBarrier1.srcAccessMask = vk::AccessFlagBits::eNone;
-		imgBarrier1.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-		imgBarrier1.oldLayout = vk::ImageLayout::eUndefined;
-		imgBarrier1.newLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-		imgBarrier1.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imgBarrier1.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		imgBarrier1.image = m_vkSwapchainImages[m_currentSwapchainImageIndex].depthImage;
-		imgBarrier1.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
-
-		vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
-		cmdBuffer.pipelineBarrier(
-			vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(),
-			0, nullptr, 0, nullptr, 1, &imgBarrier0);
-		cmdBuffer.pipelineBarrier(
-			vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(),
-			0, nullptr, 0, nullptr, 1, &imgBarrier1);
-		cmdBuffer.end();
-
-		const vk::PipelineStageFlags stageToWaitOn[1] = { vk::PipelineStageFlagBits::eBottomOfPipe };
-
-		vk::SubmitInfo submit;
-		submit.commandBufferCount = 1;
-		submit.pCommandBuffers = &cmdBuffer;
-		submit.waitSemaphoreCount = 1;
-		submit.pWaitSemaphores = &m_swapchainSemaphore;
-		submit.pWaitDstStageMask = stageToWaitOn;
-		m_vkDevice.resetFences(m_swapchainFence);
-		m_vkQueue.submit(submit, m_swapchainFence);
 	}
 
 	// Initialisation
@@ -412,10 +365,10 @@ struct RGeneralBufferVulkan
 	vk::Buffer buffer;
 	VmaAllocation allocation;
 	
-	DynamicBuffer<1> stageBuffer;
+	std::unique_ptr<DynamicBuffer<1>> stageBuffer;
 
 	RGeneralBufferVulkan(VulkanRenderer* gfx, int size, vk::BufferUsageFlags usage)
-		: gfx(gfx), stageBuffer(gfx, size, vk::BufferUsageFlagBits::eTransferSrc)
+		: gfx(gfx), stageBuffer(std::make_unique<DynamicBuffer<1>>(gfx, size, vk::BufferUsageFlagBits::eTransferSrc))
 	{
 		VmaAllocationCreateInfo allocationCreateInfo;
 		memset(&allocationCreateInfo, 0, sizeof(allocationCreateInfo));
@@ -434,7 +387,7 @@ struct RGeneralBufferVulkan
 
 	~RGeneralBufferVulkan()
 	{
-		gfx->m_buffersToDelete.push_back({ buffer, allocation });
+		gfx->currentFrameObject().buffersToDelete.push_back({ buffer, allocation, std::move(stageBuffer)});
 	}
 };
 
@@ -448,14 +401,14 @@ struct RVertexBufferVulkan : public RVertexBuffer, RGeneralBufferVulkan
 	batchVertex* lock()
 	{
 		if (!dirty) {
-			stageBuffer.nextBuffer();
+			stageBuffer->nextBuffer();
 			dirty = true;
 		}
-		return (batchVertex*)stageBuffer.getCurrentBuffer()->mappedPtr[0];
+		return (batchVertex*)stageBuffer->getCurrentBuffer()->mappedPtr[0];
 	}
 	void unlock()
 	{
-		vmaFlushAllocation(gfx->m_vmaAllocator, stageBuffer.getCurrentBuffer()->allocation[0], 0, size);
+		vmaFlushAllocation(gfx->m_vmaAllocator, stageBuffer->getCurrentBuffer()->allocation[0], 0, size);
 	}
 
 	bool dirty = false;
@@ -471,14 +424,14 @@ struct RIndexBufferVulkan : public RIndexBuffer, RGeneralBufferVulkan
 	uint16_t* lock()
 	{
 		if (!dirty) {
-			stageBuffer.nextBuffer();
+			stageBuffer->nextBuffer();
 			dirty = true;
 		}
-		return (uint16_t*)stageBuffer.getCurrentBuffer()->mappedPtr[0];
+		return (uint16_t*)stageBuffer->getCurrentBuffer()->mappedPtr[0];
 	}
 	void unlock()
 	{
-		vmaFlushAllocation(gfx->m_vmaAllocator, stageBuffer.getCurrentBuffer()->allocation[0], 0, size);
+		vmaFlushAllocation(gfx->m_vmaAllocator, stageBuffer->getCurrentBuffer()->allocation[0], 0, size);
 	}
 
 	bool dirty = false;
@@ -550,16 +503,12 @@ struct RBatchVulkan : public RBatch
 		vmaFlushAllocations(gfx->m_vmaAllocator, 2, currentBuf->allocation, flushOffsets, flushSizes);
 
 		vk::DeviceSize offset = 0;
-		auto cmdBuffer = gfx->createCommandBufferAndBegin();
-		gfx->beginPass(cmdBuffer);
-		cmdBuffer.bindVertexBuffers(0, 1, &currentBuf->buffer[0], &offset);
-		cmdBuffer.bindIndexBuffer(currentBuf->buffer[1], 0, vk::IndexType::eUint16);
-		cmdBuffer.drawIndexed(curindis, 1, 0, 0, 0);
-		gfx->endPass(cmdBuffer);
-		cmdBuffer.end();
-
-		// submit to queue
-		gfx->submitSingleCommandBuffer(cmdBuffer, currentBuf->fence);
+		auto& frame = gfx->currentFrameObject();
+		gfx->beginPass(frame.mainCommandBuffer);
+		frame.mainCommandBuffer.bindVertexBuffers(0, 1, &currentBuf->buffer[0], &offset);
+		frame.mainCommandBuffer.bindIndexBuffer(currentBuf->buffer[1], 0, vk::IndexType::eUint16);
+		frame.mainCommandBuffer.drawIndexed(curindis, 1, 0, 0, 0);
+		gfx->endPass(frame.mainCommandBuffer);
 
 		curverts = curindis = 0;
 	}
@@ -569,9 +518,9 @@ struct RBatchVulkan : public RBatch
 template<int NumSubs>
 void DynamicBuffer<NumSubs>::addNewBuffer()
 {
-	auto& buffer = buffers.emplace_back();
+	auto& frame = frames[gfx->m_currentSwapchainImageIndex];
+	auto& buffer = frame.buffers.emplace_back();
 	vk::FenceCreateInfo fci;
-	buffer.fence = gfx->m_vkDevice.createFence(fci);
 	for (int i = 0; i < NumSubs; ++i) {
 		VkBuffer vkbuf;
 		VmaAllocation alloc;
@@ -589,36 +538,34 @@ void DynamicBuffer<NumSubs>::addNewBuffer()
 template<int NumSubs>
 void DynamicBuffer<NumSubs>::reset()
 {
-	for (auto& inst : buffers) {
-		auto res = gfx->m_vkDevice.waitForFences(1, &inst.fence, VK_TRUE, 10'000'000'000u);
-		assert(res == vk::Result::eSuccess);
-		gfx->m_vkDevice.destroyFence(inst.fence);
-		for(int i = 0; i < NumSubs; ++i)
-			vmaDestroyBuffer(gfx->m_vmaAllocator, inst.buffer[i], inst.allocation[i]);
+	for (auto& frame : frames) {
+		for (auto& inst : frame.buffers) {
+			for (int i = 0; i < NumSubs; ++i)
+				vmaDestroyBuffer(gfx->m_vmaAllocator, inst.buffer[i], inst.allocation[i]);
+		}
+		frame.buffers.clear();
 	}
-	buffers.clear();
+}
+
+
+// once received, the fence HAS TO be given to a queue submission ASAP
+// otherwise calling reset() (by destructor) will deadlock
+template<int NumSubs>
+const typename DynamicBuffer<NumSubs>::BufferInstance* DynamicBuffer<NumSubs>::getCurrentBuffer()
+{
+	const auto& frame = frames[gfx->m_currentSwapchainImageIndex];
+	if (frame.buffers.empty())
+		nextBuffer();
+	return &frame.buffers[lastBuffer];
 }
 
 template<int NumSubs>
 void DynamicBuffer<NumSubs>::nextBuffer()
 {
-	for (size_t i = 0; i < buffers.size(); ++i) {
-		size_t b = (lastBuffer + i) % buffers.size();
-		auto result = gfx->m_vkDevice.getFenceStatus(buffers[b].fence);
-		if (result == vk::Result::eSuccess) {
-			// signaled -> done, can be reused
-			auto result = gfx->m_vkDevice.resetFences(1, &buffers[b].fence);
-			assert(result == vk::Result::eSuccess);
-			lastBuffer = b;
-			return;
-		}
-		else {
-			// unsignaled -> being used
-		}
-	}
 	// all buffers are occupied -> create a new one
-	addNewBuffer();
-	lastBuffer = buffers.size() - 1;
+	lastBuffer += 1;
+	if (lastBuffer == frames[gfx->m_currentSwapchainImageIndex].buffers.size())
+		addNewBuffer();
 }
 
 vk::ShaderModule VulkanRenderer::loadShader(const char* name, const char* func) {
@@ -708,17 +655,16 @@ void VulkanRenderer::Init() {
 
 	m_vkQueue = m_vkDevice.getQueue(m_queueFamilyIndex, 0);
 
-	vk::SemaphoreCreateInfo semaInfo;
-	m_mainSemaphore = m_vkDevice.createSemaphore(semaInfo);
-	m_swapchainSemaphore = m_vkDevice.createSemaphore(semaInfo);
-
-	vk::FenceCreateInfo swapFenceInfo;
-	m_swapchainFence = m_vkDevice.createFence(swapFenceInfo);
-
 	vk::CommandPoolCreateInfo commandPoolCreateInfo;
 	commandPoolCreateInfo.queueFamilyIndex = m_queueFamilyIndex;
 	commandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eTransient;
-	m_vkCommandPool = m_vkDevice.createCommandPool(commandPoolCreateInfo);
+	m_texCommandPool = m_vkDevice.createCommandPool(commandPoolCreateInfo);
+
+	vk::CommandBufferAllocateInfo cbaInfo;
+	cbaInfo.commandPool = m_texCommandPool;
+	cbaInfo.level = vk::CommandBufferLevel::ePrimary;
+	cbaInfo.commandBufferCount = 1;
+	m_texCommandBuffer = m_vkDevice.allocateCommandBuffers(cbaInfo).at(0);
 
 	// ==== Surface ====
 
@@ -1087,6 +1033,12 @@ void VulkanRenderer::Reset() {
 	// Destroy old stuff
 
 	for (const auto& swapchainImg : m_vkSwapchainImages) {
+		for (const auto& [buffer, allocation, stageDynBuffer] : swapchainImg.buffersToDelete) {
+			vmaDestroyBuffer(m_vmaAllocator, buffer, allocation);
+		}
+
+		m_vkDevice.destroyCommandPool(swapchainImg.commandPool);
+
 		m_vkDevice.destroyFramebuffer(swapchainImg.framebuffer);
 		m_vkDevice.destroyImageView(swapchainImg.imageView);
 		m_vkDevice.destroyImageView(swapchainImg.depthImageView);
@@ -1098,6 +1050,10 @@ void VulkanRenderer::Reset() {
 		m_vkDevice.destroySwapchainKHR(m_vkSwapchain);
 
 	m_vkSwapchain = nullptr;
+
+	for (const auto& semaphore : m_swapchainSemaphorePool)
+		m_vkDevice.destroySemaphore(semaphore);
+	m_swapchainSemaphorePool.clear();
 
 	// Create swapchain
 
@@ -1119,6 +1075,9 @@ void VulkanRenderer::Reset() {
 
 	m_vkSwapchain = m_vkDevice.createSwapchainKHR(swapchainCreateInfo);
 	auto vkSwapchainImages = m_vkDevice.getSwapchainImagesKHR(m_vkSwapchain);
+	assert(vkSwapchainImages.size() <= MAX_SWAPCHAIN_IMAGES);
+
+	vk::SemaphoreCreateInfo semaInfo;
 
 	for (size_t i = 0; i < vkSwapchainImages.size(); ++i) {
 		auto& si = m_vkSwapchainImages.emplace_back();
@@ -1170,12 +1129,59 @@ void VulkanRenderer::Reset() {
 		fci.height = m_surfaceHeight;
 		fci.layers = 1;
 		si.framebuffer = m_vkDevice.createFramebuffer(fci);
+
+		si.commandSemaphore = m_vkDevice.createSemaphore(semaInfo);
+
+		vk::FenceCreateInfo fenceInfo;
+		fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+		si.fence = m_vkDevice.createFence(fenceInfo);
+
+		vk::CommandPoolCreateInfo commandPoolCreateInfo;
+		commandPoolCreateInfo.queueFamilyIndex = m_queueFamilyIndex;
+		commandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eTransient;
+		si.commandPool = m_vkDevice.createCommandPool(commandPoolCreateInfo);
+
+		vk::CommandBufferAllocateInfo cbaInfo;
+		cbaInfo.commandPool = si.commandPool;
+		cbaInfo.level = vk::CommandBufferLevel::ePrimary;
+		cbaInfo.commandBufferCount = 1;
+		si.mainCommandBuffer = m_vkDevice.allocateCommandBuffers(cbaInfo).at(0);
 	}
 
-	nextFrame();
+	for (size_t i = 0; i < vkSwapchainImages.size() + 1; ++i) {
+		m_swapchainSemaphorePool.push_back(m_vkDevice.createSemaphore(semaInfo));
+	}
 }
 
 void VulkanRenderer::BeginDrawing() {
+
+	DynamicBuffer<1>::onFrameBegin();
+	DynamicBuffer<2>::onFrameBegin();
+
+	vk::Semaphore swapchainSemaphore = m_swapchainSemaphorePool[m_nextSwapchainSemaphoreIndex];
+	m_nextSwapchainSemaphoreIndex = (m_nextSwapchainSemaphoreIndex + 1) % m_swapchainSemaphorePool.size();
+
+	auto nextImageRes = m_vkDevice.acquireNextImageKHR(m_vkSwapchain, UINT64_MAX, swapchainSemaphore, {});
+	assert((int)nextImageRes.result >= 0);
+	m_currentSwapchainImageIndex = nextImageRes.value;
+
+	auto& frame = currentFrameObject();
+	frame.swapchainSemaphore = swapchainSemaphore;
+
+	auto rr = m_vkDevice.waitForFences(1, &(frame.fence), vk::True, 10'000'000'000);
+	assert(rr == vk::Result::eSuccess);
+	m_vkDevice.resetFences(frame.fence);
+
+	// Clean stuff from previous frame
+
+	m_vkDevice.resetCommandPool(frame.commandPool, vk::CommandPoolResetFlags());
+
+	for (const auto& [buffer, allocation, _] : frame.buffersToDelete) {
+		vmaDestroyBuffer(m_vmaAllocator, buffer, allocation);
+	}
+	frame.buffersToDelete.clear();
+
+	// ---
 
 	m_viewport.x = 0.0f;
 	m_viewport.y = (float)m_surfaceHeight;
@@ -1184,17 +1190,84 @@ void VulkanRenderer::BeginDrawing() {
 	m_viewport.minDepth = 0.0f;
 	m_viewport.maxDepth = 1.0f;
 
-	auto rr = m_vkDevice.waitForFences(1, &m_swapchainFence, vk::True, 10'000'000'000);
-	assert(rr == vk::Result::eSuccess);
-
 	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
 
 	m_fogEnabled = false;
 	m_currentPipeline = nullptr; // it needs to be decided by the caller!
 	m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
+
+	// ---
+
+	vk::ImageMemoryBarrier imgBarrier0;
+	imgBarrier0.srcAccessMask = vk::AccessFlagBits::eNone;
+	imgBarrier0.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eColorAttachmentRead;
+	imgBarrier0.oldLayout = vk::ImageLayout::eUndefined;
+	imgBarrier0.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
+	imgBarrier0.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imgBarrier0.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imgBarrier0.image = m_vkSwapchainImages[m_currentSwapchainImageIndex].image;
+	imgBarrier0.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	imgBarrier0.subresourceRange.baseArrayLayer = 0;
+	imgBarrier0.subresourceRange.baseMipLevel = 0;
+	imgBarrier0.subresourceRange.layerCount = 1;
+	imgBarrier0.subresourceRange.levelCount = 1;
+
+	vk::ImageMemoryBarrier imgBarrier1 = imgBarrier0;
+	imgBarrier1.srcAccessMask = vk::AccessFlagBits::eNone;
+	imgBarrier1.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentRead;
+	imgBarrier1.oldLayout = vk::ImageLayout::eUndefined;
+	imgBarrier1.newLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+	imgBarrier1.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imgBarrier1.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imgBarrier1.image = m_vkSwapchainImages[m_currentSwapchainImageIndex].depthImage;
+	imgBarrier1.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+
+	vk::CommandBufferBeginInfo beginInfo;
+	beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+	frame.mainCommandBuffer.begin(beginInfo);
+
+	frame.mainCommandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(),
+		0, nullptr, 0, nullptr, 1, &imgBarrier0);
+	frame.mainCommandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(),
+		0, nullptr, 0, nullptr, 1, &imgBarrier1);
+
+	vk::ClearAttachment clearAttachments[2];
+	uint32_t numClearAttachments = 0;
+	if (m_clearColor) {
+		const uint32_t color = *m_clearColor;
+		auto& clearAttach = clearAttachments[numClearAttachments++];
+		clearAttach.aspectMask = vk::ImageAspectFlagBits::eColor;
+		clearAttach.colorAttachment = 0;
+		auto& cc = clearAttach.clearValue.color.float32;
+		cc[0] = (float)((color >> 16) & 255) / 255.0f;
+		cc[1] = (float)((color >> 8) & 255) / 255.0f;
+		cc[2] = (float)((color >> 0) & 255) / 255.0f;
+		cc[3] = (float)((color >> 24) & 255) / 255.0f;
+	}
+	if (m_clearDepth) {
+		auto& clearAttach = clearAttachments[numClearAttachments++];
+		clearAttach.aspectMask = vk::ImageAspectFlagBits::eDepth;
+		clearAttach.clearValue.depthStencil.depth = 1.0f;
+		clearAttach.clearValue.depthStencil.stencil = 0;
+	}
+	vk::ClearRect clearRect;
+	clearRect.rect.offset.x = 0;
+	clearRect.rect.offset.y = 0;
+	clearRect.rect.extent.width = m_surfaceWidth;
+	clearRect.rect.extent.height = m_surfaceHeight;
+	clearRect.baseArrayLayer = 0;
+	clearRect.layerCount = 1;
+	beginPass(frame.mainCommandBuffer, m_pipeline2D);
+	frame.mainCommandBuffer.clearAttachments(numClearAttachments, clearAttachments, 1, &clearRect);
+	endPass(frame.mainCommandBuffer);
 }
 
 void VulkanRenderer::EndDrawing() {
+	auto& frame = currentFrameObject();
+	
 	vk::ImageMemoryBarrier imgBarrier1;
 	imgBarrier1.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 	imgBarrier1.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
@@ -1209,76 +1282,36 @@ void VulkanRenderer::EndDrawing() {
 	imgBarrier1.subresourceRange.layerCount = 1;
 	imgBarrier1.subresourceRange.levelCount = 1;
 
-	auto cmdBuffer = createCommandBufferAndBegin();
-	cmdBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &imgBarrier1);
-	cmdBuffer.end();
-	submitSingleCommandBuffer(cmdBuffer);
-	//submitSignalSemaphore(m_swapchainSemaphore);
+	frame.mainCommandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &imgBarrier1);
+	frame.mainCommandBuffer.end();
+
+	const vk::PipelineStageFlags stageToWaitOn[1] = { vk::PipelineStageFlagBits::eAllCommands };
+
+	vk::SubmitInfo submit;
+	submit.waitSemaphoreCount = 1;
+	submit.pWaitSemaphores = &frame.swapchainSemaphore;
+	submit.pWaitDstStageMask = stageToWaitOn;
+	submit.commandBufferCount = 1;
+	submit.pCommandBuffers = &frame.mainCommandBuffer;
+	submit.signalSemaphoreCount = 1;
+	submit.pSignalSemaphores = &frame.commandSemaphore;
+	m_vkQueue.submit(submit, frame.fence);
 
 	vk::PresentInfoKHR pinfo;
+	pinfo.waitSemaphoreCount = 1;
+	pinfo.pWaitSemaphores = &frame.commandSemaphore;
 	pinfo.swapchainCount = 1;
 	pinfo.pSwapchains = &m_vkSwapchain;
 	pinfo.pImageIndices = &m_currentSwapchainImageIndex;
-	//pinfo.waitSemaphoreCount = 1;
-	//pinfo.pWaitSemaphores = &m_swapchainSemaphore;
 	m_vkQueue.presentKHR(pinfo);
-
-	//std::this_thread::sleep_for(std::chrono::milliseconds(20));
-	//if (hres != S_OK) {
-	//	Sleep(100);
-	//}
-
-	m_vkQueue.waitIdle();
-
-	for (const vk::CommandBuffer& cmdBuffer : m_activeCommandBuffers) {
-		m_vkDevice.freeCommandBuffers(m_vkCommandPool, 1, &cmdBuffer);
-	}
-	m_activeCommandBuffers.clear();
-	m_vkDevice.resetCommandPool(m_vkCommandPool, vk::CommandPoolResetFlags());
-	for (const auto& [buffer, allocation] : m_buffersToDelete) {
-		vmaDestroyBuffer(m_vmaAllocator, buffer, allocation);
-	}
-	m_buffersToDelete.clear();
-
-	nextFrame();
 }
 
 void VulkanRenderer::ClearFrame(bool clearColors, bool clearDepth, uint32_t color) {
-	vk::ClearAttachment clearAttachments[2];
-	uint32_t numClearAttachments = 0;
-	if (clearColors) {
-		auto& clearAttach = clearAttachments[numClearAttachments++];
-		clearAttach.aspectMask = vk::ImageAspectFlagBits::eColor;
-		clearAttach.colorAttachment = 0;
-		auto& cc = clearAttach.clearValue.color.float32;
-		cc[0] = (float)((color >> 16) & 255) / 255.0f;
-		cc[1] = (float)((color >> 8) & 255) / 255.0f;
-		cc[2] = (float)((color >> 0) & 255) / 255.0f;
-		cc[3] = (float)((color >> 24) & 255) / 255.0f;
-	}
-	if (clearDepth) {
-		auto& clearAttach = clearAttachments[numClearAttachments++];
-		clearAttach.aspectMask = vk::ImageAspectFlagBits::eDepth;
-		clearAttach.clearValue.depthStencil.depth = 1.0f;
-		clearAttach.clearValue.depthStencil.stencil = 0;
-	}
-	vk::ClearRect clearRect;
-	clearRect.rect.offset.x = 0;
-	clearRect.rect.offset.y = 0;
-	clearRect.rect.extent.width = m_surfaceWidth;
-	clearRect.rect.extent.height = m_surfaceHeight;
-	clearRect.baseArrayLayer = 0;
-	clearRect.layerCount = 1;
-	auto cmdBuffer = createCommandBufferAndBegin();
-	beginPass(cmdBuffer, m_pipeline2D);
-	cmdBuffer.clearAttachments(numClearAttachments, clearAttachments, 1, &clearRect);
-	endPass(cmdBuffer);
-	cmdBuffer.end();
-
-	auto rr = m_vkDevice.waitForFences(1, &m_swapchainFence, vk::True, 10'000'000'000);
-	assert(rr == vk::Result::eSuccess);
-
-	submitSingleCommandBuffer(cmdBuffer);
+	// TEMP
+	// We cannot clear immediately outside Begin/EndDrawing.
+	// Instead we store the values and do the actual clearing inside BeginDrawing.
+	m_clearColor = clearColors ? std::make_optional(color) : std::nullopt;
+	m_clearDepth = clearDepth;
 }
 
 // Textures management
@@ -1383,13 +1416,22 @@ texture VulkanRenderer::CreateTexture(const Bitmap& bm, int mipmaps) {
 		imgBarrier2.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 		imgBarrier2.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
-		vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
-		cmdBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &imgBarrier1);
-		cmdBuffer.copyBufferToImage(stageBuffer, imageHandle, vk::ImageLayout::eTransferDstOptimal, 1, &bic);
-		cmdBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &imgBarrier2);
-		cmdBuffer.end();
-		submitSingleCommandBuffer(cmdBuffer);
+		vk::CommandBufferBeginInfo beginInfo;
+		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+		m_texCommandBuffer.begin(beginInfo);
+
+		m_texCommandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &imgBarrier1);
+		m_texCommandBuffer.copyBufferToImage(stageBuffer, imageHandle, vk::ImageLayout::eTransferDstOptimal, 1, &bic);
+		m_texCommandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &imgBarrier2);
+		m_texCommandBuffer.end();
+		
+		vk::SubmitInfo submit;
+		submit.commandBufferCount = 1;
+		submit.pCommandBuffers = &m_texCommandBuffer;
+		m_vkQueue.submit(submit);
+
 		m_vkQueue.waitIdle();
+		m_vkDevice.resetCommandPool(m_texCommandPool);
 	}
 
 	vk::ImageViewCreateInfo ivcInfo;
@@ -1448,10 +1490,28 @@ void VulkanRenderer::SetTransformMatrix(const Matrix* m) {
 	copy.dstOffset = 0;
 	copy.size = 64;
 
-	vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
-	cmdBuffer.copyBuffer(stage->buffer[0], m_currentTransformBuffer, 1, &copy);
-	cmdBuffer.end();
-	submitSingleCommandBuffer(cmdBuffer, stage->fence);
+	vk::BufferMemoryBarrier barrier;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.buffer = m_currentTransformBuffer;
+	barrier.offset = 0;
+	barrier.size = vk::WholeSize;
+
+	auto& frame = currentFrameObject();
+
+	barrier.srcAccessMask = vk::AccessFlagBits::eUniformRead | vk::AccessFlagBits::eTransferWrite;
+	barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+	frame.mainCommandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(),
+		0, nullptr, 1, &barrier, 0, nullptr);
+
+	frame.mainCommandBuffer.copyBuffer(stage->buffer[0], m_currentTransformBuffer, 1, &copy);
+
+	barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+	barrier.dstAccessMask = vk::AccessFlagBits::eUniformRead;
+	frame.mainCommandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, vk::DependencyFlags(),
+		0, nullptr, 1, &barrier, 0, nullptr);
 }
 
 void VulkanRenderer::SetTexture(uint32_t x, texture t) {
@@ -1484,10 +1544,28 @@ void VulkanRenderer::SetFog(uint32_t color, float farz) {
 	copy.dstOffset = 0;
 	copy.size = 32;
 
-	vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
-	cmdBuffer.copyBuffer(stage->buffer[0], m_currentFogBuffer, 1, &copy);
-	cmdBuffer.end();
-	submitSingleCommandBuffer(cmdBuffer, stage->fence);
+	vk::BufferMemoryBarrier barrier;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.buffer = m_currentFogBuffer;
+	barrier.offset = 0;
+	barrier.size = vk::WholeSize;
+
+	auto& frame = currentFrameObject();
+
+	barrier.srcAccessMask = vk::AccessFlagBits::eUniformRead | vk::AccessFlagBits::eTransferWrite;
+	barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+	frame.mainCommandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(),
+		0, nullptr, 1, &barrier, 0, nullptr);
+
+	frame.mainCommandBuffer.copyBuffer(stage->buffer[0], m_currentFogBuffer, 1, &copy);
+
+	barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+	barrier.dstAccessMask = vk::AccessFlagBits::eUniformRead;
+	frame.mainCommandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, vk::DependencyFlags(),
+		0, nullptr, 1, &barrier, 0, nullptr);
 
 	m_fogEnabled = true;
 }
@@ -1566,13 +1644,11 @@ void VulkanRenderer::DrawRect(int x, int y, int w, int h, int c, float u, float 
 	//vmaFlushAllocation(m_vmaAllocator, buffer->allocation[0], 0, 6 * sizeof(batchVertex));
 
 	vk::DeviceSize offset = 0;
-	vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
-	beginPass(cmdBuffer, m_pipeline2D);
-	cmdBuffer.bindVertexBuffers(0, 1, &buffer->buffer[0], &offset);
-	cmdBuffer.draw(6, 1, 0, 0);
-	endPass(cmdBuffer);
-	cmdBuffer.end();
-	submitSingleCommandBuffer(cmdBuffer, buffer->fence);
+	auto& frame = currentFrameObject();
+	beginPass(frame.mainCommandBuffer, m_pipeline2D);
+	frame.mainCommandBuffer.bindVertexBuffers(0, 1, &buffer->buffer[0], &offset);
+	frame.mainCommandBuffer.draw(6, 1, 0, 0);
+	endPass(frame.mainCommandBuffer);
 }
 
 void VulkanRenderer::DrawGradientRect(int x, int y, int w, int h, int c0, int c1, int c2, int c3) {
@@ -1598,13 +1674,11 @@ void VulkanRenderer::DrawFrame(int x, int y, int w, int h, int c) {
 	vmaCopyMemoryToAllocation(m_vmaAllocator, verts, buffer->allocation[0], 0, 8 * sizeof(batchVertex));
 
 	vk::DeviceSize offset = 0;
-	vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
-	beginPass(cmdBuffer, m_pipeline2DLines);
-	cmdBuffer.bindVertexBuffers(0, 1, &buffer->buffer[0], &offset);
-	cmdBuffer.draw(8, 1, 0, 0);
-	endPass(cmdBuffer);
-	cmdBuffer.end();
-	submitSingleCommandBuffer(cmdBuffer, buffer->fence);
+	auto& frame = currentFrameObject();
+	beginPass(frame.mainCommandBuffer, m_pipeline2DLines);
+	frame.mainCommandBuffer.bindVertexBuffers(0, 1, &buffer->buffer[0], &offset);
+	frame.mainCommandBuffer.draw(8, 1, 0, 0);
+	endPass(frame.mainCommandBuffer);
 }
 
 // 3D Landscape/Heightmap drawing
@@ -1660,35 +1734,56 @@ void VulkanRenderer::DrawBuffer(int first, int count) {
 	assert(this->m_currentVertexBuffer);
 	assert(this->m_currentIndexBuffer);
 
+	auto& frame = currentFrameObject();
+
 	vk::BufferCopy bc;
 	bc.srcOffset = 0;
 	bc.dstOffset = 0;
+
+	vk::BufferMemoryBarrier barriers[2];
+	int barrierIndex = 0;
+
 	if (m_currentVertexBuffer->dirty) {
-		vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
 		bc.size = m_currentVertexBuffer->size;
-		cmdBuffer.copyBuffer(m_currentVertexBuffer->stageBuffer.getCurrentBuffer()->buffer[0], m_currentVertexBuffer->buffer, bc);
-		cmdBuffer.end();
+		frame.mainCommandBuffer.copyBuffer(m_currentVertexBuffer->stageBuffer->getCurrentBuffer()->buffer[0], m_currentVertexBuffer->buffer, bc);
 		m_currentVertexBuffer->dirty = false;
-		submitSingleCommandBuffer(cmdBuffer, m_currentVertexBuffer->stageBuffer.getCurrentBuffer()->fence);
+
+		auto& barrier = barriers[barrierIndex++];
+		barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eVertexAttributeRead;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.buffer = m_currentVertexBuffer->buffer;
+		barrier.offset = 0;
+		barrier.size = vk::WholeSize;
 	}
 	if (m_currentIndexBuffer->dirty) {
-		vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
 		bc.size = m_currentIndexBuffer->size;
-		cmdBuffer.copyBuffer(m_currentIndexBuffer->stageBuffer.getCurrentBuffer()->buffer[0], m_currentIndexBuffer->buffer, bc);
-		cmdBuffer.end();
+		frame.mainCommandBuffer.copyBuffer(m_currentIndexBuffer->stageBuffer->getCurrentBuffer()->buffer[0], m_currentIndexBuffer->buffer, bc);
 		m_currentIndexBuffer->dirty = false;
-		submitSingleCommandBuffer(cmdBuffer, m_currentIndexBuffer->stageBuffer.getCurrentBuffer()->fence);
+		
+		auto& barrier = barriers[barrierIndex++];
+		barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eIndexRead;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.buffer = m_currentIndexBuffer->buffer;
+		barrier.offset = 0;
+		barrier.size = vk::WholeSize;
 	}
 
-	vk::CommandBuffer cmdBuffer = createCommandBufferAndBegin();
+	if (barrierIndex > 0) {
+		frame.mainCommandBuffer.pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, vk::DependencyFlags(),
+			0, nullptr, barrierIndex, barriers, 0, nullptr);
+	}
+
 	VkDeviceSize offset = 0;
-	beginPass(cmdBuffer);
-	cmdBuffer.bindVertexBuffers(0, 1, &m_currentVertexBuffer->buffer, &offset);
-	cmdBuffer.bindIndexBuffer(m_currentIndexBuffer->buffer, 0, vk::IndexType::eUint16);
-	cmdBuffer.drawIndexed(count, 1, first, 0, 0);
-	endPass(cmdBuffer);
-	cmdBuffer.end();
-	submitSingleCommandBuffer(cmdBuffer);
+	beginPass(frame.mainCommandBuffer);
+	frame.mainCommandBuffer.bindVertexBuffers(0, 1, &m_currentVertexBuffer->buffer, &offset);
+	frame.mainCommandBuffer.bindIndexBuffer(m_currentIndexBuffer->buffer, 0, vk::IndexType::eUint16);
+	frame.mainCommandBuffer.drawIndexed(count, 1, first, 0, 0);
+	endPass(frame.mainCommandBuffer);
 }
 
 // ImGui
