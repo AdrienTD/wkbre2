@@ -388,7 +388,9 @@ struct ValueHasDirectLineOfSightTo : ValueDeterminer {
 		Vector3 dir = (endPos - startPos).normal();
 		
 		auto* terrain = ctx->gameState->terrain;
-		auto [trnWidth, trnHeight] = terrain->getNumPlayableTiles();
+		const auto terrainArea = terrain->getNumPlayableTiles();
+		const auto trnWidth = terrainArea.first;
+		const auto trnHeight = terrainArea.second;
 
 		auto pred = [&](Pathfinding::PFPos pos) {
 			if (!(pos.x >= 0 && pos.x < trnWidth && pos.z >= 0 && pos.z < trnHeight))
