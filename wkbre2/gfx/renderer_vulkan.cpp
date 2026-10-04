@@ -28,6 +28,9 @@
 #ifdef _WIN32
 #include <vma/vk_mem_alloc.h>
 #else
+#ifdef __ANDROID__
+#define VMA_VULKAN_VERSION 1001000
+#endif
 #include <vk_mem_alloc.h>
 #endif
 
@@ -199,6 +202,8 @@ struct VulkanRenderer : IRenderer {
 	std::optional<uint32_t> m_clearColor = 0;
 	bool m_clearDepth = true;
 
+	vk::Pipeline m_currentPassPipeline;
+
 	auto& currentFrameObject() {
 		return m_vkSwapchainImages[m_currentSwapchainImageIndex];
 	}
@@ -241,12 +246,8 @@ struct VulkanRenderer : IRenderer {
 		m_vkDevice.updateDescriptorSets(index, writes, 0, nullptr);
 	}
 
-	void beginPass(vk::CommandBuffer cmdBuffer, vk::Pipeline pipeline = nullptr)
+	void togglePass(vk::Pipeline pipeline)
 	{
-		if (pipeline == nullptr)
-			pipeline = m_currentPipeline;
-		assert(pipeline != nullptr);
-
 		if (m_primitiveTopology == vk::PrimitiveTopology::eLineList) {
 			if (pipeline == m_pipeline2D)
 				pipeline = m_pipeline2DLines;
@@ -256,28 +257,38 @@ struct VulkanRenderer : IRenderer {
 				assert(false && "No line variant for the current pipeline");
 		}
 
-		vk::RenderPassBeginInfo rpbi;
-		rpbi.renderPass = m_vkRenderPass;
-		rpbi.framebuffer = m_vkSwapchainImages[m_currentSwapchainImageIndex].framebuffer;
-		rpbi.renderArea.offset.x = 0;
-		rpbi.renderArea.offset.y = 0;
-		rpbi.renderArea.extent.width = m_surfaceWidth;
-		rpbi.renderArea.extent.height = m_surfaceHeight;
-		rpbi.clearValueCount = 0;
-		rpbi.pClearValues = nullptr;
+		auto cmdBuffer = currentFrameObject().mainCommandBuffer;
 
-		vk::DescriptorSet descSets[2] = { m_vkMainDescriptorSet, m_currentTextureDescriptorSet };
+		if(pipeline != m_currentPassPipeline)
+		{
+			if(!pipeline) {
+				cmdBuffer.endRenderPass();
+			}
+			else if(!m_currentPassPipeline) {
+				vk::RenderPassBeginInfo rpbi;
+				rpbi.renderPass = m_vkRenderPass;
+				rpbi.framebuffer = m_vkSwapchainImages[m_currentSwapchainImageIndex].framebuffer;
+				rpbi.renderArea.offset.x = 0;
+				rpbi.renderArea.offset.y = 0;
+				rpbi.renderArea.extent.width = m_surfaceWidth;
+				rpbi.renderArea.extent.height = m_surfaceHeight;
+				rpbi.clearValueCount = 0;
+				rpbi.pClearValues = nullptr;
 
-		cmdBuffer.beginRenderPass(rpbi, vk::SubpassContents::eInline);
-		cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_vkPipelineLayout, 0, descSets, {});
-		cmdBuffer.setViewport(0, m_viewport);
-		cmdBuffer.setScissor(0, m_scissorRect);
-	}
+				cmdBuffer.beginRenderPass(rpbi, vk::SubpassContents::eInline);
+			}
+		}
 
-	void endPass(vk::CommandBuffer cmdBuffer)
-	{
-		cmdBuffer.endRenderPass();
+		if(pipeline) {
+			vk::DescriptorSet descSets[2] = { m_vkMainDescriptorSet, m_currentTextureDescriptorSet };
+
+			cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+			cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_vkPipelineLayout, 0, descSets, {});
+			cmdBuffer.setViewport(0, m_viewport);
+			cmdBuffer.setScissor(0, m_scissorRect);
+		}
+
+		m_currentPassPipeline = pipeline;
 	}
 
 	// Initialisation
@@ -501,11 +512,11 @@ struct RBatchVulkan : public RBatch
 
 		vk::DeviceSize offset = 0;
 		auto& frame = gfx->currentFrameObject();
-		gfx->beginPass(frame.mainCommandBuffer);
+		gfx->togglePass(gfx->m_currentPipeline);
 		frame.mainCommandBuffer.bindVertexBuffers(0, 1, &currentBuf->buffer[0], &offset);
 		frame.mainCommandBuffer.bindIndexBuffer(currentBuf->buffer[1], 0, vk::IndexType::eUint16);
 		frame.mainCommandBuffer.drawIndexed(curindis, 1, 0, 0, 0);
-		gfx->endPass(frame.mainCommandBuffer);
+		//gfx->togglePass(nullptr);
 
 		curverts = curindis = 0;
 	}
@@ -1058,7 +1069,7 @@ void VulkanRenderer::Reset() {
 
 	vk::SwapchainCreateInfoKHR swapchainCreateInfo;
 	swapchainCreateInfo.surface = m_vkSurface;
-	swapchainCreateInfo.minImageCount = 2;
+	swapchainCreateInfo.minImageCount = 3;
 	swapchainCreateInfo.imageFormat = m_surfaceFormat;
 	swapchainCreateInfo.imageColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
 	swapchainCreateInfo.imageExtent = surfCaps.currentExtent;
@@ -1195,6 +1206,8 @@ void VulkanRenderer::BeginDrawing() {
 	m_currentPipeline = nullptr; // it needs to be decided by the caller!
 	m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
 
+	m_currentPassPipeline = nullptr;
+
 	// ---
 
 	vk::ImageMemoryBarrier imgBarrier0;
@@ -1259,14 +1272,16 @@ void VulkanRenderer::BeginDrawing() {
 	clearRect.rect.extent.height = m_surfaceHeight;
 	clearRect.baseArrayLayer = 0;
 	clearRect.layerCount = 1;
-	beginPass(frame.mainCommandBuffer, m_pipeline2D);
+	togglePass(m_pipeline2D);
 	frame.mainCommandBuffer.clearAttachments(numClearAttachments, clearAttachments, 1, &clearRect);
-	endPass(frame.mainCommandBuffer);
+	togglePass(nullptr);
 }
 
 void VulkanRenderer::EndDrawing() {
 	auto& frame = currentFrameObject();
-	
+
+	togglePass(nullptr);
+
 	vk::ImageMemoryBarrier imgBarrier1;
 	imgBarrier1.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 	imgBarrier1.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
@@ -1498,6 +1513,8 @@ void VulkanRenderer::SetTransformMatrix(const Matrix* m) {
 
 	auto& frame = currentFrameObject();
 
+	togglePass(nullptr);
+
 	barrier.srcAccessMask = vk::AccessFlagBits::eUniformRead | vk::AccessFlagBits::eTransferWrite;
 	barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 	frame.mainCommandBuffer.pipelineBarrier(
@@ -1551,6 +1568,8 @@ void VulkanRenderer::SetFog(uint32_t color, float farz) {
 	barrier.size = vk::WholeSize;
 
 	auto& frame = currentFrameObject();
+
+	togglePass(nullptr);
 
 	barrier.srcAccessMask = vk::AccessFlagBits::eUniformRead | vk::AccessFlagBits::eTransferWrite;
 	barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -1644,10 +1663,9 @@ void VulkanRenderer::DrawRect(int x, int y, int w, int h, int c, float u, float 
 
 	vk::DeviceSize offset = 0;
 	auto& frame = currentFrameObject();
-	beginPass(frame.mainCommandBuffer, m_pipeline2D);
+	togglePass(m_pipeline2D);
 	frame.mainCommandBuffer.bindVertexBuffers(0, 1, &buffer->buffer[0], &offset);
 	frame.mainCommandBuffer.draw(6, 1, 0, 0);
-	endPass(frame.mainCommandBuffer);
 }
 
 void VulkanRenderer::DrawGradientRect(int x, int y, int w, int h, int c0, int c1, int c2, int c3) {
@@ -1674,10 +1692,9 @@ void VulkanRenderer::DrawFrame(int x, int y, int w, int h, int c) {
 
 	vk::DeviceSize offset = 0;
 	auto& frame = currentFrameObject();
-	beginPass(frame.mainCommandBuffer, m_pipeline2DLines);
+	togglePass(m_pipeline2DLines);
 	frame.mainCommandBuffer.bindVertexBuffers(0, 1, &buffer->buffer[0], &offset);
 	frame.mainCommandBuffer.draw(8, 1, 0, 0);
-	endPass(frame.mainCommandBuffer);
 }
 
 // 3D Landscape/Heightmap drawing
@@ -1743,6 +1760,7 @@ void VulkanRenderer::DrawBuffer(int first, int count) {
 	int barrierIndex = 0;
 
 	if (m_currentVertexBuffer->dirty) {
+		togglePass(nullptr);
 		bc.size = m_currentVertexBuffer->size;
 		frame.mainCommandBuffer.copyBuffer(m_currentVertexBuffer->stageBuffer->getCurrentBuffer()->buffer[0], m_currentVertexBuffer->buffer, bc);
 		m_currentVertexBuffer->dirty = false;
@@ -1757,6 +1775,7 @@ void VulkanRenderer::DrawBuffer(int first, int count) {
 		barrier.size = vk::WholeSize;
 	}
 	if (m_currentIndexBuffer->dirty) {
+		togglePass(nullptr);
 		bc.size = m_currentIndexBuffer->size;
 		frame.mainCommandBuffer.copyBuffer(m_currentIndexBuffer->stageBuffer->getCurrentBuffer()->buffer[0], m_currentIndexBuffer->buffer, bc);
 		m_currentIndexBuffer->dirty = false;
@@ -1778,11 +1797,10 @@ void VulkanRenderer::DrawBuffer(int first, int count) {
 	}
 
 	VkDeviceSize offset = 0;
-	beginPass(frame.mainCommandBuffer);
+	togglePass(m_currentPipeline);
 	frame.mainCommandBuffer.bindVertexBuffers(0, 1, &m_currentVertexBuffer->buffer, &offset);
 	frame.mainCommandBuffer.bindIndexBuffer(m_currentIndexBuffer->buffer, 0, vk::IndexType::eUint16);
 	frame.mainCommandBuffer.drawIndexed(count, 1, first, 0, 0);
-	endPass(frame.mainCommandBuffer);
 }
 
 // ImGui
