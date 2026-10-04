@@ -1187,6 +1187,8 @@ void VulkanRenderer::BeginDrawing() {
 	m_viewport.minDepth = 0.0f;
 	m_viewport.maxDepth = 1.0f;
 
+	DisableScissor();
+
 	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
 
 	m_fogEnabled = false;
@@ -1595,7 +1597,7 @@ void VulkanRenderer::EnableScissor() {
 }
 
 void VulkanRenderer::DisableScissor() {
-	SetScissorRect(0, 0, 8192, 8192);
+	SetScissorRect(0, 0, m_surfaceWidth, m_surfaceHeight);
 }
 
 void VulkanRenderer::SetScissorRect(int x, int y, int w, int h) {
