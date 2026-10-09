@@ -26,80 +26,6 @@ static constexpr uint32_t NormalToR10G10B10A2(const Vector3& vec) {
 	return Vec3ToR10G10B10A2((vec + Vector3(1, 1, 1)) * 0.5f);
 }
 
-struct AllocatedBuffer {
-	vk::Buffer buffer;
-	VmaAllocation allocation;
-};
-
-AllocatedBuffer CreateAndInitializeBuffer(VulkanRenderer* gfx, vk::BufferUsageFlags usage, void* data, size_t length)
-{
-	// Create buffer
-
-	VmaAllocationCreateInfo allocationCreateInfo;
-	memset(&allocationCreateInfo, 0, sizeof(allocationCreateInfo));
-	allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
-
-	vk::BufferCreateInfo bufferCreateInfo;
-	bufferCreateInfo.size = length;
-	bufferCreateInfo.usage = usage | vk::BufferUsageFlagBits::eTransferDst;
-	bufferCreateInfo.sharingMode = vk::SharingMode::eExclusive;
-
-	VmaAllocationInfo allocInfo;
-	VkBuffer buffer;
-	VmaAllocation allocation;
-	vmaCreateBuffer(gfx->m_vmaAllocator, &(VkBufferCreateInfo&)bufferCreateInfo, &allocationCreateInfo, &buffer, &allocation, &allocInfo);
-	
-	// Create Stage buffer
-
-	VmaAllocationCreateInfo stageAllocationCreateInfo;
-	memset(&stageAllocationCreateInfo, 0, sizeof(stageAllocationCreateInfo));
-	stageAllocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT
-		| VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	stageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-
-	vk::BufferCreateInfo stageBufferCreateInfo;
-	stageBufferCreateInfo.size = length;
-	stageBufferCreateInfo.usage = vk::BufferUsageFlagBits::eTransferSrc;
-	stageBufferCreateInfo.sharingMode = vk::SharingMode::eExclusive;
-
-	VmaAllocationInfo stageAllocInfo;
-	VkBuffer stageBuffer;
-	VmaAllocation stageAllocation;
-	vmaCreateBuffer(gfx->m_vmaAllocator, &(VkBufferCreateInfo&)stageBufferCreateInfo, &stageAllocationCreateInfo, &stageBuffer, &stageAllocation, &stageAllocInfo);
-
-	// Fill Stage buffer
-
-	memcpy(stageAllocInfo.pMappedData, data, length);
-
-	// Copy to buffer
-
-	vk::BufferCopy copy;
-	copy.srcOffset = 0;
-	copy.dstOffset = 0;
-	copy.size = length;
-
-	vk::CommandBufferBeginInfo beginInfo;
-	beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-	gfx->m_texCommandBuffer.begin(beginInfo);
-	gfx->m_texCommandBuffer.copyBuffer(stageBuffer, buffer, copy);
-	gfx->m_texCommandBuffer.end();
-
-	vk::SubmitInfo submit;
-	submit.commandBufferCount = 1;
-	submit.pCommandBuffers = &gfx->m_texCommandBuffer;
-	gfx->m_vkQueue.submit(submit);
-
-	gfx->m_vkQueue.waitIdle();
-	gfx->m_vkDevice.resetCommandPool(gfx->m_texCommandPool);
-
-	vmaDestroyBuffer(gfx->m_vmaAllocator, stageBuffer, stageAllocation);
-
-	AllocatedBuffer ab;
-	ab.buffer = vk::Buffer(buffer);
-	ab.allocation = allocation;
-	return ab;
-}
-
 void UpdateUniformBuffer(VulkanRenderer* gfx, vk::Buffer uniformBuffer, DynamicBuffer<1>& stageBuffer, void* data, size_t length)
 {
 	stageBuffer.nextBuffer();
@@ -146,10 +72,10 @@ void UpdateUniformBuffer(VulkanRenderer* gfx, vk::Buffer uniformBuffer, DynamicB
 
 struct EnhMeshVk
 {
-	AllocatedBuffer vertices;
-	AllocatedBuffer normals;
-	std::vector<AllocatedBuffer> texcoords;
-	AllocatedBuffer indices;
+	VulkanRenderer::StaticBuffer vertices;
+	VulkanRenderer::StaticBuffer normals;
+	std::vector<VulkanRenderer::StaticBuffer> texcoords;
+	VulkanRenderer::StaticBuffer indices;
 	uint32_t totVertices = 0, totIndices = 0;
 
 	static EnhMeshVk createEnhMesh(StaticModel* model, VulkanRenderer* gfx) {
@@ -169,16 +95,16 @@ struct EnhMeshVk
 		for (auto& mat : mesh.groupIndices)
 			for (auto& grp : mat)
 				pVertices.push_back(*(const Vector3*)(mesh.vertices.data() + 3 * grp.vertex));
-		enh.vertices = CreateAndInitializeBuffer(
-			gfx, vk::BufferUsageFlagBits::eVertexBuffer, pVertices.data(), enh.totVertices * 12);
+		enh.vertices = gfx->createStaticBuffer(
+			vk::BufferUsageFlagBits::eVertexBuffer, pVertices.data(), enh.totVertices * 12);
 
 		std::vector<uint32_t> pNormals;
 		pNormals.reserve(enh.totVertices);
 		for (auto& mat : mesh.groupIndices)
 			for (auto& grp : mat)
 				pNormals.push_back(NormalToR10G10B10A2(Mesh::s_normalTable[mesh.normals[grp.normal]].normal()));
-		enh.normals = CreateAndInitializeBuffer(
-			gfx, vk::BufferUsageFlagBits::eVertexBuffer, pNormals.data(), enh.totVertices * 4);
+		enh.normals = gfx->createStaticBuffer(
+			vk::BufferUsageFlagBits::eVertexBuffer, pNormals.data(), enh.totVertices * 4);
 
 		enh.texcoords.resize(mesh.uvLists.size());
 		std::vector<float> pUvs;
@@ -189,8 +115,8 @@ struct EnhMeshVk
 			for (auto& mat : mesh.groupIndices)
 				for (auto& grp : mat)
 					pUvs.insert(pUvs.end(), { uvlist[2 * grp.uv], uvlist[2 * grp.uv + 1] });
-			enh.texcoords[i] = CreateAndInitializeBuffer(
-				gfx, vk::BufferUsageFlagBits::eVertexBuffer, pUvs.data(), enh.totVertices * 8);
+			enh.texcoords[i] = gfx->createStaticBuffer(
+				vk::BufferUsageFlagBits::eVertexBuffer, pUvs.data(), enh.totVertices * 8);
 		}
 
 		std::vector<uint16_t> pIndices;
@@ -201,8 +127,8 @@ struct EnhMeshVk
 			}
 			enh.totIndices += 3 * mat.tupleIndex.size();
 		}
-		enh.indices = CreateAndInitializeBuffer(
-			gfx, vk::BufferUsageFlagBits::eIndexBuffer, pIndices.data(), pIndices.size() * 2);
+		enh.indices = gfx->createStaticBuffer(
+			vk::BufferUsageFlagBits::eIndexBuffer, pIndices.data(), pIndices.size() * 2);
 
 		return enh;
 	}
@@ -212,8 +138,8 @@ struct EnhAnimVk
 {
 	EnhMeshVk* enhMesh;
 	std::vector<uint32_t> animTimes;
-	std::vector<AllocatedBuffer> animVertices;
-	std::vector<AllocatedBuffer> animNormals;
+	std::vector<VulkanRenderer::StaticBuffer> animVertices;
+	std::vector<VulkanRenderer::StaticBuffer> animNormals;
 
 	static EnhAnimVk createEnhAnim(AnimatedModel* model, VulkanRenderer* gfx) {
 		EnhAnimVk enh;
@@ -241,10 +167,10 @@ struct EnhAnimVk
 					pNormals.push_back(NormalToR10G10B10A2(intNormals[grp.normal].normal()));
 				}
 			}
-			enh.animVertices[frame] = CreateAndInitializeBuffer(
-				gfx, vk::BufferUsageFlagBits::eVertexBuffer, pVertices.data(), 12 * pVertices.size());
-			enh.animNormals[frame] = CreateAndInitializeBuffer(
-				gfx, vk::BufferUsageFlagBits::eVertexBuffer, pNormals.data(), 4 * pNormals.size());
+			enh.animVertices[frame] = gfx->createStaticBuffer(
+				vk::BufferUsageFlagBits::eVertexBuffer, pVertices.data(), 12 * pVertices.size());
+			enh.animNormals[frame] = gfx->createStaticBuffer(
+				vk::BufferUsageFlagBits::eVertexBuffer, pNormals.data(), 4 * pNormals.size());
 		}
 		return enh;
 	}

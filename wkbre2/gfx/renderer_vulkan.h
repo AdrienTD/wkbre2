@@ -143,7 +143,7 @@ struct VulkanRenderer : IRenderer {
 	vk::Pipeline m_pipelineTerrain, m_pipelineLake;
 
 	vk::Sampler m_vkSampler;
-	vk::DescriptorSetLayout m_vkDescSetLayout0, m_vkDescSetLayout1;
+	vk::DescriptorSetLayout m_vkDescSetLayout0, m_vkDescSetLayout1, m_vkDescSetLayout2;
 	vk::PipelineLayout m_vkPipelineLayout;
 	vk::DescriptorPool m_vkDescriptorPool;
 	vk::DescriptorSet m_vkMainDescriptorSet;
@@ -174,6 +174,7 @@ struct VulkanRenderer : IRenderer {
 	vk::Buffer m_currentSceneBuffer; VmaAllocation m_currentSceneBufferAlloc;
 	std::map<vk::ImageView, vk::Image> m_imageViewToImageMap;
 	std::map<vk::ImageView, vk::DescriptorSet> m_imageViewToDescriptorSetMap;
+	std::map<vk::ImageView, vk::DescriptorSet> m_imageViewToSecDescriptorSetMap;
 
 	texture m_whiteTexture;
 	int m_msaaNumSamples = 1;
@@ -187,6 +188,7 @@ struct VulkanRenderer : IRenderer {
 	vk::PrimitiveTopology m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
 	vk::Pipeline m_currentPipeline = nullptr;
 	vk::DescriptorSet m_currentTextureDescriptorSet = nullptr;
+	vk::DescriptorSet m_currentSecondaryTextureDescriptorSet = nullptr;
 
 	std::optional<uint32_t> m_clearColor = 0;
 	bool m_clearDepth = true;
@@ -198,6 +200,13 @@ struct VulkanRenderer : IRenderer {
 	}
 
 	vk::ShaderModule loadShader(const char* name, const char* func);
+
+	struct StaticBuffer {
+		vk::Buffer buffer;
+		VmaAllocation allocation;
+	};
+
+	StaticBuffer createStaticBuffer(vk::BufferUsageFlags usage, void* data, size_t length);
 
 	void setUniformDescriptors(std::vector<vk::Buffer> buffers)
 	{
@@ -258,7 +267,9 @@ struct VulkanRenderer : IRenderer {
 		}
 
 		if (pipeline) {
-			vk::DescriptorSet descSets[2] = { m_vkMainDescriptorSet, m_currentTextureDescriptorSet };
+			vk::DescriptorSet descSets[3] = {
+				m_vkMainDescriptorSet, m_currentTextureDescriptorSet, m_currentSecondaryTextureDescriptorSet
+			};
 
 			cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 			cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_vkPipelineLayout, 0, descSets, {});
