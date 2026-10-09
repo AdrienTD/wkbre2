@@ -253,6 +253,75 @@ vk::ShaderModule VulkanRenderer::loadShader(const char* name, const char* func) 
 	return module;
 }
 
+VulkanRenderer::StaticBuffer VulkanRenderer::createStaticBuffer(vk::BufferUsageFlags usage, void* data, size_t length)
+{
+	// Create buffer
+
+	VmaAllocationCreateInfo allocationCreateInfo;
+	memset(&allocationCreateInfo, 0, sizeof(allocationCreateInfo));
+	allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+
+	vk::BufferCreateInfo bufferCreateInfo;
+	bufferCreateInfo.size = length;
+	bufferCreateInfo.usage = usage | vk::BufferUsageFlagBits::eTransferDst;
+	bufferCreateInfo.sharingMode = vk::SharingMode::eExclusive;
+
+	VmaAllocationInfo allocInfo;
+	VkBuffer buffer;
+	VmaAllocation allocation;
+	vmaCreateBuffer(m_vmaAllocator, &(VkBufferCreateInfo&)bufferCreateInfo, &allocationCreateInfo, &buffer, &allocation, &allocInfo);
+
+	// Create Stage buffer
+
+	VmaAllocationCreateInfo stageAllocationCreateInfo;
+	memset(&stageAllocationCreateInfo, 0, sizeof(stageAllocationCreateInfo));
+	stageAllocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT
+		| VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	stageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+	vk::BufferCreateInfo stageBufferCreateInfo;
+	stageBufferCreateInfo.size = length;
+	stageBufferCreateInfo.usage = vk::BufferUsageFlagBits::eTransferSrc;
+	stageBufferCreateInfo.sharingMode = vk::SharingMode::eExclusive;
+
+	VmaAllocationInfo stageAllocInfo;
+	VkBuffer stageBuffer;
+	VmaAllocation stageAllocation;
+	vmaCreateBuffer(m_vmaAllocator, &(VkBufferCreateInfo&)stageBufferCreateInfo, &stageAllocationCreateInfo, &stageBuffer, &stageAllocation, &stageAllocInfo);
+
+	// Fill Stage buffer
+
+	memcpy(stageAllocInfo.pMappedData, data, length);
+
+	// Copy to buffer
+
+	vk::BufferCopy copy;
+	copy.srcOffset = 0;
+	copy.dstOffset = 0;
+	copy.size = length;
+
+	vk::CommandBufferBeginInfo beginInfo;
+	beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+	m_texCommandBuffer.begin(beginInfo);
+	m_texCommandBuffer.copyBuffer(stageBuffer, buffer, copy);
+	m_texCommandBuffer.end();
+
+	vk::SubmitInfo submit;
+	submit.commandBufferCount = 1;
+	submit.pCommandBuffers = &m_texCommandBuffer;
+	m_vkQueue.submit(submit);
+
+	m_vkQueue.waitIdle();
+	m_vkDevice.resetCommandPool(m_texCommandPool);
+
+	vmaDestroyBuffer(m_vmaAllocator, stageBuffer, stageAllocation);
+
+	StaticBuffer ab;
+	ab.buffer = vk::Buffer(buffer);
+	ab.allocation = allocation;
+	return ab;
+}
+
 // Initialisation
 
 void VulkanRenderer::Init() {
@@ -474,6 +543,12 @@ void VulkanRenderer::Init() {
 	bindingsSet1[0].descriptorCount = 1;
 	bindingsSet1[0].stageFlags = vk::ShaderStageFlagBits::eFragment;
 	bindingsSet1[0].pImmutableSamplers = &m_vkSampler;
+	vk::DescriptorSetLayoutBinding bindingsSet2[1];
+	bindingsSet2[0].binding = 0;
+	bindingsSet2[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+	bindingsSet2[0].descriptorCount = 1;
+	bindingsSet2[0].stageFlags = vk::ShaderStageFlagBits::eFragment;
+	bindingsSet2[0].pImmutableSamplers = &m_vkSampler;
 
 	vk::DescriptorSetLayoutCreateInfo dslcInfo;
 	dslcInfo.bindingCount = std::size(bindingsSet0);
@@ -482,6 +557,9 @@ void VulkanRenderer::Init() {
 	dslcInfo.bindingCount = std::size(bindingsSet1);
 	dslcInfo.pBindings = bindingsSet1;
 	m_vkDescSetLayout1 = m_vkDevice.createDescriptorSetLayout(dslcInfo);
+	dslcInfo.bindingCount = std::size(bindingsSet2);
+	dslcInfo.pBindings = bindingsSet2;
+	m_vkDescSetLayout2 = m_vkDevice.createDescriptorSetLayout(dslcInfo);
 
 	vk::PushConstantRange pushConstRanges[1];
 	pushConstRanges[0].stageFlags = vk::ShaderStageFlagBits::eVertex;
@@ -489,7 +567,7 @@ void VulkanRenderer::Init() {
 	pushConstRanges[0].size = 8;
 
 	vk::PipelineLayoutCreateInfo plcInfo;
-	vk::DescriptorSetLayout setLayouts[2] = { m_vkDescSetLayout0, m_vkDescSetLayout1 };
+	vk::DescriptorSetLayout setLayouts[] = { m_vkDescSetLayout0, m_vkDescSetLayout1, m_vkDescSetLayout2 };
 	plcInfo.setLayoutCount = std::size(setLayouts);
 	plcInfo.pSetLayouts = setLayouts;
 	plcInfo.pushConstantRangeCount = std::size(pushConstRanges);
@@ -712,6 +790,7 @@ void VulkanRenderer::Init() {
 	setUniformDescriptors({ m_currentTransformBuffer, m_currentFogBuffer, m_currentSunBuffer });
 
 	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
+	m_currentSecondaryTextureDescriptorSet = m_imageViewToSecDescriptorSetMap.at(VkImageView(m_whiteTexture));
 
 	Reset();
 }
@@ -885,6 +964,7 @@ void VulkanRenderer::BeginDrawing() {
 	DisableScissor();
 
 	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
+	m_currentSecondaryTextureDescriptorSet = m_imageViewToSecDescriptorSetMap.at(VkImageView(m_whiteTexture));
 
 	m_fogEnabled = false;
 	m_currentPipeline = nullptr; // it needs to be decided by the caller!
@@ -1166,6 +1246,26 @@ texture VulkanRenderer::CreateTexture(const Bitmap& bm, int mipmaps) {
 
 	m_imageViewToImageMap[imageView] = imageHandle;
 	m_imageViewToDescriptorSetMap[imageView] = imgDescSet;
+
+	//
+
+	dsaInfo.descriptorPool = m_vkDescriptorPool;
+	dsaInfo.descriptorSetCount = 1;
+	dsaInfo.pSetLayouts = &m_vkDescSetLayout2;
+	imgDescSet = m_vkDevice.allocateDescriptorSets(dsaInfo).at(0);
+
+	wds.dstSet = imgDescSet;
+	wds.dstBinding = 0;
+	wds.dstArrayElement = 0;
+	wds.descriptorCount = 1;
+	wds.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+	wds.pImageInfo = &dbInfoTexture;
+	m_vkDevice.updateDescriptorSets(wds, {});
+
+	m_imageViewToSecDescriptorSetMap[imageView] = imgDescSet;
+
+	//
+
 	return imageView;
 }
 
@@ -1217,12 +1317,17 @@ void VulkanRenderer::SetTransformMatrix(const Matrix* m) {
 void VulkanRenderer::SetTexture(uint32_t x, texture t) {
 	if (t == nullptr)
 		NoTexture(x);
-	else
+	else if (x == 0)
 		m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(t));
+	else if (x == 1)
+		m_currentSecondaryTextureDescriptorSet = m_imageViewToSecDescriptorSetMap.at(VkImageView(t));
 }
 
 void VulkanRenderer::NoTexture(uint32_t x) {
-	m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
+	if (x == 0)
+		m_currentTextureDescriptorSet = m_imageViewToDescriptorSetMap.at(VkImageView(m_whiteTexture));
+	else if (x == 1)
+		m_currentSecondaryTextureDescriptorSet = m_imageViewToSecDescriptorSetMap.at(VkImageView(m_whiteTexture));
 }
 
 void VulkanRenderer::SetFog(uint32_t color, float farz) {

@@ -53,7 +53,7 @@ add_executable (wkbre2 "wkbre2.cpp" "wkbre2.h" "file.cpp" "file.h" "lzrw3.c" "lz
 "gameset/ArmyCreationSchedule.h" "gameset/ArmyCreationSchedule.cpp" "gameset/WorkOrder.h" "gameset/WorkOrder.cpp" "common.cpp" "gameset/Commission.h" "gameset/Commission.cpp"
 "FormationController.h" "FormationController.cpp" "StampdownPlan.h" "StampdownPlan.cpp" "BreakpointManager.h" "BreakpointManager.cpp" "interface/QuickSkirmishMenu.h" "interface/QuickSkirmishMenu.cpp"
 "platform.cpp" "gfx/TerrainSpriteContainer.cpp" "gfx/TerrainSpriteContainer.h" "gfx/TerrainSpriteRenderer.h" "gfx/TerrainSpriteRenderer.cpp"
-"gfx/renderer_vulkan.cpp" "gfx/renderer_vulkan.h" "gfx/VulkanEnhancedSceneRenderer.cpp" "gfx/VulkanEnhancedSceneRenderer.h")
+"gfx/renderer_vulkan.cpp" "gfx/renderer_vulkan.h" "gfx/VulkanEnhancedSceneRenderer.cpp" "gfx/VulkanEnhancedSceneRenderer.h" "gfx/VulkanEnhancedTerrainRenderer.cpp" "gfx/VulkanEnhancedTerrainRenderer.h")
 target_link_libraries (wkbre2
   imgui
   SDL2::SDL2

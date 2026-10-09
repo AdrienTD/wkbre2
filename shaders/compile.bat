@@ -17,6 +17,9 @@ call :compile EnhSceneShader vs_4_0 VS_Anim
 call :compile EnhSceneShader ps_4_0 PS
 call :compile EnhSceneShader ps_4_0 PS_Alpha
 
+call :compile EnhTerrainShader vs_4_0 VS
+call :compile EnhTerrainShader ps_4_1 PS
+
 goto :EOF
 
 :compile
