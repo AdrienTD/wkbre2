@@ -1612,3 +1612,6 @@ void VulkanRenderer::SetTriangleTopology() {
 }
 
 IRenderer* CreateVulkanRenderer() { return new VulkanRenderer; }
+
+template struct DynamicBuffer<1>;
+template struct DynamicBuffer<2>;

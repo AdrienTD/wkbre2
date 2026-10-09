@@ -26,13 +26,13 @@ struct D11NTRVtx {
 	float u, v;
 };
 
-static constexpr uint32_t Vec3ToR10G10B10A2(const Vector3& vec) {
+static const uint32_t Vec3ToR10G10B10A2(const Vector3& vec) {
 	uint32_t res = (uint32_t)(vec.x * 1023.0f);
 	res |= (uint32_t)(vec.y * 1023.0f) << 10;
 	res |= (uint32_t)(vec.z * 1023.0f) << 20;
 	return res;
 }
-static constexpr uint32_t NormalToR10G10B10A2(const Vector3& vec) {
+static const uint32_t NormalToR10G10B10A2(const Vector3& vec) {
 	return Vec3ToR10G10B10A2((vec + Vector3(1, 1, 1)) * 0.5f);
 }
 
