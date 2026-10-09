@@ -5,6 +5,7 @@
 #include "../util/DynArray.h"
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <vector>
 

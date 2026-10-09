@@ -2,8 +2,6 @@
 // (C) 2021 AdrienTD
 // Licensed under the GNU General Public License 3
 
-#ifdef _WIN32
-
 #include "VulkanEnhancedSceneRenderer.h"
 #include "../Model.h"
 #include "../scene.h"
@@ -16,13 +14,13 @@
 
 #include "renderer_vulkan.h"
 
-static constexpr uint32_t Vec3ToR10G10B10A2(const Vector3& vec) {
+static const uint32_t Vec3ToR10G10B10A2(const Vector3& vec) {
 	uint32_t res = (uint32_t)(vec.x * 1023.0f);
 	res |= (uint32_t)(vec.y * 1023.0f) << 10;
 	res |= (uint32_t)(vec.z * 1023.0f) << 20;
 	return res;
 }
-static constexpr uint32_t NormalToR10G10B10A2(const Vector3& vec) {
+static const uint32_t NormalToR10G10B10A2(const Vector3& vec) {
 	return Vec3ToR10G10B10A2((vec + Vector3(1, 1, 1)) * 0.5f);
 }
 
@@ -521,5 +519,3 @@ void VulkanEnhancedSceneRenderer::render()
 	//dimm->IASetInputLayout(((D3D11Renderer*)gfx)->ddInputLayout);
 
 }
-
-#endif // _WIN32
