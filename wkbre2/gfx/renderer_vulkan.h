@@ -253,6 +253,24 @@ struct VulkanRenderer : IRenderer {
 				cmdBuffer.endRenderPass();
 			}
 			else if (!m_currentPassPipeline) {
+				vk::ImageMemoryBarrier imgBarrier0;
+				imgBarrier0.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+				imgBarrier0.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eColorAttachmentRead;
+				imgBarrier0.oldLayout = vk::ImageLayout::eColorAttachmentOptimal;
+				imgBarrier0.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
+				imgBarrier0.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				imgBarrier0.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				imgBarrier0.image = m_vkSwapchainImages[m_currentSwapchainImageIndex].image;
+				imgBarrier0.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+				imgBarrier0.subresourceRange.baseArrayLayer = 0;
+				imgBarrier0.subresourceRange.baseMipLevel = 0;
+				imgBarrier0.subresourceRange.layerCount = 1;
+				imgBarrier0.subresourceRange.levelCount = 1;
+
+				cmdBuffer.pipelineBarrier(
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlagBits(), {}, {}, {imgBarrier0}
+				);
+
 				vk::RenderPassBeginInfo rpbi;
 				rpbi.renderPass = m_vkRenderPass;
 				rpbi.framebuffer = m_vkSwapchainImages[m_currentSwapchainImageIndex].framebuffer;
