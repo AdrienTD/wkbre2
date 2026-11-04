@@ -6,7 +6,6 @@
 
 #include "TerrainRenderer.h"
 #include "renderer.h"
-#include <map>
 #include <vector>
 #include <memory>
 
@@ -24,14 +23,13 @@ public:
 
 	bool m_bumpOn = true;
 private:
-	struct LoadedTexture {
+	struct TexAtlas {
 		texture diffuseMap;
 		texture normalMap;
-		bool operator<(const LoadedTexture& lt) const { return (diffuseMap == lt.diffuseMap) ? (normalMap < lt.normalMap) : (diffuseMap < lt.diffuseMap); }
+		std::vector<const TerrainTile*> tiles;
 	};
 	struct Impl;
 	Impl* _impl;
 	TextureCache *texcache;
-	std::map<TerrainTexture*, LoadedTexture> ttexmap;
-	std::map<LoadedTexture, std::vector<const TerrainTile*>> tilesPerTex;
+	std::vector<TexAtlas> texAtlases;
 };

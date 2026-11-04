@@ -6,7 +6,6 @@
 
 #include "TerrainRenderer.h"
 #include "renderer.h"
-#include <map>
 #include <vector>
 
 struct RBatch;
@@ -21,8 +20,13 @@ public:
 	void render() override;
 	void init();
 private:
+	struct TexAtlas
+	{
+		texture tex;
+		std::vector<const TerrainTile*> tiles;
+	};
+
 	RBatch *batch;
 	TextureCache *texcache;
-	std::map<TerrainTexture*, texture> ttexmap;
-	std::map<texture, std::vector<const TerrainTile*>> tilesPerTex;
+	std::vector<TexAtlas> texAtlases;
 };

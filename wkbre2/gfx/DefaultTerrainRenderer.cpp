@@ -20,11 +20,11 @@ void DefaultTerrainRenderer::init()
 	texcache = new TextureCache(gfx, "Maps\\Map_Textures\\");
 
 	// Load terrain color textures
-	for (const auto &grp : terrain->texDb.groups) {
-		printf("%s\n", grp.first.c_str());
-		for (const auto &tex : grp.second->textures) {
-			ttexmap[tex.second.get()] = texcache->getTexture(tex.second->file.c_str());
-		}
+	const size_t numTexFiles = terrain->texDb.textureFilenames.size();
+	texAtlases.resize(numTexFiles);
+	for (size_t i = 0; i < numTexFiles; ++i) {
+		printf("%s\n", terrain->texDb.textureFilenames[i].c_str());
+		texAtlases[i].tex = texcache->getTexture(terrain->texDb.textureFilenames[i].c_str());
 	}
 }
 
@@ -81,17 +81,15 @@ void DefaultTerrainRenderer::render() {
 				continue;
 			//zoccurs[(int)(oriz * 100)]++;
 			const TerrainTile* tile = terrain->getTile(x, z);
-			TerrainTexture *trntex = tile->texture;
-			texture newgfxtex = ttexmap[trntex];
-			tilesPerTex[newgfxtex].push_back(tile);
+			texAtlases[tile->texture->texFilenameId].tiles.push_back(tile);
 		}
 	}
 
-	for(auto &pack : tilesPerTex) {
-		if (pack.second.empty())
+	for(auto &pack : texAtlases) {
+		if (pack.tiles.empty())
 			continue;
-		gfx->SetTexture(0, pack.first);
-		for (const TerrainTile* tile : pack.second) {
+		gfx->SetTexture(0, pack.tex);
+		for (const TerrainTile* tile : pack.tiles) {
 			unsigned int x = tile->x;
 			unsigned int z = tile->z;
 			int lx = x - terrain->edge, lz = z - terrain->edge;
@@ -186,6 +184,6 @@ void DefaultTerrainRenderer::render() {
 	batch->flush();
 	batch->end();
 
-	for (auto& pack : tilesPerTex)
-		pack.second.clear();
+	for (auto& pack : texAtlases)
+		pack.tiles.clear();
 }

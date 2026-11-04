@@ -9,6 +9,7 @@
 #include <utility>
 #include <map>
 #include <memory>
+#include "util/IndexedStringList.h"
 
 struct TerrainTextureGroup;
 struct TerrainTexture;
@@ -25,9 +26,7 @@ struct TerrainTexture
 {
 	int id;
 	int startx, starty, width, height;
-	//texture t;
-	//int tfid;
-	std::string file;
+	int texFilenameId;
 	TerrainTextureGroup *grp;
 	std::vector<TerrainTextureEdge> edges[4];
 };
@@ -41,7 +40,7 @@ struct TerrainTextureGroup
 struct TerrainTextureDatabase
 {
 	std::map<std::string, std::unique_ptr<TerrainTextureGroup>> groups;
-	std::vector<std::string> textureFilenames;
+	IndexedStringList textureFilenames;
 
 	void load(const char *filename);
 	void translate(const char* ltttFilePath);

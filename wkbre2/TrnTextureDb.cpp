@@ -38,7 +38,7 @@ void TerrainTextureDatabase::load(const char * filename)
 				if (strtag2 == "TEXTURE") {
 					TerrainTexture *tex = new TerrainTexture;
 					tex->grp = grp;
-					tex->file = parser.nextString();
+					tex->texFilenameId = textureFilenames.insertString(parser.nextString());
 					for (int* v : { &tex->startx, &tex->starty, &tex->width, &tex->height, &tex->id })
 						*v = parser.nextInt();
 					grp->textures.emplace(tex->id, tex);
@@ -51,7 +51,7 @@ void TerrainTextureDatabase::load(const char * filename)
 						if (strtag3 == "MATCHING") {
 							TerrainTexture *tex = new TerrainTexture;
 							tex->grp = grp;
-							tex->file = parser.nextString();
+							tex->texFilenameId = textureFilenames.insertString(parser.nextString());
 							for (int* v : { &tex->startx, &tex->starty, &tex->width, &tex->height, &tex->id })
 								*v = parser.nextInt();
 							grp->textures.emplace(tex->id, tex);
@@ -113,19 +113,27 @@ void TerrainTextureDatabase::translate(const char* ltttFilePath)
 
 	free(lttt);
 
+	IndexedStringList newTextureFilenames;
+
 	for (auto& grp : groups) {
 		for (auto& e_tex : grp.second->textures) {
 			auto& tex = *e_tex.second;
 			uint8_t pos = ((tex.starty / 64) << 2) | (tex.startx / 64);
-			auto it = translations.find({ pos, tex.file });
+			const std::string& originalFilename = textureFilenames.getString(tex.texFilenameId);
+			auto it = translations.find({ pos, originalFilename });
 			if (it != translations.end()) {
 				auto& tr = it->second;
 				tex.startx = (tr.position & 3) * 64;
 				tex.starty = ((tr.position >> 2) & 3) * 64;
-				tex.file = tr.textureFilePath;
+				tex.texFilenameId = newTextureFilenames.insertString(tr.textureFilePath);
+			}
+			else {
+				tex.texFilenameId = newTextureFilenames.insertString(originalFilename);
 			}
 		}
 	}
+
+	textureFilenames = std::move(newTextureFilenames);
 }
 
 std::string TerrainTextureDatabase::getLTTTPath(const std::string& terrainFilePath)
