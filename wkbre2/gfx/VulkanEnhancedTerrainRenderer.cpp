@@ -297,76 +297,77 @@ void VulkanEnhancedTerrainRenderer::init()
 	texcache = new TextureCache(gfx, "Maps\\Map_Textures\\");
 
 	// Load terrain color textures
-	for (const auto &grp : terrain->texDb.groups) {
-		printf("%s\n", grp.first.c_str());
-		for (const auto &tex : grp.second->textures) {
-			LoadedTexture ld;
-			ld.diffuseMap = texcache->getTexture(tex.second->file.c_str());
+	const size_t numTexFiles = terrain->texDb.textureFilenames.size();
+	texAtlases.resize(numTexFiles);
+	for (size_t i = 0; i < numTexFiles; ++i) {
+		const auto& texFilename = terrain->texDb.textureFilenames[i];
+		printf("%s\n", texFilename.c_str());
 
-			std::string nrm;
-			size_t ext = tex.second->file.rfind('.');
-			if (ext != nrm.npos)
-				nrm = tex.second->file.substr(0, ext);
-			else
-				nrm = tex.second->file;
-			if (g_settings.value<int>("gameVersion", 0) < 2) {
-				nrm.append("_NormalMap.pcx");
-				ld.normalMap = texcache->getTexture(nrm.c_str());
-			}
-			else {
-				nrm.append("_BumpMap.pcx");
-				ld.normalMap = texcache->getTextureIfCached(nrm.c_str());
-				if (!ld.normalMap) {
-					Bitmap bmp = Bitmap::loadBitmap((texcache->directory + nrm).c_str());
-					Bitmap nmap; nmap.width = bmp.width; nmap.height = bmp.height; nmap.format = BMFORMAT_R8G8B8A8;
-					nmap.pixels.resize(nmap.width * nmap.height * 4);
-					uint8_t* bmpix = (uint8_t*)bmp.pixels.data();
-					uint8_t* nmpix = (uint8_t*)nmap.pixels.data();
-					int pitch = nmap.width;
-					for (int tz = 0; tz < 4; tz++) {
-						for (int tx = 0; tx < 4; tx++) {
-							int sx = 64 * tx, sz = 64 * tz;
-							for (int cz = 0; cz < 64; cz++) {
-								for (int cx = 0; cx < 64; cx++) {
-									int ax = (cx + 1) & 63, az = (cz + 1) & 63;
-									int bx = (cx - 1) & 63, bz = (cz - 1) & 63;
+		auto& texAtlas = texAtlases[i];
+		texAtlas.diffuseMap = texcache->getTexture(texFilename.c_str());
 
-									int cheight = bmpix[(sz + cz) * pitch + sx + cx];
+		std::string nrm;
+		size_t ext = texFilename.rfind('.');
+		if (ext != nrm.npos)
+			nrm = texFilename.substr(0, ext);
+		else
+			nrm = texFilename;
+		if (g_settings.value<int>("gameVersion", 0) < 2) {
+			nrm.append("_NormalMap.pcx");
+			texAtlas.normalMap = texcache->getTexture(nrm.c_str());
+		}
+		else {
+			nrm.append("_BumpMap.pcx");
+			texAtlas.normalMap = texcache->getTextureIfCached(nrm.c_str());
+			if (!texAtlas.normalMap) {
+				Bitmap bmp = Bitmap::loadBitmap((texcache->directory + nrm).c_str());
+				Bitmap nmap; nmap.width = bmp.width; nmap.height = bmp.height; nmap.format = BMFORMAT_R8G8B8A8;
+				nmap.pixels.resize(nmap.width * nmap.height * 4);
+				uint8_t* bmpix = (uint8_t*)bmp.pixels.data();
+				uint8_t* nmpix = (uint8_t*)nmap.pixels.data();
+				int pitch = nmap.width;
+				for (int tz = 0; tz < 4; tz++) {
+					for (int tx = 0; tx < 4; tx++) {
+						int sx = 64 * tx, sz = 64 * tz;
+						for (int cz = 0; cz < 64; cz++) {
+							for (int cx = 0; cx < 64; cx++) {
+								int ax = (cx + 1) & 63, az = (cz + 1) & 63;
+								int bx = (cx - 1) & 63, bz = (cz - 1) & 63;
 
-									int dx1 = 0, dx2 = 0, dz1 = 0, dz2 = 0;
-									if(ax != 0)
-										dx1 = (int)bmpix[(sz + cz) * pitch + sx + ax] - cheight;
-									if(bx != 63)
-										dx2 = (int)bmpix[(sz + cz) * pitch + sx + bx] - cheight;
-									if(az != 0)
-										dz1 = (int)bmpix[(sz + az) * pitch + sx + cx] - cheight;
-									if(bz != 63)
-										dz2 = (int)bmpix[(sz + bz) * pitch + sx + cx] - cheight;
+								int cheight = bmpix[(sz + cz) * pitch + sx + cx];
 
-									float fx = (-dx1+dx2) / 510.0f, fz = (-dz1+dz2) / 510.0f;
-									//fx *= 3.0f; fz *= 3.0f;
-									//float fy = 1.0f - fx * fx - fz * fz;
-									float fy = 0.1f;
-									float norm = std::sqrt(fx * fx + fy * fy + fz * fz);
-									fx /= norm; fy /= norm; fz /= norm;
+								int dx1 = 0, dx2 = 0, dz1 = 0, dz2 = 0;
+								if(ax != 0)
+									dx1 = (int)bmpix[(sz + cz) * pitch + sx + ax] - cheight;
+								if(bx != 63)
+									dx2 = (int)bmpix[(sz + cz) * pitch + sx + bx] - cheight;
+								if(az != 0)
+									dz1 = (int)bmpix[(sz + az) * pitch + sx + cx] - cheight;
+								if(bz != 63)
+									dz2 = (int)bmpix[(sz + bz) * pitch + sx + cx] - cheight;
 
-									int dx = (int)(fx * 255.0f);
-									int dy = (int)(fy * 255.0f);
-									int dz = (int)(fz * 255.0f);
+								float fx = (-dx1+dx2) / 510.0f, fz = (-dz1+dz2) / 510.0f;
+								//fx *= 3.0f; fz *= 3.0f;
+								//float fy = 1.0f - fx * fx - fz * fz;
+								float fy = 0.1f;
+								float norm = std::sqrt(fx * fx + fy * fy + fz * fz);
+								fx /= norm; fy /= norm; fz /= norm;
 
-									uint8_t* out = nmpix + ((sz + cz) * pitch + sx + cx) * 4;
-									out[0] = (uint8_t)((dx + 255) / 2);
-									out[1] = (uint8_t)((dy + 255) / 2);
-									out[2] = (uint8_t)((dz + 255) / 2);
-									out[3] = 255;
-								}
+								int dx = (int)(fx * 255.0f);
+								int dy = (int)(fy * 255.0f);
+								int dz = (int)(fz * 255.0f);
+
+								uint8_t* out = nmpix + ((sz + cz) * pitch + sx + cx) * 4;
+								out[0] = (uint8_t)((dx + 255) / 2);
+								out[1] = (uint8_t)((dy + 255) / 2);
+								out[2] = (uint8_t)((dz + 255) / 2);
+								out[3] = 255;
 							}
 						}
 					}
-					ld.normalMap = texcache->createTexture(nrm.c_str(), 0, nmap);
 				}
+				texAtlas.normalMap = texcache->createTexture(nrm.c_str(), 0, nmap);
 			}
-			ttexmap[tex.second.get()] = ld;
 		}
 	}
 
@@ -539,9 +540,7 @@ void VulkanEnhancedTerrainRenderer::render() {
 			if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
 				continue;
 			const Terrain::Tile* tile = terrain->getTile(x, z);
-			TerrainTexture *trntex = tile->texture;
-			auto& newgfxtex = ttexmap.at(trntex);
-			tilesPerTex[newgfxtex].push_back(tile);
+			texAtlases[tile->texture->texFilenameId].tiles.push_back(tile);
 		}
 	}
 
@@ -550,17 +549,17 @@ void VulkanEnhancedTerrainRenderer::render() {
 	vk::DeviceSize voffset = 0;
 	vkgfx->togglePass(_impl->terrainPipeline);
 	frame.mainCommandBuffer.bindVertexBuffers(0, _impl->trnVertexBuffer.buffer, voffset);
-	for(auto &pack : tilesPerTex) {
-		if (pack.second.empty())
+	for(auto &pack : texAtlases) {
+		if (pack.tiles.empty())
 			continue;
-		gfx->SetTexture(0, pack.first.diffuseMap);
-		gfx->SetTexture(1, pack.first.normalMap);
+		gfx->SetTexture(0, pack.diffuseMap);
+		gfx->SetTexture(1, pack.normalMap);
 		vk::DescriptorSet descSets[2] = {
 			vkgfx->m_currentTextureDescriptorSet, vkgfx->m_currentSecondaryTextureDescriptorSet
 		};
 		frame.mainCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, vkgfx->m_vkPipelineLayout, 1, descSets, {});
 
-		for (const TerrainTile* tile : pack.second) {
+		for (const TerrainTile* tile : pack.tiles) {
 			unsigned int x = tile->x;
 			unsigned int z = tile->z;
 
@@ -615,6 +614,6 @@ void VulkanEnhancedTerrainRenderer::render() {
 	lakeBatch->flush();
 	lakeBatch->end();
 
-	for (auto& pack : tilesPerTex)
-		pack.second.clear();
+	for (auto& pack : texAtlases)
+		pack.tiles.clear();
 }

@@ -35,6 +35,7 @@
 #include "Camera.h"
 #include "gfx/DefaultTerrainRenderer.h"
 #include "gfx/D3D11EnhancedTerrainRenderer.h"
+#include "gfx/VulkanEnhancedTerrainRenderer.h"
 #include "interface/ClientInterface.h"
 #include "scene.h"
 #include <SDL2/SDL_timer.h>
@@ -233,6 +234,8 @@ void Test_Terrain() {
 	std::unique_ptr<TerrainRenderer> defaultTerrainRenderer = std::make_unique<DefaultTerrainRenderer>(gfx, &terrain, &camera);
 	std::unique_ptr<TerrainRenderer> enhancedTerrainRenderer;
 	const std::string renderer = g_settings.value<std::string>("renderer", "");
+	if (renderer == "vulkan")
+		enhancedTerrainRenderer = std::make_unique<VulkanEnhancedTerrainRenderer>(gfx, &terrain, &camera);
 #ifdef _WIN32
 	if (renderer == "d3d11")
 		enhancedTerrainRenderer = std::make_unique<D3D11EnhancedTerrainRenderer>(gfx, &terrain, &camera);
