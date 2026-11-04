@@ -34,6 +34,7 @@
 #include "anim.h"
 #include "Camera.h"
 #include "gfx/DefaultTerrainRenderer.h"
+#include "gfx/D3D11EnhancedTerrainRenderer.h"
 #include "interface/ClientInterface.h"
 #include "scene.h"
 #include <SDL2/SDL_timer.h>
@@ -42,6 +43,8 @@
 #include "ParticleSystem.h"
 #include "gfx/DefaultParticleRenderer.h"
 #include "ParticleContainer.h"
+#include "settings.h"
+#include <nlohmann/json.hpp>
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -208,56 +211,87 @@ void Test_TrnTexDb() {
 
 void Test_Terrain() {
 	LoadBCP("data.bcp");
-	Terrain trn;
-	trn.readFromFile("Maps\\128_4Peaks\\128_4Peaks.bcm");
-	//trn.readFromFile("Maps\\rotfliptest\\rotfliptest.bcm");
-	printf("yeah!\n");
-
 	InitWindow();
 	ImGuiImpl_Init();
-	IRenderer *gfx = CreateRenderer();
+	IRenderer* gfx = CreateRenderer();
 	gfx->Init();
 	SetRenderer(gfx);
 	ImGuiImpl_CreateFontsTexture(gfx);
 
+	std::string terrainFileName = "Maps\\448_Continent\\448_Continent";
+	terrainFileName += g_settings.at("gameVersion").get<int>() >= 2 ? ".bcm" : ".snr";
+
+	Terrain terrain;
+	terrain.readFromFile(terrainFileName.c_str());
+
 	Camera camera;
-	camera.position = Vector3(256, 100, 256);
-	camera.orientation = Vector3(0, 0, 0);
-	DefaultTerrainRenderer trnrender(gfx, &trn, &camera);
+	float cameraSpeed = 0.5f;
+	camera.position = Vector3(-230, 320, -280);
+	camera.orientation = Vector3(-0.2f, -0.75, 0);
+	camera.farDist = 10000.0f;
+
+	std::unique_ptr<TerrainRenderer> defaultTerrainRenderer = std::make_unique<DefaultTerrainRenderer>(gfx, &terrain, &camera);
+	std::unique_ptr<TerrainRenderer> enhancedTerrainRenderer;
+	const std::string renderer = g_settings.value<std::string>("renderer", "");
+#ifdef _WIN32
+	if (renderer == "d3d11")
+		enhancedTerrainRenderer = std::make_unique<D3D11EnhancedTerrainRenderer>(gfx, &terrain, &camera);
+#endif
+
+	TerrainRenderer* terrainRenderer = defaultTerrainRenderer.get();
+
+	int fps = 0, nextfps = 0;
+	uint32_t lastfpscheck = SDL_GetTicks();
 
 	while (!g_windowQuit)
 	{
+		uint32_t ticks = SDL_GetTicks();
+		if (ticks - lastfpscheck >= 1000) {
+			fps = nextfps;
+			nextfps = 0;
+			lastfpscheck = ticks;
+		}
+		nextfps++;
 		ImGuiImpl_NewFrame();
+		ImGui::Text("FPS: %i", fps);
 		ImGui::DragFloat3("Position", &camera.position.x);
 		ImGui::DragFloat2("Orientation", &camera.orientation.x, 0.1f);
-		ImGui::DragFloat3("Sun Vector", &trn.sunVector.x);
+		ImGui::DragFloat2("Distance", &camera.nearDist);
+		ImGui::DragFloat("Speed", &cameraSpeed, 0.1f);
+		if (ImGui::RadioButton("Default renderer", terrainRenderer == defaultTerrainRenderer.get()))
+			terrainRenderer = defaultTerrainRenderer.get();
+		if (enhancedTerrainRenderer && ImGui::RadioButton("Enhanced renderer", terrainRenderer == enhancedTerrainRenderer.get()))
+			terrainRenderer = enhancedTerrainRenderer.get();
+
 		camera.updateMatrix();
 
 		gfx->ClearFrame();
 		gfx->BeginDrawing();
 		gfx->SetTransformMatrix(&camera.sceneMatrix);
+		gfx->SetFog(0, camera.farDist);
 
-		trnrender.render();
+		terrainRenderer->render();
 
 		gfx->InitImGuiDrawing();
 		ImGuiImpl_Render(gfx);
 		gfx->EndDrawing();
 
 		HandleWindow();
+
+		const Vector3 forwards = Vector3(camera.direction.x, 0.0f, camera.direction.z).normal();
+		const Vector3 sideways = forwards.cross(Vector3(0.0f, 1.0f, 0.0f)).normal();
 		if (g_keyDown[SDL_SCANCODE_UP])
-			camera.position.z += 0.5;
+			camera.position += forwards * cameraSpeed;
 		if (g_keyDown[SDL_SCANCODE_DOWN])
-			camera.position.z -= 0.5;
-		if (g_keyDown[SDL_SCANCODE_RIGHT])
-			camera.position.x += 0.5;
+			camera.position -= forwards * cameraSpeed;
 		if (g_keyDown[SDL_SCANCODE_LEFT])
-			camera.position.x -= 0.5;
+			camera.position += sideways * cameraSpeed;
+		if (g_keyDown[SDL_SCANCODE_RIGHT])
+			camera.position -= sideways * cameraSpeed;
 		if (g_keyDown[SDL_SCANCODE_0])
 			;
 
 	}
-
-	//getchar();
 }
 
 
