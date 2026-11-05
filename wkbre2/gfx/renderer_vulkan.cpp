@@ -1220,7 +1220,7 @@ texture VulkanRenderer::CreateTexture(const Bitmap& bm, int mipmaps) {
 	ivcInfo.subresourceRange.baseArrayLayer = 0;
 	ivcInfo.subresourceRange.baseMipLevel = 0;
 	ivcInfo.subresourceRange.layerCount = 1;
-	ivcInfo.subresourceRange.levelCount = 1;
+	ivcInfo.subresourceRange.levelCount = numMipmaps;
 	vk::ImageView imageView = m_vkDevice.createImageView(ivcInfo);
 
 	vmaDestroyBuffer(m_vmaAllocator, stageBuffer, stageAllocation);
