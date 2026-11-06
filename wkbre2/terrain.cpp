@@ -4,6 +4,7 @@
 
 #include "terrain.h"
 #include "file.h"
+#include "Camera.h"
 #include "util/util.h"
 #include "util/GSFileParser.h"
 #include "util/StriCompare.h"
@@ -197,6 +198,7 @@ void Terrain::readBCM(const char * filename) {
 	free(fcnt);
 
 	floodfillWater();
+	updateQuadTree();
 }
 
 void Terrain::readSNR(const char* filename)
@@ -268,6 +270,7 @@ void Terrain::readSNR(const char* filename)
 	free(text);
 
 	floodfillWater();
+	updateQuadTree();
 }
 
 void Terrain::readTRN(const char* filename)
@@ -357,4 +360,108 @@ void Terrain::floodfillWater()
 	for (Vector3& lake : lakes) {
 		floodfill((int)(lake.x / 5.0f), (int)(lake.z / 5.0f), lake.y, floodfill);
 	}
+}
+
+void Terrain::updateQuadTree()
+{
+	std::vector<TerrainQuadNode> quadTree;
+
+	auto generateQuadNode = [&quadTree, terrain = this](int start_x, int start_z, int len_x, int len_z, const auto& rec) -> int {
+		if (len_x == 0 || len_z == 0) {
+			return -1;
+		}
+
+		const int index = quadTree.size();
+		quadTree.emplace_back();
+
+		TerrainQuadNode node;
+
+		if (len_x == 1 && len_z == 1)
+		{
+			const float h0 = terrain->getVertex(start_x, start_z);
+			const float h1 = terrain->getVertex(start_x + 1, start_z);
+			const float h2 = terrain->getVertex(start_x, start_z + 1);
+			const float h3 = terrain->getVertex(start_x + 1, start_z + 1);
+			std::tie(node.minHeight, node.maxHeight) = std::minmax({ h0, h1, h2, h3 });
+
+			const auto& tile = terrain->getTile(start_x, start_z);
+			if (tile->fullOfWater)
+				node.maxHeight = std::max(node.maxHeight, tile->waterLevel);
+		}
+		else
+		{
+			const int first_half_x = len_x / 2;
+			const int first_half_z = len_z / 2;
+			const int second_half_x = len_x - first_half_x;
+			const int second_half_z = len_z - first_half_z;
+			node.topLeft = rec(start_x, start_z, first_half_x, first_half_z, rec);
+			node.topRight = rec(start_x + first_half_x, start_z, second_half_x, first_half_z, rec);
+			node.bottomLeft = rec(start_x, start_z + first_half_z, first_half_x, second_half_z, rec);
+			node.bottomRight = rec(start_x + first_half_x, start_z + first_half_z, second_half_x, second_half_z, rec);
+
+			node.minHeight = std::numeric_limits<float>::max();
+			node.maxHeight = std::numeric_limits<float>::lowest();
+			for (int n : {node.topLeft, node.topRight, node.bottomLeft, node.bottomRight}) {
+				if (n != -1) {
+					node.minHeight = std::min(node.minHeight, quadTree[n].minHeight);
+					node.maxHeight = std::max(node.maxHeight, quadTree[n].maxHeight);
+				}
+			}
+		}
+
+		quadTree[index] = node;
+
+		return index;
+		};
+
+	generateQuadNode(0, 0, this->width, this->height, generateQuadNode);
+	this->quadTree = std::move(quadTree);
+}
+
+int Terrain::iterateVisibleTiles(const Camera& camera, const std::function<void(int, int, int, int)>& func)
+{
+	int statQuadNodesIterated = 0;
+
+	const auto iterQuadNode = [this, &statQuadNodesIterated, &camera, &func](int index, int start_x, int start_z, int len_x, int len_z, const auto& rec) -> void {
+		statQuadNodesIterated += 1;
+
+		if (index == -1 || len_x == 0 || len_z == 0)
+			return;
+		const auto& quadNode = this->quadTree[index];
+
+		bool drawNow = len_x <= 2 && len_z <= 2;
+
+		if (!drawNow) {
+			const auto t = [this](int x) {return (x - this->edge) * 5.0f; };
+			const float x0 = t(start_x), x1 = t(start_x + len_x);
+			const float z0 = t(start_z), z1 = t(start_z + len_z);
+			const auto visibility = camera.isAABBVisible(Vector3(x0, quadNode.minHeight, z0), Vector3(x1, quadNode.maxHeight, z1));
+			if (visibility == Camera::Visibility::Invisible)
+			{
+				// box completely outside the frustum -> skip quad node entirely
+				return;
+			}
+			drawNow = visibility == Camera::Visibility::CompletelyVisible;
+		}
+
+
+		if (drawNow) {
+			// box completely inside the frustum -> draw all the tiles directly
+			func(start_x, start_z, len_x, len_z);
+		}
+		else {
+			// box partially visible or uncertain -> continue walking through the quad nodes
+			const int first_half_x = len_x / 2;
+			const int first_half_z = len_z / 2;
+			const int second_half_x = len_x - first_half_x;
+			const int second_half_z = len_z - first_half_z;
+			rec(quadNode.topLeft, start_x, start_z, first_half_x, first_half_z, rec);
+			rec(quadNode.topRight, start_x + first_half_x, start_z, second_half_x, first_half_z, rec);
+			rec(quadNode.bottomLeft, start_x, start_z + first_half_z, first_half_x, second_half_z, rec);
+			rec(quadNode.bottomRight, start_x + first_half_x, start_z + first_half_z, second_half_x, second_half_z, rec);
+		}
+		};
+	iterQuadNode(0, 0, 0, this->width, this->height, iterQuadNode);
+
+	return statQuadNodesIterated;
 }

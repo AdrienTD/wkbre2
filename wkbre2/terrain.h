@@ -7,9 +7,12 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <functional>
 #include "util/vecmat.h"
 #include "TrnTextureDb.h"
 #include "util/DynArray.h"
+
+struct Camera;
 
 struct BitReader
 {
@@ -45,6 +48,12 @@ struct TerrainTile {
 	//unsigned int lakeId; // when removing lake, do a full autofill again.
 };
 
+struct TerrainQuadNode
+{
+	float minHeight, maxHeight;
+	int topLeft, topRight, bottomLeft, bottomRight;
+};
+
 struct Terrain
 {
 	typedef TerrainTile Tile;
@@ -59,6 +68,8 @@ struct Terrain
 	TerrainTextureDatabase texDb;
 	DynArray<uint8_t> vertices;
 	Tile *tiles;
+
+	std::vector<TerrainQuadNode> quadTree;
 
 	std::pair<int, int> getNumPlayableTiles() const { return { width - 2 * edge, height - 2 * edge }; }
 	std::pair<float, float> getPlayableArea() const { return { 5.0f * (width - 2 * edge), 5.0f * (height - 2 * edge) }; }
@@ -91,5 +102,7 @@ struct Terrain
 	void readTRN(const char* filename);
 
 	void floodfillWater();
+
+	void updateQuadTree();
+	int iterateVisibleTiles(const Camera& camera, const std::function<void(int, int, int, int)>& func);
 };
-		
