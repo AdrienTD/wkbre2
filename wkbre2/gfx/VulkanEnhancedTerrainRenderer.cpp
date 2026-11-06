@@ -529,20 +529,30 @@ void VulkanEnhancedTerrainRenderer::render() {
 	*(int*)(sunData + 12) = m_bumpOn ? 1 : 0;
 	UpdateUniformBuffer(vkgfx, vkgfx->m_currentSunBuffer, vkgfx->m_globalBuffers->sunBuffer, sunData, 16);
 
-	texture oldgfxtex = 0;
-	for (int z = tlsz; z <= tlez; z++) {
-		for (int x = tlsx; x <= tlex; x++) {
-			int lx = x - terrain->edge, lz = z - terrain->edge;
-			Vector3 pp((lx + 0.5f)*tilesize, terrain->getVertex(x, z), (lz + 0.5f)*tilesize);
-			Vector3 camcenter = camera->position + camera->direction * 125.0f;
-			pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
-			Vector3 ttpp = pp.transformScreenCoords(camera->sceneMatrix);
-			if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
-				continue;
-			const Terrain::Tile* tile = terrain->getTile(x, z);
-			texAtlases[tile->texture->texFilenameId].tiles.push_back(tile);
+	struct LakeTile {
+		uint16_t x, z;
+		float height;
+	};
+	static std::vector<LakeTile> lakeTiles;
+	lakeTiles.clear();
+
+	const auto drawTiles = [this](int start_x, int start_z, int len_x, int len_z) {
+		for (int z = start_z; z < start_z + len_z; ++z) {
+			for (int x = start_x; x < start_x + len_x; ++x) {
+				const Terrain::Tile* tile = terrain->getTile(x, z);
+				texAtlases[tile->texture->texFilenameId].tiles.push_back(tile);
+
+				if (tile->fullOfWater) {
+					auto& lakeTile = lakeTiles.emplace_back();
+					lakeTile.x = x;
+					lakeTile.z = z;
+					lakeTile.height = tile->waterLevel;
+				}
+			}
 		}
-	}
+		};
+
+	terrain->iterateVisibleTiles(*camera, drawTiles);
 
 	auto& frame = vkgfx->currentFrameObject();
 
@@ -579,37 +589,22 @@ void VulkanEnhancedTerrainRenderer::render() {
 	lakeBatch->begin();
 	gfx->BeginLakeDrawing();
 	const uint32_t color = (terrain->fogColor & 0xFFFFFF) | 0x80000000;
-	for (int z = tlsz; z <= tlez; z++) {
-		for (int x = tlsx; x <= tlex; x++) {
-			const TerrainTile* tile = terrain->getTile(x, z);
-			if (tile && tile->fullOfWater) {
-				unsigned int x = tile->x;
-				unsigned int z = tile->z;
-				int lx = x - terrain->edge, lz = z - terrain->edge;
+	for (const auto& lakeTile : lakeTiles) {
+		const int lx = (int)lakeTile.x - terrain->edge, lz = (int)lakeTile.z - terrain->edge;
 
-				// is water tile visible on screen?
-				Vector3 pp((lx + 0.5f) * tilesize, tile->waterLevel, (lz + 0.5f) * tilesize);
-				Vector3 camcenter = camera->position + camera->direction * 125.0f;
-				pp += (camcenter - pp).normal() * tilesize * sqrtf(2.0f);
-				Vector3 ttpp = pp.transformScreenCoords(camera->sceneMatrix);
-				if (ttpp.x < -1 || ttpp.x > 1 || ttpp.y < -1 || ttpp.y > 1 || ttpp.z < -1 || ttpp.z > 1)
-					continue;
-
-				batchVertex* outvert; uint16_t* outindices; unsigned int firstindex;
-				lakeBatch->next(4, 6, &outvert, &outindices, &firstindex);
-				outvert[0].x = lx * tilesize; outvert[0].y = tile->waterLevel ; outvert[0].z = lz * tilesize;
-				outvert[0].color = color; outvert[0].u = 0.0f; outvert[0].v = 0.0f;
-				outvert[1].x = (lx + 1) * tilesize; outvert[1].y = tile->waterLevel; outvert[1].z = lz * tilesize;
-				outvert[1].color = color; outvert[1].u = 0.0f; outvert[1].v = 0.0f;
-				outvert[2].x = (lx + 1) * tilesize; outvert[2].y = tile->waterLevel; outvert[2].z = (lz + 1) * tilesize;
-				outvert[2].color = color; outvert[2].u = 0.0f; outvert[2].v = 0.0f;
-				outvert[3].x = lx * tilesize; outvert[3].y = tile->waterLevel; outvert[3].z = (lz + 1) * tilesize;
-				outvert[3].color = color; outvert[3].u = 0.0f; outvert[3].v = 0.0f;
-				uint16_t* oix = outindices;
-				for (const int& c : { 0,3,1,1,3,2 })
-					*(oix++) = firstindex + c;
-			}
-		}
+		batchVertex* outvert; uint16_t* outindices; unsigned int firstindex;
+		lakeBatch->next(4, 6, &outvert, &outindices, &firstindex);
+		outvert[0].x = lx * tilesize; outvert[0].y = lakeTile.height; outvert[0].z = lz * tilesize;
+		outvert[0].color = color; outvert[0].u = 0.0f; outvert[0].v = 0.0f;
+		outvert[1].x = (lx + 1) * tilesize; outvert[1].y = lakeTile.height; outvert[1].z = lz * tilesize;
+		outvert[1].color = color; outvert[1].u = 0.0f; outvert[1].v = 0.0f;
+		outvert[2].x = (lx + 1) * tilesize; outvert[2].y = lakeTile.height; outvert[2].z = (lz + 1) * tilesize;
+		outvert[2].color = color; outvert[2].u = 0.0f; outvert[2].v = 0.0f;
+		outvert[3].x = lx * tilesize; outvert[3].y = lakeTile.height; outvert[3].z = (lz + 1) * tilesize;
+		outvert[3].color = color; outvert[3].u = 0.0f; outvert[3].v = 0.0f;
+		uint16_t* oix = outindices;
+		for (const int& c : { 0,3,1,1,3,2 })
+			*(oix++) = firstindex + c;
 	}
 	lakeBatch->flush();
 	lakeBatch->end();
