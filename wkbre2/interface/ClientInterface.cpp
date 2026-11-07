@@ -25,14 +25,17 @@
 #include "../ParticleContainer.h"
 #include "../ParticleSystem.h"
 #include "../gfx/DefaultParticleRenderer.h"
-#include "../gfx/D3D11EnhancedTerrainRenderer.h"
 #include "../settings.h"
 #include <nlohmann/json.hpp>
-#include "../gfx/D3D11EnhancedSceneRenderer.h"
 #include "../StampdownPlan.h"
 #include "../gfx/TerrainSpriteContainer.h"
 #include "../gfx/TerrainSpriteRenderer.h"
 #include "../gfx/bitmap.h"
+
+#include "../gfx/D3D11EnhancedTerrainRenderer.h"
+#include "../gfx/D3D11EnhancedSceneRenderer.h"
+#include "../gfx/VulkanEnhancedTerrainRenderer.h"
+#include "../gfx/VulkanEnhancedSceneRenderer.h"
 
 #define SOL_NO_CHECK_NUMBER_PRECISION 1
 #include <sol/sol.hpp>
@@ -687,15 +690,19 @@ void ClientInterface::iter()
 		if (ImGui::Button("Start level"))
 			client->sendStartLevelRequest();
 		ImGui::Checkbox("Terrain", &showTerrain);
+		const bool useEnhancedGraphics = g_settings.value<bool>("enhancedGraphics", false);
+		if (useEnhancedGraphics) {
 #ifdef _WIN32
-		if (g_settings.value<bool>("enhancedGraphics", false)) {
-			if (D3D11EnhancedTerrainRenderer* etr = static_cast<D3D11EnhancedTerrainRenderer*>(terrainRenderer)) {
+			if (auto* etr = dynamic_cast<D3D11EnhancedTerrainRenderer*>(terrainRenderer)) {
 				if (client->terrain)
 					ImGui::DragFloat3("Sun", &client->terrain->sunVector.x, 0.1f);
 				ImGui::Checkbox("Bump", &etr->m_bumpOn);
 			}
-		}
 #endif
+			if (auto* etr = dynamic_cast<VulkanEnhancedTerrainRenderer*>(terrainRenderer)) {
+				ImGui::Checkbox("Bump", &etr->m_bumpOn);
+			}
+		}
 		ImGui::End();
 	}
 
@@ -1184,14 +1191,16 @@ void ClientInterface::iter()
 		if (client->terrain)
 			scene->sunDirection = client->terrain->sunVector;
 		if (!sceneRenderer) {
+			const bool useEnhancedGraphics = g_settings.value<bool>("enhancedGraphics", false);
+			const std::string renderer = g_settings.value<std::string>("renderer", "");
+			if (useEnhancedGraphics && renderer == "vulkan")
+				sceneRenderer = new VulkanEnhancedSceneRenderer(gfx, scene, &client->camera);
 #ifdef _WIN32
-			if (g_settings.value<bool>("enhancedGraphics", false))
+			else if (useEnhancedGraphics && renderer == "d3d11")
 				sceneRenderer = new D3D11EnhancedSceneRenderer(gfx, scene, &client->camera);
+#endif
 			else
 				sceneRenderer = new DefaultSceneRenderer(gfx, scene, &client->camera);
-#else
-			sceneRenderer = new DefaultSceneRenderer(gfx, scene, &client->camera);
-#endif
 		}
 		sceneRenderer->render();
 		scene->clear();
@@ -1240,14 +1249,17 @@ void ClientInterface::render()
 }
 
 void ClientInterface::updateTerrain() {
+	const bool useEnhancedGraphics = g_settings.value<bool>("enhancedGraphics", false);
+	const std::string renderer = g_settings.value<std::string>("renderer", "");
+	if (useEnhancedGraphics && renderer == "vulkan")
+		this->terrainRenderer = new VulkanEnhancedTerrainRenderer(gfx, client->terrain, &client->camera);
 #ifdef _WIN32
-	if (g_settings.value<bool>("enhancedGraphics", false))
+	else if (useEnhancedGraphics && renderer == "d3d11")
 		this->terrainRenderer = new D3D11EnhancedTerrainRenderer(gfx, client->terrain, &client->camera);
+#endif
 	else
 		this->terrainRenderer = new DefaultTerrainRenderer(gfx, client->terrain, &client->camera);
-#else
-	this->terrainRenderer = new DefaultTerrainRenderer(gfx, client->terrain, &client->camera);
-#endif
+
 	this->terrainSpriteContainer = new TerrainSpriteContainer;
 	this->terrainSpriteRenderer = new TerrainSpriteRenderer(gfx, client->terrain, this->terrainSpriteContainer);
 }
