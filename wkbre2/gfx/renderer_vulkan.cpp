@@ -1363,7 +1363,7 @@ void VulkanRenderer::SetFog(uint32_t color, float farz) {
 	barrier.srcAccessMask = vk::AccessFlagBits::eUniformRead | vk::AccessFlagBits::eTransferWrite;
 	barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 	frame.mainCommandBuffer.pipelineBarrier(
-		vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(),
+		vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eFragmentShader | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(),
 		0, nullptr, 1, &barrier, 0, nullptr);
 
 	frame.mainCommandBuffer.copyBuffer(stage->buffer[0], m_currentFogBuffer, 1, &copy);
