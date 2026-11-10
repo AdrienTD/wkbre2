@@ -10,7 +10,7 @@
 struct Camera {
 	Vector3 position, orientation;
 	float aspect = 4.0f/3.0f, nearDist = 0.1f, farDist = 250.0f;
-	bool orthoMode = false;
+	bool orthoMode = false, freeLook = true;
 	Matrix sceneMatrix, viewMatrix, projMatrix;
 	Vector3 direction;
 
@@ -29,6 +29,7 @@ struct Camera {
 	Camera() = default;
 	Camera(const Vector3 &position, const Vector3 &orientation) : position(position), orientation(orientation) {}
 
+	void autoManage(float terrainHeight);
 	void updateMatrix();
 
 	//bool isPointVisible(const Vector3& point) const;

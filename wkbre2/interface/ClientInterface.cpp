@@ -676,6 +676,12 @@ void ClientInterface::iter()
 		selection.merge(formationsSelected);
 	}
 
+	//----- Auto Camera -----
+	if (client->terrain) {
+		const float terrainHeight = client->terrain->getHeightEx(client->camera.position.x, client->camera.position.z, true);
+		client->camera.autoManage(terrainHeight);
+	}
+
 	//----- ImGui -----//
 
 	ImGuiImpl_NewFrame();
