@@ -9,7 +9,7 @@
 
 struct Camera {
 	Vector3 position, orientation;
-	float aspect = 4.0f/3.0f, nearDist = 0.1f, farDist = 250.0f;
+	float aspect = 4.0f/3.0f, nearDist = 1.0f, farDist = 350.0f;
 	bool orthoMode = false, freeLook = true;
 	Matrix sceneMatrix, viewMatrix, projMatrix;
 	Vector3 direction;

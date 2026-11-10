@@ -8,12 +8,13 @@
 
 void Camera::autoManage(float terrainHeight)
 {
+	static const float minHeightToTerrain = 3.0f;
 	static const float maxHeightToTerrain = 150.0f;
 
 	if (freeLook)
 		return;
 
-	position.y = std::clamp(position.y, terrainHeight + 1.0f, terrainHeight + maxHeightToTerrain);
+	position.y = std::clamp(position.y, terrainHeight + minHeightToTerrain, terrainHeight + maxHeightToTerrain);
 
 	const float cameraHeightToTerrain = position.y - terrainHeight;
 	const float r = std::clamp(cameraHeightToTerrain / maxHeightToTerrain, 0.0f, 1.0f);
