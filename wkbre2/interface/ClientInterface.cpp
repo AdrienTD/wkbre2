@@ -482,6 +482,21 @@ void ClientInterface::iter()
 	if (g_mouseWheel)
 		client->camera.position.y += g_mouseWheel * 2;
 
+	static int trainMousePrevX = 0;
+	static int trainMousePrevY = 0;
+	if (g_mousePressed[SDL_BUTTON_X2]) {
+		trainMousePrevX = g_mouseX;
+		trainMousePrevY = g_mouseY;
+	}
+	if (g_mouseDown[SDL_BUTTON_X2]) {
+		const int dx = g_mouseX - trainMousePrevX;
+		const int dy = g_mouseY - trainMousePrevY;
+		client->camera.position += forward.normal() * 0.1f * dy;
+		client->camera.position += strafe.normal() * 0.1f * dx;
+		trainMousePrevX = g_mouseX;
+		trainMousePrevY = g_mouseY;
+	}
+
 	static bool clickedScriptedUi = false;
 	if (!clickedScriptedUi && g_mousePressed[SDL_BUTTON_LEFT]) {
 		debugger.selectObject(nextSelectedObject);
